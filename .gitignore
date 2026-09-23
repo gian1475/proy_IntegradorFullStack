@@ -1,0 +1,19 @@
+# Node / Angular
+frontend/node_modules/
+frontend/.angular/
+frontend/dist/
+
+# Java / Spring Boot / Maven
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/*.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.iml
+
+# OS files
+Thumbs.db
+Desktop.ini
