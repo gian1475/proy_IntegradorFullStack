@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { HeaderComponent } from '../../components/header/header.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.less',
 })
@@ -22,7 +23,7 @@ export class LoginComponent {
 
   onLogin(): void {
     if (!this.email || !this.password) {
-      this.errorMessage.set('Por favor ingrese correo y contraseña');
+      this.errorMessage.set('Por favor ingrese usuario y contraseña');
       return;
     }
 
@@ -36,9 +37,19 @@ export class LoginComponent {
       },
       error: (err) => {
         this.cargando.set(false);
-        const msg = err.error?.mensaje || 'Credenciales incorrectas o error en el servidor';
-        this.errorMessage.set(msg);
+        if (err.status === 0) {
+          this.errorMessage.set('No se pudo conectar con el servidor backend (puerto 8080). Verifica que el backend esté iniciado.');
+        } else {
+          const msg = err.error?.mensaje || 'Credenciales incorrectas';
+          this.errorMessage.set(msg);
+        }
       }
     });
+  }
+
+  loginAdmin(): void {
+    this.email = 'admin@alejandria.edu.pe';
+    this.password = '123456';
+    this.onLogin();
   }
 }

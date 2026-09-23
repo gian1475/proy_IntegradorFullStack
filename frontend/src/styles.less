@@ -1,26 +1,24 @@
-/* =====================================================================
-   ESTILOS GLOBALES Y VARIABLES EN LESS: LUZ DEL SABER
-   ===================================================================== */
-@primary-gold: #f59e0b;
-@primary-dark: #d97706;
-@primary-light: #fef3c7;
-@primary-gradient: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-@primary-glow: 0 4px 14px rgba(245, 158, 11, 0.35);
-
-@text-dark: #0f172a;
-@text-body: #334155;
-@text-muted: #64748b;
-@text-light: #94a3b8;
-
-@bg-page: #f8fafc;
+@bg-page: #fbf9f5;
 @bg-card: #ffffff;
-@border-color: #e2e8f0;
-@border-focus: #f59e0b;
+@bg-sidebar: #f5f1eb;
+@bg-sidebar-hover: #ebe4d8;
+@bg-light: #fefcf9;
 
-@shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-@shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-@shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-@shadow-card: 0 20px 30px -10px rgba(0, 0, 0, 0.07);
+@primary-color: #854d0e;
+@primary-hover: #713f12;
+@primary-soft: #fef3c7;
+@primary-border: #d97706;
+
+@accent-blue: #1e3a8a;
+@accent-green: #15803d;
+
+@text-dark: #1e293b;
+@text-body: #374151;
+@text-muted: #6b7280;
+@text-light: #9ca3af;
+
+@border-color: #e5e0d8;
+@border-subtle: #ede7de;
 
 @font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
@@ -55,30 +53,4 @@ button {
 input, select {
   font-family: inherit;
   outline: none;
-}
-
-/* Clases utilitarias globales */
-.btn-primary-gold {
-  background: @primary-gradient;
-  color: #ffffff;
-  font-weight: 700;
-  padding: 0.85rem 1.8rem;
-  border-radius: 9999px;
-  box-shadow: @primary-glow;
-  transition: all 0.2s ease-in-out;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-
-  &:hover {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
 }

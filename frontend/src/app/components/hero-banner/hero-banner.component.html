@@ -1,55 +1,52 @@
-<section class="hero-banner" role="region" aria-label="Banner de Bienvenida">
-  <!-- Dynamic Background Image -->
-  <div 
-    class="banner-bg" 
-    [style.backgroundImage]="'url(' + currentSlide().image + ')'"
-  ></div>
-  <div class="banner-overlay"></div>
+<section class="hero-banner-container" aria-label="Novedades de la Biblioteca">
+  <div class="banner-box">
+    <div 
+      class="banner-bg-img" 
+      [style.backgroundImage]="'url(' + currentSlide().image + ')'"
+    ></div>
 
-  <!-- Left Arrow Navigation -->
-  <button 
-    class="nav-btn prev-btn" 
-    (click)="prevSlide()" 
-    aria-label="Diapositiva anterior"
-    title="Anterior"
-  >
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="15 18 9 12 15 6"></polyline>
-    </svg>
-  </button>
-
-  <!-- Hero Content Matching Figura 29 -->
-  <div class="banner-content">
-    <h1 class="hero-title">{{ currentSlide().title }}</h1>
-    <p class="hero-subtitle">{{ currentSlide().subtitle }}</p>
-    <button class="btn-location" (click)="onLocationClick()">
-      <svg viewBox="0 0 24 24">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    <button class="nav-btn prev-btn" (click)="prevSlide()" aria-label="Anterior">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
-      {{ currentSlide().buttonText }}
     </button>
-  </div>
 
-  <!-- Right Arrow Navigation -->
-  <button 
-    class="nav-btn next-btn" 
-    (click)="nextSlide()" 
-    aria-label="Diapositiva siguiente"
-    title="Siguiente"
-  >
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="9 18 15 12 9 6"></polyline>
-    </svg>
-  </button>
+    <div class="banner-content">
+      <span class="badge-novedad">{{ currentSlide().tag }}</span>
+      <h1 class="hero-title">{{ currentSlide().title }}</h1>
+      <p class="hero-subtitle">{{ currentSlide().subtitle }}</p>
+      <div class="banner-actions">
+        <a routerLink="/catalogo" class="btn-catalog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          Catálogo Bibliográfico
+        </a>
+        <button class="btn-location" (click)="onLocationClick()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Horarios y Sala
+        </button>
+      </div>
+    </div>
 
-  <!-- Carousel Indicators -->
-  <div class="carousel-dots">
-    @for (slide of slides; track slide.id; let i = $index) {
-      <span 
-        class="dot" 
-        [class.active]="currentSlideIndex() === i"
-        (click)="goToSlide(i)"
-      ></span>
-    }
+    <button class="nav-btn next-btn" (click)="nextSlide()" aria-label="Siguiente">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+
+    <div class="carousel-dots">
+      @for (slide of slides; track slide.id; let i = $index) {
+        <span 
+          class="dot" 
+          [class.active]="currentSlideIndex() === i"
+          (click)="goToSlide(i)"
+        ></span>
+      }
+    </div>
   </div>
 </section>

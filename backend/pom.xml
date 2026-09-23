@@ -12,7 +12,7 @@
 	<artifactId>demo</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>biblioteca-backend</name>
-	<description>Backend REST API para Biblioteca Luz del Saber</description>
+	<description>Backend REST API para Biblioteca de Alejandría</description>
 
 	<properties>
 		<java.version>21</java.version>

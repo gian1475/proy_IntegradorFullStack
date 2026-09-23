@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { HeaderComponent } from '../../components/header/header.component';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent],
   templateUrl: './register.component.html',
   styleUrl: './register.component.less',
 })
@@ -21,19 +22,13 @@ export class RegisterComponent {
   correo: string = '';
   contrasena: string = '';
   confirmarContrasena: string = '';
-  aceptoTerminos: boolean = false;
 
   errorMessage = signal<string>('');
   cargando = signal<boolean>(false);
 
   onRegister(): void {
     if (!this.nombre || !this.apellido || !this.dni || !this.correo || !this.contrasena) {
-      this.errorMessage.set('Por favor completa todos los campos requeridos');
-      return;
-    }
-
-    if (this.dni.length !== 8) {
-      this.errorMessage.set('El DNI debe contener exactamente 8 dígitos');
+      this.errorMessage.set('Por favor completa todos los campos');
       return;
     }
 
@@ -48,8 +43,8 @@ export class RegisterComponent {
     this.authService.registro({
       nombre: this.nombre,
       apellido: this.apellido,
-      dni: this.dni,
-      correo: this.correo,
+      dni: this.dni.trim(),
+      correo: this.correo.trim(),
       contrasena: this.contrasena
     }).subscribe({
       next: () => {

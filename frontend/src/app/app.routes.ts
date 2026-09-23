@@ -8,22 +8,22 @@ export const routes: Routes = [
   {
     path: '',
     component: HomeComponent,
-    title: 'Luz del Saber - Inicio',
+    title: 'Biblioteca de Alejandría - Inicio',
   },
   {
     path: 'login',
     component: LoginComponent,
-    title: 'Luz del Saber - Iniciar Sesión',
+    title: 'Biblioteca de Alejandría - Iniciar Sesión',
   },
   {
     path: 'registro',
     component: RegisterComponent,
-    title: 'Luz del Saber - Registro de Usuario',
+    title: 'Biblioteca de Alejandría - Registro de Usuario',
   },
   {
     path: 'catalogo',
     component: UserCatalogComponent,
-    title: 'Luz del Saber - Catálogo de Libros',
+    title: 'Biblioteca de Alejandría - Catálogo de Libros',
   },
   {
     path: '**',

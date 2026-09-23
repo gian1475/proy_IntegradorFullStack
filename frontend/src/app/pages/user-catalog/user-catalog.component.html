@@ -2,6 +2,7 @@
   <app-header (searchChange)="onSearch($event)"></app-header>
 
   <div class="catalog-body">
+    <!-- Sidebar según Figura 36 -->
     <aside class="catalog-sidebar">
       <div class="sidebar-section">
         <h4 class="sidebar-title">Menú</h4>
@@ -26,21 +27,12 @@
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            <span>Mis Reservas</span>
-          </li>
-          <li 
-            class="menu-item" 
-            [class.active]="selectedMenu() === 'prestamos'"
-            (click)="selectMenu('prestamos')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <span>Mis Préstamos</span>
+            <span>Mis Reservas ({{ misReservas().length }})</span>
           </li>
         </ul>
       </div>
 
+      <!-- Las 5 Categorías Oficiales de la Base de Datos -->
       <div class="sidebar-section">
         <h4 class="sidebar-title">Categorías</h4>
         <ul class="category-list">
@@ -57,47 +49,185 @@
       </div>
     </aside>
 
+    <!-- Contenido Principal -->
     <main class="catalog-content">
-      <div class="content-header">
-        <h1 class="page-title">Catálogo de Libros</h1>
-        <span class="results-count">{{ filteredBooks().length }} títulos disponibles</span>
-      </div>
+      @if (selectedMenu() === 'catalogo') {
+        <!-- Vista Catálogo de Libros (Figura 36) -->
+        <div class="content-header">
+          <h1 class="page-title">Catálogo de Libros</h1>
+          <span class="results-count">{{ filteredBooks().length }} títulos encontrados</span>
+        </div>
 
-      @if (cargando()) {
-        <div style="padding: 3rem; text-align: center; color: #64748b;">
-          Cargando catálogo...
-        </div>
-      } @else {
-        <div class="catalog-grid">
-          @for (book of filteredBooks(); track book.id) {
-            <article class="catalog-card">
-              <div class="cover-wrapper">
-                <img [src]="book.coverImage" [alt]="book.title" loading="lazy" />
-              </div>
-              <div class="card-details">
-                <span class="badge-category">{{ book.category }}</span>
-                <h3 class="book-name" [title]="book.title">{{ book.title }}</h3>
-                <p class="book-author">{{ book.author }}</p>
-                <div class="card-action">
-                  <button class="btn-reserve-book" (click)="onReserve(book)">
-                    Reservar Libro
-                  </button>
+        @if (cargando()) {
+          <div style="padding: 3rem; text-align: center; color: #78716c;">
+            Cargando catálogo...
+          </div>
+        } @else {
+          <div class="books-grid">
+            @for (book of filteredBooks(); track book.id) {
+              <article class="book-card">
+                <div class="cover-box">
+                  <img [src]="book.coverImage" [alt]="book.title" loading="lazy" />
                 </div>
-              </div>
-            </article>
-          }
+                <div class="card-details">
+                  <span class="badge-category">{{ book.category }}</span>
+                  <h3 class="book-title" [title]="book.title">{{ book.title }}</h3>
+                  <p class="book-author">{{ book.author }}</p>
+                  <div class="card-action">
+                    <button class="btn-reserve" (click)="abrirModalConfiguracion(book)">
+                      Reservar
+                    </button>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      } @else {
+        <!-- Vista Mis Reservas (Figura 39) -->
+        <div class="content-header">
+          <h1 class="page-title">Mis Reservas</h1>
+          <span class="results-count">{{ misReservas().length }} solicitudes activas</span>
         </div>
+
+        @if (misReservas().length === 0) {
+          <div style="padding: 3rem; text-align: center; color: #78716c; background: #ffffff; border-radius: 12px; border: 1px solid #e5e0d8;">
+            <p style="margin-bottom: 1rem; font-size: 1rem;">Aún no tienes libros reservados.</p>
+            <button class="btn-reserve" style="width: auto; padding: 0.5rem 1.5rem;" (click)="selectMenu('catalogo')">
+              Explorar Catálogo
+            </button>
+          </div>
+        } @else {
+          <div class="books-grid">
+            @for (reserva of misReservas(); track reserva.idReserva) {
+              <article class="book-card">
+                <div class="cover-box">
+                  <img [src]="reserva.coverImage" [alt]="reserva.titulo" loading="lazy" />
+                </div>
+                <div class="card-details">
+                  <span class="badge-category">{{ reserva.categoria }}</span>
+                  <h3 class="book-title">{{ reserva.titulo }}</h3>
+                  <p class="book-author">{{ reserva.autor }}</p>
+                  <div class="reserve-meta">
+                    Recojo: {{ reserva.fechaRecojo }} ({{ reserva.horario }})
+                  </div>
+                  <div class="card-action">
+                    <button class="btn-cancel" (click)="abrirModalCancelar(reserva)">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        }
       }
     </main>
   </div>
 
-  @if (reservationMessage()) {
-    <div class="toast-notification">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-      </svg>
-      <span>{{ reservationMessage() }}</span>
+  <!-- MODAL FIGURA 37: Configuración y confirmación de reserva -->
+  @if (modalConfiguracion(); as book) {
+    <div class="modal-backdrop">
+      <div class="modal-box">
+        <h2 class="modal-title">Confirmar Reserva</h2>
+        <div class="modal-form">
+          <div class="modal-book-preview">
+            <img [src]="book.coverImage" [alt]="book.title" />
+            <div class="preview-info">
+              <div class="preview-title">{{ book.title }}</div>
+              <div class="preview-author">{{ book.author }}</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="fechaRecojo">Selecciona la fecha de recojo</label>
+            <input 
+              id="fechaRecojo" 
+              type="date" 
+              class="form-input" 
+              [(ngModel)]="fechaSeleccionada" 
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="horarioRecojo">Selecciona la hora de recojo (3 hrs en sala)</label>
+            <select id="horarioRecojo" class="form-input" [(ngModel)]="horarioSeleccionado">
+              <option value="08:30 - 11:30">08:30 - 11:30 (Turno Mañana)</option>
+              <option value="11:30 - 14:30">11:30 - 14:30 (Turno Mediodía)</option>
+              <option value="14:30 - 17:30">14:30 - 17:30 (Turno Tarde)</option>
+              <option value="17:30 - 20:00">17:30 - 20:00 (Turno Noche)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button class="btn-cancel-modal" (click)="cerrarModalConfiguracion()">Cancelar</button>
+          <button class="btn-confirm-modal" (click)="confirmarReserva(book)">Reservar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL FIGURA 38: Confirmación de reserva realizada -->
+  @if (modalReservaRealizada()) {
+    <div class="modal-backdrop">
+      <div class="modal-box">
+        <div class="modal-icon-circle success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h2 class="modal-title">Reserva Realizada</h2>
+        <p class="modal-desc">
+          Acércate a la fecha y hora elegida para recoger el libro en sala de lectura.
+        </p>
+        <div class="modal-actions-row">
+          <button class="btn-single-modal" (click)="cerrarModalReservaRealizada()">Volver</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL FIGURA 40: Confirmación de cancelación de reserva -->
+  @if (modalCancelar(); as item) {
+    <div class="modal-backdrop">
+      <div class="modal-box">
+        <div class="modal-icon-circle warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h2 class="modal-title">¿Desea Cancelar?</h2>
+        <p class="modal-desc">
+          ¿Está seguro en la cancelación de su reserva de <strong>"{{ item.titulo }}"</strong>?
+        </p>
+        <div class="modal-actions-row">
+          <button class="btn-confirm-modal" (click)="ejecutarCancelacion(item)">Sí, acepto</button>
+          <button class="btn-cancel-modal" (click)="cerrarModalCancelar()">No, rechazo</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL FIGURA 41: Notificación de reserva cancelada -->
+  @if (modalCanceladaExitosa()) {
+    <div class="modal-backdrop">
+      <div class="modal-box">
+        <div class="modal-icon-circle success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h2 class="modal-title">Reserva Cancelada</h2>
+        <p class="modal-desc">
+          El proceso de anulación de su solicitud se ha completado con éxito.
+        </p>
+        <div class="modal-actions-row">
+          <button class="btn-single-modal" (click)="cerrarModalCanceladaExitosa()">Volver</button>
+        </div>
+      </div>
     </div>
   }
 </div>

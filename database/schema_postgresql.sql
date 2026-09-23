@@ -236,11 +236,11 @@ INSERT INTO libro_autor (id_libro, id_autor) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Usuarios iniciales (Contraseña de prueba: '123456' con hash BCrypt)
--- Hash: $2a$10$wT8B1mJ0e75aZkmcQhKqC.qO9NqZc4WvhK0bLkmjC19a.uA3oQ5u2
+-- Hash real para '123456': $2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y
 INSERT INTO usuario (nombre, apellido, dni, correo, contrasena, estado) VALUES
-('Admin', 'Principal', '11111111', 'admin@alejandria.edu.pe', '$2a$10$wT8B1mJ0e75aZkmcQhKqC.qO9NqZc4WvhK0bLkmjC19a.uA3oQ5u2', 'activo'),
-('Carlos', 'Librero', '22222222', 'encargado@alejandria.edu.pe', '$2a$10$wT8B1mJ0e75aZkmcQhKqC.qO9NqZc4WvhK0bLkmjC19a.uA3oQ5u2', 'activo'),
-('Juan', 'Estudiante', '33333333', 'alumno@alejandria.edu.pe', '$2a$10$wT8B1mJ0e75aZkmcQhKqC.qO9NqZc4WvhK0bLkmjC19a.uA3oQ5u2', 'activo')
+('Admin', 'Principal', '11111111', 'admin@alejandria.edu.pe', '$2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y', 'activo'),
+('Carlos', 'Librero', '22222222', 'encargado@alejandria.edu.pe', '$2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y', 'activo'),
+('Juan', 'Estudiante', '33333333', 'alumno@alejandria.edu.pe', '$2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y', 'activo')
 ON CONFLICT (dni) DO NOTHING;
 
 INSERT INTO administrador (id_usuario, nivel_acceso) VALUES (1, 'SUPER_ADMIN') ON CONFLICT DO NOTHING;
