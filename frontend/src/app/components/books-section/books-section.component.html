@@ -1,0 +1,49 @@
+<section class="books-section" aria-labelledby="section-mvll">
+  <!-- Section Header matching Figura 29 -->
+  <div class="section-header">
+    <div class="header-titles">
+      <h2 id="section-mvll" class="title">Libros de Mario Vargas Llosa</h2>
+      <p class="subtitle">Descubre las obras más emblemáticas de nuestro Nobel peruano</p>
+    </div>
+    <div class="carousel-arrows">
+      <button class="arrow-btn" (click)="scrollLeft()" aria-label="Ver anteriores" title="Anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <button class="arrow-btn" (click)="scrollRight()" aria-label="Ver siguientes" title="Siguiente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Book Cards Grid -->
+  <div class="books-grid">
+    @for (book of filteredBooks(); track book.id) {
+      <article class="book-card">
+        <div class="card-cover">
+          <img [src]="book.coverImage" [alt]="book.title" loading="lazy" />
+          <span class="status-badge" [class.disponible]="book.stock > 0" [class.prestado]="book.stock === 0">
+            {{ book.stock > 0 ? 'Disponible' : 'Agotado' }}
+          </span>
+          <span class="category-badge">{{ book.category }}</span>
+        </div>
+        <div class="card-info">
+          <h3 class="book-title" [title]="book.title">{{ book.title }}</h3>
+          <p class="book-author">{{ book.author }}</p>
+          <div class="book-meta">
+            <span>{{ book.year }}</span>
+            <span>Stock: {{ book.stock }} unid.</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn-reserve" (click)="selectBook(book)">
+              Ver Detalles
+            </button>
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+</section>

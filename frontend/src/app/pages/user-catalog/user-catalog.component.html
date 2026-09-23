@@ -1,0 +1,103 @@
+<div class="catalog-layout">
+  <app-header (searchChange)="onSearch($event)"></app-header>
+
+  <div class="catalog-body">
+    <aside class="catalog-sidebar">
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">Menú</h4>
+        <ul class="menu-list">
+          <li 
+            class="menu-item" 
+            [class.active]="selectedMenu() === 'catalogo'"
+            (click)="selectMenu('catalogo')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <span>Catálogo</span>
+          </li>
+          <li 
+            class="menu-item" 
+            [class.active]="selectedMenu() === 'reservas'"
+            (click)="selectMenu('reservas')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Mis Reservas</span>
+          </li>
+          <li 
+            class="menu-item" 
+            [class.active]="selectedMenu() === 'prestamos'"
+            (click)="selectMenu('prestamos')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Mis Préstamos</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h4 class="sidebar-title">Categorías</h4>
+        <ul class="category-list">
+          @for (cat of categories; track cat) {
+            <li 
+              class="cat-item" 
+              [class.active]="selectedCategory() === cat"
+              (click)="selectCategory(cat)"
+            >
+              <span>{{ cat }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    </aside>
+
+    <main class="catalog-content">
+      <div class="content-header">
+        <h1 class="page-title">Catálogo de Libros</h1>
+        <span class="results-count">{{ filteredBooks().length }} títulos disponibles</span>
+      </div>
+
+      @if (cargando()) {
+        <div style="padding: 3rem; text-align: center; color: #64748b;">
+          Cargando catálogo...
+        </div>
+      } @else {
+        <div class="catalog-grid">
+          @for (book of filteredBooks(); track book.id) {
+            <article class="catalog-card">
+              <div class="cover-wrapper">
+                <img [src]="book.coverImage" [alt]="book.title" loading="lazy" />
+              </div>
+              <div class="card-details">
+                <span class="badge-category">{{ book.category }}</span>
+                <h3 class="book-name" [title]="book.title">{{ book.title }}</h3>
+                <p class="book-author">{{ book.author }}</p>
+                <div class="card-action">
+                  <button class="btn-reserve-book" (click)="onReserve(book)">
+                    Reservar Libro
+                  </button>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </main>
+  </div>
+
+  @if (reservationMessage()) {
+    <div class="toast-notification">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <span>{{ reservationMessage() }}</span>
+    </div>
+  }
+</div>

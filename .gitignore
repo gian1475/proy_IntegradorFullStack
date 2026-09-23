@@ -17,3 +17,10 @@ backend/*.log
 # OS files
 Thumbs.db
 Desktop.ini
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+application-secret.properties
+neon.json

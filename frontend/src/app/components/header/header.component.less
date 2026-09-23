@@ -1,0 +1,206 @@
+@primary-color: #f59e0b;
+@text-dark: #1e293b;
+@text-muted: #64748b;
+@border-color: #f1f5f9;
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 2rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    cursor: pointer;
+    user-select: none;
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: #ffffff;
+      }
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+    }
+  }
+
+  .search-wrapper {
+    flex: 1;
+    max-width: 480px;
+    margin: 0 1.5rem;
+    position: relative;
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+
+      svg {
+        width: 17px;
+        height: 17px;
+      }
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.55rem 1rem 0.55rem 2.6rem;
+      border-radius: 20px;
+      background-color: #f1f5f9;
+      border: 1px solid transparent;
+      font-size: 0.9rem;
+      color: #1e293b;
+      transition: all 0.2s ease-in-out;
+
+      &::placeholder {
+        color: #94a3b8;
+        font-size: 0.88rem;
+      }
+
+      &:focus {
+        background-color: #ffffff;
+        border-color: #cbd5e1;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+      }
+    }
+  }
+
+  .user-action {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .avatar-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+      &:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4);
+      }
+
+      svg {
+        width: 22px;
+        height: 22px;
+        fill: #1e293b;
+      }
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 120%;
+      right: 0;
+      background-color: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 0 1px 1px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e2e8f0;
+      width: 230px;
+      padding: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      animation: dropdownFade 0.15s ease-out;
+
+      .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.65rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: #334155;
+        transition: all 0.15s ease;
+
+        svg {
+          width: 17px;
+          height: 17px;
+          color: #64748b;
+        }
+
+        &:hover {
+          background-color: #f8fafc;
+          color: @primary-color;
+
+          svg {
+            color: @primary-color;
+          }
+        }
+
+        &.highlight {
+          color: #d97706;
+          font-weight: 600;
+
+          &:hover {
+            background-color: #fef3c7;
+          }
+        }
+      }
+
+      .dropdown-divider {
+        height: 1px;
+        background-color: #e2e8f0;
+        margin: 0.35rem 0;
+      }
+    }
+  }
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .header-container {
+    padding: 0.6rem 1rem;
+
+    .search-wrapper {
+      max-width: 180px;
+      margin: 0 0.5rem;
+    }
+
+    .brand .brand-title {
+      display: none;
+    }
+  }
+}

@@ -1,0 +1,88 @@
+<div class="home-container">
+  <app-header (searchChange)="onSearchTermChange($event)"></app-header>
+
+  <main>
+    <app-hero-banner (locationClick)="openLocationModal()"></app-hero-banner>
+
+    <app-books-section 
+      [searchTerm]="searchQuery()" 
+      (bookSelected)="openBookModal($event)"
+    ></app-books-section>
+  </main>
+
+  @if (showLocationModal()) {
+    <div class="modal-backdrop" (click)="closeLocationModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <button class="modal-close-btn" (click)="closeLocationModal()" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <div class="modal-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+        </div>
+        <h3 class="modal-title">Biblioteca "Luz del Saber"</h3>
+        <div class="modal-body">
+          <p>Espacios de lectura en sala y préstamo de colecciones bibliográficas.</p>
+          <div class="info-row">
+            <strong>Dirección:</strong>
+            <span>Av. Universitaria 1801, San Miguel, Lima</span>
+          </div>
+          <div class="info-row">
+            <strong>Horario:</strong>
+            <span>Lunes a Sábado: 8:00 AM - 8:00 PM</span>
+          </div>
+          <div class="info-row">
+            <strong>Préstamo:</strong>
+            <span>3 horas en sala de lectura</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-confirm" (click)="closeLocationModal()">Entendido</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (selectedBook(); as book) {
+    <div class="modal-backdrop" (click)="closeBookModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <button class="modal-close-btn" (click)="closeBookModal()" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <h3 class="modal-title">{{ book.title }}</h3>
+        <div class="modal-body">
+          <div class="info-row">
+            <strong>Autor:</strong>
+            <span>{{ book.author }}</span>
+          </div>
+          <div class="info-row">
+            <strong>Categoría:</strong>
+            <span>{{ book.category }}</span>
+          </div>
+          <div class="info-row">
+            <strong>Editorial:</strong>
+            <span>{{ book.editorial }} ({{ book.year }})</span>
+          </div>
+          <div class="info-row">
+            <strong>Stock:</strong>
+            <span>{{ book.stock }} ejemplares disponibles</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-confirm" (click)="closeBookModal()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <footer class="home-footer">
+    <p>© 2026 Luz del Saber - Sistema Integral de Gestión de Biblioteca</p>
+  </footer>
+</div>
