@@ -1,6 +1,6 @@
 import { Component, inject, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -12,6 +12,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class HeaderComponent {
   authService = inject(AuthService);
+  private router = inject(Router);
 
   readonly searchTerm = signal<string>('');
   readonly searchChange = output<string>();
@@ -34,5 +35,6 @@ export class HeaderComponent {
   logout(): void {
     this.authService.logout();
     this.closeUserMenu();
+    this.router.navigate(['/login']);
   }
 }

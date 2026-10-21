@@ -26,9 +26,30 @@ export class RegisterComponent {
   errorMessage = signal<string>('');
   cargando = signal<boolean>(false);
 
+  /** Misma regla que ValidadorContrasena del backend. */
+  requisitosContrasena(): { texto: string; cumple: boolean }[] {
+    const c = this.contrasena;
+    return [
+      { texto: 'Entre 8 y 64 caracteres', cumple: c.length >= 8 && c.length <= 64 },
+      { texto: 'Una letra minúscula', cumple: /\p{Ll}/u.test(c) },
+      { texto: 'Una letra mayúscula', cumple: /\p{Lu}/u.test(c) },
+      { texto: 'Un número', cumple: /\d/.test(c) },
+      { texto: 'Un símbolo especial (ej. @ # $ % !)', cumple: /[^\p{L}\d\s]/u.test(c) },
+    ];
+  }
+
+  contrasenaValida(): boolean {
+    return this.requisitosContrasena().every(r => r.cumple);
+  }
+
   onRegister(): void {
     if (!this.nombre || !this.apellido || !this.dni || !this.correo || !this.contrasena) {
       this.errorMessage.set('Por favor completa todos los campos');
+      return;
+    }
+
+    if (!this.contrasenaValida()) {
+      this.errorMessage.set('La contraseña no cumple los requisitos de seguridad');
       return;
     }
 

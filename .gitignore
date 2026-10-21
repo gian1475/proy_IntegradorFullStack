@@ -24,6 +24,11 @@ Desktop.ini
 *.env
 application-secret.properties
 neon.json
+!.env.example
 
 # Docs
 docs/Avance II Integrador (1).pdf
+
+# Claude Code
+CLAUDE.md
+.claude/

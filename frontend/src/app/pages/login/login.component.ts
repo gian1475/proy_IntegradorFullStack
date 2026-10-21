@@ -31,9 +31,9 @@ export class LoginComponent {
     this.errorMessage.set('');
 
     this.authService.login(this.email, this.password).subscribe({
-      next: () => {
+      next: (respuesta) => {
         this.cargando.set(false);
-        this.router.navigate(['/catalogo']);
+        this.router.navigate([this.authService.rutaInicio(respuesta.usuario.rol)]);
       },
       error: (err) => {
         this.cargando.set(false);
@@ -45,11 +45,5 @@ export class LoginComponent {
         }
       }
     });
-  }
-
-  loginAdmin(): void {
-    this.email = 'admin@alejandria.edu.pe';
-    this.password = '123456';
-    this.onLogin();
   }
 }

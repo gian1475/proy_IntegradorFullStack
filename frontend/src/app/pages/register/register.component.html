@@ -78,6 +78,14 @@
           />
         </div>
 
+        @if (contrasena) {
+          <ul class="password-rules">
+            @for (req of requisitosContrasena(); track req.texto) {
+              <li [class.ok]="req.cumple">{{ req.cumple ? '✓' : '✗' }} {{ req.texto }}</li>
+            }
+          </ul>
+        }
+
         <div class="form-row">
           <label for="confirmar">Confirmar</label>
           <input
