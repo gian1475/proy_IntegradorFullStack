@@ -92,7 +92,7 @@ CREATE TABLE libro (
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
     CONSTRAINT chk_libro_estado 
-        CHECK (estado_libro IN ('disponible', 'prestado', 'reservado', 'mantenimiento'))
+        CHECK (estado_libro IN ('disponible', 'prestado', 'reservado', 'mantenimiento', 'baja'))
 );
 
 -- 6. Tabla: LIBRO_AUTOR (M:N)
@@ -119,6 +119,8 @@ CREATE TABLE prestamo (
     fecha_prestamo               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_devolucion_prevista    TIMESTAMP NOT NULL,
     fecha_devolucion_real        TIMESTAMP NULL,
+    ampliado                     BOOLEAN NOT NULL DEFAULT FALSE,
+    estado_fisico_devolucion     VARCHAR(20) NULL,
     estado_prestamo              VARCHAR(20) NOT NULL,
     CONSTRAINT fk_prestamo_prestatario 
         FOREIGN KEY (id_prestatario) REFERENCES prestatario(id_usuario)
@@ -133,7 +135,9 @@ CREATE TABLE prestamo (
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
     CONSTRAINT chk_prestamo_estado 
-        CHECK (estado_prestamo IN ('activo', 'devuelto', 'vencido')),
+        CHECK (estado_prestamo IN ('activo', 'devuelto', 'vencido', 'anulado')),
+    CONSTRAINT chk_prestamo_estado_fisico
+        CHECK (estado_fisico_devolucion IS NULL OR estado_fisico_devolucion IN ('bueno', 'dañado')),
     CONSTRAINT chk_prestamo_fechas 
         CHECK (fecha_devolucion_real IS NULL OR fecha_devolucion_real >= fecha_prestamo)
 );

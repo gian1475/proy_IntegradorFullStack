@@ -1,0 +1,154 @@
+<div class="panel-layout">
+  <app-header></app-header>
+
+  <main class="panel-main">
+    <h1 class="panel-title">Panel del Administrador</h1>
+    <p class="panel-subtitle">Bienvenido, {{ authService.usuarioActual()?.nombre }}. Coordinación bibliotecaria.</p>
+
+    <nav class="panel-tabs">
+      <button [class.active]="pestana() === 'libros'" (click)="cambiarPestana('libros')">Libros</button>
+      <button [class.active]="pestana() === 'prestamos'" (click)="cambiarPestana('prestamos')">Préstamos activos</button>
+    </nav>
+
+    @if (mensajeOk()) {
+      <div class="alert ok">{{ mensajeOk() }}</div>
+    }
+    @if (mensajeError()) {
+      <div class="alert error">{{ mensajeError() }}</div>
+    }
+
+    <!-- ===== CRUD de libros ===== -->
+    @if (pestana() === 'libros') {
+      <section class="panel-card">
+        <h2>{{ idEditando() === null ? 'Registrar libro' : 'Editar libro #' + idEditando() }}</h2>
+        <form (ngSubmit)="guardar()">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="titulo">Título</label>
+              <input id="titulo" name="titulo" maxlength="150" [(ngModel)]="form.titulo" />
+            </div>
+            <div class="form-field">
+              <label for="isbn">ISBN</label>
+              <input id="isbn" name="isbn" maxlength="20" [(ngModel)]="form.isbn" />
+            </div>
+            <div class="form-field">
+              <label for="editorial">Editorial</label>
+              <input id="editorial" name="editorial" maxlength="100" [(ngModel)]="form.editorial" />
+            </div>
+            <div class="form-field">
+              <label for="anio">Año de publicación</label>
+              <input id="anio" name="anio" type="number" min="1000" max="2100" [(ngModel)]="form.anioPublicacion" />
+            </div>
+            <div class="form-field">
+              <label for="stock">Stock (ejemplares disponibles)</label>
+              <input id="stock" name="stock" type="number" min="0" [(ngModel)]="form.stock" />
+            </div>
+            <div class="form-field">
+              <label for="categoria">Categoría</label>
+              <select id="categoria" name="categoria" [(ngModel)]="form.idCategoria">
+                <option [ngValue]="null">Seleccione</option>
+                @for (c of categorias(); track c.idCategoria) {
+                  <option [ngValue]="c.idCategoria">{{ c.nombre }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="autores">Autores (Ctrl + clic para varios)</label>
+              <select id="autores" name="autores" multiple [(ngModel)]="form.idsAutores">
+                @for (a of autores(); track a.idAutor) {
+                  <option [ngValue]="a.idAutor">{{ a.nombre }} {{ a.apellido }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">{{ idEditando() === null ? 'Registrar' : 'Guardar cambios' }}</button>
+            @if (idEditando() !== null) {
+              <button type="button" class="btn secondary" (click)="cancelarEdicion()">Cancelar</button>
+            }
+          </div>
+        </form>
+      </section>
+
+      <section class="panel-card">
+        <h2>Libros del catálogo</h2>
+        @if (libros().length === 0) {
+          <div class="empty">No hay libros registrados.</div>
+        } @else {
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Título</th>
+                  <th>Autor(es)</th>
+                  <th>Categoría</th>
+                  <th>ISBN</th>
+                  <th>Stock</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of libros(); track l.idLibro) {
+                  <tr>
+                    <td>{{ l.idLibro }}</td>
+                    <td>{{ l.titulo }}</td>
+                    <td>{{ nombreAutores(l) }}</td>
+                    <td>{{ l.categoria?.nombre }}</td>
+                    <td>{{ l.isbn }}</td>
+                    <td>{{ l.stock }}</td>
+                    <td><span class="badge" [class]="l.estadoLibro">{{ l.estadoLibro }}</span></td>
+                    <td>
+                      <div class="acciones">
+                        <button class="btn secondary" (click)="editar(l)">Editar</button>
+                        <button class="btn danger" (click)="darDeBaja(l)">Dar de baja</button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- ===== Préstamos activos (solo consulta) ===== -->
+    @if (pestana() === 'prestamos') {
+      <section class="panel-card">
+        <h2>Préstamos activos</h2>
+        @if (prestamos().length === 0) {
+          <div class="empty">No hay préstamos activos.</div>
+        } @else {
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Prestatario</th>
+                  <th>Libro</th>
+                  <th>Inicio</th>
+                  <th>Hora límite</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of prestamos(); track p.idPrestamo) {
+                  <tr>
+                    <td>{{ p.idPrestamo }}</td>
+                    <td>{{ p.nombrePrestatario }}</td>
+                    <td>{{ p.tituloLibro }}</td>
+                    <td>{{ p.fechaPrestamo | date: 'dd/MM HH:mm' }}</td>
+                    <td>{{ p.fechaDevolucionPrevista | date: 'dd/MM HH:mm' }}</td>
+                    <td><span class="badge" [class]="p.estadoPrestamo">{{ p.estadoPrestamo }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+  </main>
+</div>

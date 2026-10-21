@@ -3,12 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface ReservaBackend {
-  idReserva?: number;
+  idReserva: number;
   idLibro: number;
-  idUsuario: number;
-  fechaReserva?: string;
-  posicionCola?: number;
-  estadoReserva?: string;
+  tituloLibro: string;
+  autor: string;
+  categoria: string;
+  idPrestatario: number;
+  nombrePrestatario: string;
+  fechaReserva: string;
+  fechaRecojoLimite: string;
+  estadoReserva: string;
 }
 
 @Injectable({
@@ -18,11 +22,20 @@ export class ReservaService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8080/api/reservas';
 
-  crearReserva(idLibro: number, idUsuario: number): Observable<ReservaBackend> {
-    return this.http.post<ReservaBackend>(this.apiUrl, { idLibro, idUsuario });
+  /** fechaRecojoLimite en formato local "AAAA-MM-DDTHH:mm:ss" (hasta cuándo puede recoger el libro). */
+  crearReserva(idLibro: number, idUsuario: number, fechaRecojoLimite: string): Observable<ReservaBackend> {
+    return this.http.post<ReservaBackend>(this.apiUrl, { idLibro, idUsuario, fechaRecojoLimite });
   }
 
   getReservasPorUsuario(idUsuario: number): Observable<ReservaBackend[]> {
     return this.http.get<ReservaBackend[]>(`${this.apiUrl}/usuario/${idUsuario}`);
+  }
+
+  getTodas(): Observable<ReservaBackend[]> {
+    return this.http.get<ReservaBackend[]>(this.apiUrl);
+  }
+
+  cancelar(idReserva: number): Observable<{ mensaje: string }> {
+    return this.http.put<{ mensaje: string }>(`${this.apiUrl}/${idReserva}/cancelar`, {});
   }
 }

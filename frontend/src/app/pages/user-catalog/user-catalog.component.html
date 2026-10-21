@@ -62,6 +62,10 @@
           <div style="padding: 3rem; text-align: center; color: #78716c;">
             Cargando catálogo...
           </div>
+        } @else if (errorCatalogo()) {
+          <div style="padding: 1rem; background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 8px;">
+            No se pudo cargar el catálogo: {{ errorCatalogo() }}
+          </div>
         } @else {
           <div class="books-grid">
             @for (book of filteredBooks(); track book.id) {
@@ -74,8 +78,8 @@
                   <h3 class="book-title" [title]="book.title">{{ book.title }}</h3>
                   <p class="book-author">{{ book.author }}</p>
                   <div class="card-action">
-                    <button class="btn-reserve" (click)="abrirModalConfiguracion(book)">
-                      Reservar
+                    <button class="btn-reserve" (click)="abrirModalConfiguracion(book)" [disabled]="book.stock === 0">
+                      {{ book.stock === 0 ? 'Agotado' : 'Reservar' }}
                     </button>
                   </div>
                 </div>
@@ -159,6 +163,12 @@
             </select>
           </div>
         </div>
+
+        @if (errorReserva()) {
+          <div style="background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 0.6rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem;">
+            {{ errorReserva() }}
+          </div>
+        }
 
         <div class="modal-actions-row">
           <button class="btn-cancel-modal" (click)="cerrarModalConfiguracion()">Cancelar</button>

@@ -1,10 +1,11 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { HeaderComponent } from '../../components/header/header.component';
 import { LibroService, LibroBackend } from '../../services/libro.service';
 import { AuthService } from '../../services/auth.service';
-import { ReservaService } from '../../services/reserva.service';
+import { ReservaBackend, ReservaService } from '../../services/reserva.service';
 
 export interface CatalogBook {
   id: number;
@@ -48,7 +49,7 @@ export class UserCatalogComponent implements OnInit {
   readonly modalCancelar = signal<ReservaActiva | null>(null);
   readonly modalCanceladaExitosa = signal<boolean>(false);
 
-  fechaSeleccionada: string = '2026-09-24';
+  fechaSeleccionada: string = this.hoy();
   horarioSeleccionado: string = '08:30 - 11:30';
 
   readonly categories: string[] = [
@@ -61,18 +62,9 @@ export class UserCatalogComponent implements OnInit {
   ];
 
   readonly books = signal<CatalogBook[]>([]);
-  readonly misReservas = signal<ReservaActiva[]>([
-    {
-      idReserva: 1,
-      idLibro: 4,
-      titulo: 'La Ciudad y los Perros',
-      autor: 'Mario Vargas Llosa',
-      categoria: 'Arte y Cultura',
-      coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=400&q=80',
-      fechaRecojo: '24/09/2026',
-      horario: '14:30 - 17:30'
-    }
-  ]);
+  readonly misReservas = signal<ReservaActiva[]>([]);
+  readonly errorReserva = signal<string>('');
+  readonly errorCatalogo = signal<string>('');
 
   private defaultCovers: Record<string, string> = {
     'don quijote': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80',
@@ -85,94 +77,58 @@ export class UserCatalogComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarLibros();
+    this.cargarReservas();
   }
 
   cargarLibros(): void {
     this.cargando.set(true);
+    this.errorCatalogo.set('');
     this.libroService.getLibros().subscribe({
       next: (data: LibroBackend[]) => {
-        if (data && data.length > 0) {
-          const mapeados = data.map(item => {
-            const autorStr = item.autores && item.autores.length > 0 
-              ? `${item.autores[0].nombre} ${item.autores[0].apellido}`
-              : 'Autor';
-            
-            const catStr = item.categoria ? item.categoria.nombre : 'Arte y Cultura';
-            
-            let cover = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80';
-            const lower = item.titulo.toLowerCase();
-            for (const key of Object.keys(this.defaultCovers)) {
-              if (lower.includes(key)) {
-                cover = this.defaultCovers[key];
-                break;
-              }
-            }
-
-            return {
-              id: item.idLibro,
-              title: item.titulo,
-              author: autorStr,
-              category: catStr,
-              coverImage: cover,
-              stock: item.stock
-            };
-          });
-          this.books.set(mapeados);
-        } else {
-          this.cargarFallback();
-        }
+        this.books.set(data.map(item => ({
+          id: item.idLibro,
+          title: item.titulo,
+          author: item.autores && item.autores.length > 0
+            ? `${item.autores[0].nombre} ${item.autores[0].apellido}`
+            : 'Autor desconocido',
+          category: item.categoria ? item.categoria.nombre : '',
+          coverImage: this.portada(item.titulo),
+          stock: item.stock
+        })));
         this.cargando.set(false);
       },
-      error: () => {
-        this.cargarFallback();
+      error: (err: HttpErrorResponse) => {
+        this.errorCatalogo.set(this.mensajeDeError(err));
         this.cargando.set(false);
       }
     });
   }
 
-  private cargarFallback(): void {
-    this.books.set([
-      {
-        id: 1,
-        title: 'Clean Code',
-        author: 'Robert Martin',
-        category: 'Tecnología',
-        coverImage: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=400&q=80',
-        stock: 3
+  /** Mis reservas: se piden al backend (solo las pendientes de recojo). */
+  cargarReservas(): void {
+    const usuario = this.authService.usuarioActual();
+    if (!usuario) return;
+
+    this.reservaService.getReservasPorUsuario(usuario.idUsuario).subscribe({
+      next: (data: ReservaBackend[]) => {
+        this.misReservas.set(data
+          .filter(r => r.estadoReserva === 'pendiente')
+          .map(r => {
+            const limite = new Date(r.fechaRecojoLimite);
+            return {
+              idReserva: r.idReserva,
+              idLibro: r.idLibro,
+              titulo: r.tituloLibro,
+              autor: r.autor,
+              categoria: r.categoria,
+              coverImage: this.portada(r.tituloLibro),
+              fechaRecojo: limite.toLocaleDateString('es-PE'),
+              horario: 'hasta las ' + limite.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+            };
+          }));
       },
-      {
-        id: 2,
-        title: 'Core Java Volume I',
-        author: 'Cay Horstmann',
-        category: 'Tecnología',
-        coverImage: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=400&q=80',
-        stock: 2
-      },
-      {
-        id: 3,
-        title: 'Cien Años de Soledad',
-        author: 'Gabriel García Márquez',
-        category: 'Arte y Cultura',
-        coverImage: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80',
-        stock: 1
-      },
-      {
-        id: 4,
-        title: 'La Ciudad y los Perros',
-        author: 'Mario Vargas Llosa',
-        category: 'Arte y Cultura',
-        coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=400&q=80',
-        stock: 2
-      },
-      {
-        id: 5,
-        title: 'Don Quijote de la Mancha',
-        author: 'Miguel de Cervantes',
-        category: 'Arte y Cultura',
-        coverImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80',
-        stock: 3
-      }
-    ]);
+      error: () => this.misReservas.set([])
+    });
   }
 
   readonly filteredBooks = computed(() => {
@@ -181,8 +137,8 @@ export class UserCatalogComponent implements OnInit {
 
     return this.books().filter(b => {
       const matchCat = cat === 'Todas' || b.category.toLowerCase() === cat.toLowerCase();
-      const matchQuery = !term || 
-        b.title.toLowerCase().includes(term) || 
+      const matchQuery = !term ||
+        b.title.toLowerCase().includes(term) ||
         b.author.toLowerCase().includes(term);
       return matchCat && matchQuery;
     });
@@ -201,6 +157,7 @@ export class UserCatalogComponent implements OnInit {
   }
 
   abrirModalConfiguracion(book: CatalogBook): void {
+    this.errorReserva.set('');
     this.modalConfiguracion.set(book);
   }
 
@@ -210,33 +167,22 @@ export class UserCatalogComponent implements OnInit {
 
   confirmarReserva(book: CatalogBook): void {
     const usuario = this.authService.usuarioActual();
-    const idUsuario = usuario ? usuario.idUsuario : 3;
+    if (!usuario) return;
 
-    this.reservaService.crearReserva(book.id, idUsuario).subscribe({
-      next: (res) => {
-        this.agregarReservaLocal(book, res.idReserva || Date.now());
+    // El límite de recojo es el final del turno elegido. Ej: "08:30 - 11:30" -> 11:30
+    const horaFin = this.horarioSeleccionado.split(' - ')[1];
+    const fechaRecojoLimite = `${this.fechaSeleccionada}T${horaFin}:00`;
+
+    this.errorReserva.set('');
+    this.reservaService.crearReserva(book.id, usuario.idUsuario, fechaRecojoLimite).subscribe({
+      next: () => {
+        this.modalConfiguracion.set(null);
+        this.modalReservaRealizada.set(true);
+        this.cargarReservas();
+        this.cargarLibros();
       },
-      error: () => {
-        this.agregarReservaLocal(book, Date.now());
-      }
+      error: (err: HttpErrorResponse) => this.errorReserva.set(this.mensajeDeError(err))
     });
-
-    this.modalConfiguracion.set(null);
-    this.modalReservaRealizada.set(true);
-  }
-
-  private agregarReservaLocal(book: CatalogBook, idReserva: number): void {
-    const nueva: ReservaActiva = {
-      idReserva: idReserva,
-      idLibro: book.id,
-      titulo: book.title,
-      autor: book.author,
-      categoria: book.category,
-      coverImage: book.coverImage,
-      fechaRecojo: this.fechaSeleccionada,
-      horario: this.horarioSeleccionado
-    };
-    this.misReservas.update(lista => [nueva, ...lista]);
   }
 
   cerrarModalReservaRealizada(): void {
@@ -252,12 +198,39 @@ export class UserCatalogComponent implements OnInit {
   }
 
   ejecutarCancelacion(item: ReservaActiva): void {
-    this.misReservas.update(lista => lista.filter(r => r.idReserva !== item.idReserva));
-    this.modalCancelar.set(null);
-    this.modalCanceladaExitosa.set(true);
+    this.reservaService.cancelar(item.idReserva).subscribe({
+      next: () => {
+        this.modalCancelar.set(null);
+        this.modalCanceladaExitosa.set(true);
+        this.cargarReservas();
+        this.cargarLibros();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.modalCancelar.set(null);
+        alert(this.mensajeDeError(err));
+      }
+    });
   }
 
   cerrarModalCanceladaExitosa(): void {
     this.modalCanceladaExitosa.set(false);
+  }
+
+  private portada(titulo: string): string {
+    const lower = titulo.toLowerCase();
+    const clave = Object.keys(this.defaultCovers).find(k => lower.includes(k));
+    return clave ? this.defaultCovers[clave] : this.defaultCovers['don quijote'];
+  }
+
+  /** Fecha de hoy en formato AAAA-MM-DD (hora local, para el input type="date"). */
+  private hoy(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  private mensajeDeError(err: HttpErrorResponse): string {
+    return err.status === 0
+      ? 'No se pudo conectar con el backend (puerto 8080)'
+      : err.error?.mensaje || 'Ocurrió un error inesperado';
   }
 }

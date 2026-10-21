@@ -13,14 +13,34 @@ export interface LibroBackend {
   categoria?: {
     idCategoria: number;
     nombre: string;
-    descripcion?: string;
   };
   autores?: Array<{
     idAutor: number;
     nombre: string;
     apellido: string;
-    nacionalidad?: string;
   }>;
+}
+
+/** Datos del formulario de libros (crear / actualizar). */
+export interface LibroForm {
+  titulo: string;
+  isbn: string;
+  anioPublicacion: number | null;
+  editorial: string;
+  stock: number | null;
+  idCategoria: number | null;
+  idsAutores: number[];
+}
+
+export interface Categoria {
+  idCategoria: number;
+  nombre: string;
+}
+
+export interface Autor {
+  idAutor: number;
+  nombre: string;
+  apellido: string;
 }
 
 @Injectable({
@@ -40,5 +60,25 @@ export class LibroService {
 
   buscar(query: string): Observable<LibroBackend[]> {
     return this.http.get<LibroBackend[]>(`${this.apiUrl}/buscar?q=${encodeURIComponent(query)}`);
+  }
+
+  crear(form: LibroForm): Observable<LibroBackend> {
+    return this.http.post<LibroBackend>(this.apiUrl, form);
+  }
+
+  actualizar(idLibro: number, form: LibroForm): Observable<LibroBackend> {
+    return this.http.put<LibroBackend>(`${this.apiUrl}/${idLibro}`, form);
+  }
+
+  darDeBaja(idLibro: number): Observable<{ mensaje: string }> {
+    return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/${idLibro}`);
+  }
+
+  getCategorias(): Observable<Categoria[]> {
+    return this.http.get<Categoria[]>('http://localhost:8080/api/categorias');
+  }
+
+  getAutores(): Observable<Autor[]> {
+    return this.http.get<Autor[]>('http://localhost:8080/api/autores');
   }
 }

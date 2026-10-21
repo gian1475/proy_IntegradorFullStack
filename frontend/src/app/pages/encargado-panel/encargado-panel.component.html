@@ -1,0 +1,156 @@
+<div class="panel-layout">
+  <app-header></app-header>
+
+  <main class="panel-main">
+    <h1 class="panel-title">Panel del Encargado</h1>
+    <p class="panel-subtitle">Bienvenido, {{ authService.usuarioActual()?.nombre }}. Préstamos en sala (máximo 3 horas).</p>
+
+    <nav class="panel-tabs">
+      <button [class.active]="pestana() === 'activos'" (click)="cambiarPestana('activos')">Préstamos activos</button>
+      <button [class.active]="pestana() === 'registrar'" (click)="cambiarPestana('registrar')">Registrar préstamo</button>
+      <button [class.active]="pestana() === 'reservas'" (click)="cambiarPestana('reservas')">Reservas pendientes</button>
+    </nav>
+
+    @if (mensajeOk()) {
+      <div class="alert ok">{{ mensajeOk() }}</div>
+    }
+    @if (mensajeError()) {
+      <div class="alert error">{{ mensajeError() }}</div>
+    }
+
+    <!-- ===== Préstamos activos (consulta con JOIN) ===== -->
+    @if (pestana() === 'activos') {
+      <section class="panel-card">
+        <h2>Préstamos activos</h2>
+        @if (cargando()) {
+          <div class="empty">Cargando...</div>
+        } @else if (prestamos().length === 0) {
+          <div class="empty">No hay préstamos activos.</div>
+        } @else {
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Prestatario</th>
+                  <th>DNI</th>
+                  <th>Libro</th>
+                  <th>Inicio</th>
+                  <th>Hora límite</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of prestamos(); track p.idPrestamo) {
+                  <tr>
+                    <td>{{ p.idPrestamo }}</td>
+                    <td>{{ p.nombrePrestatario }}</td>
+                    <td>{{ p.dniPrestatario }}</td>
+                    <td>{{ p.tituloLibro }}</td>
+                    <td>{{ p.fechaPrestamo | date: 'dd/MM HH:mm' }}</td>
+                    <td>
+                      {{ p.fechaDevolucionPrevista | date: 'dd/MM HH:mm' }}
+                      @if (p.ampliado) { <span class="badge">ampliado</span> }
+                    </td>
+                    <td><span class="badge" [class]="p.estadoPrestamo">{{ p.estadoPrestamo }}</span></td>
+                    <td>
+                      <div class="acciones">
+                        <button class="btn secondary" (click)="ampliar(p)"
+                                [disabled]="p.ampliado || p.estadoPrestamo !== 'activo'">Ampliar</button>
+                        <button class="btn primary" (click)="abrirDevolucion(p)">Devolver</button>
+                        <button class="btn danger" (click)="anular(p)">Anular</button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- ===== Registrar préstamo ===== -->
+    @if (pestana() === 'registrar') {
+      <section class="panel-card">
+        <h2>Registrar préstamo en sala</h2>
+        <form (ngSubmit)="registrarPrestamo()">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="dni">DNI del prestatario</label>
+              <input id="dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="dniPrestatario" />
+            </div>
+            <div class="form-field">
+              <label for="libro">Libro</label>
+              <select id="libro" name="libro" [(ngModel)]="idLibroSeleccionado">
+                <option [ngValue]="null">Seleccione un libro</option>
+                @for (l of librosPrestables(); track l.idLibro) {
+                  <option [ngValue]="l.idLibro">{{ l.titulo }} (stock: {{ l.stock }})</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Registrar préstamo</button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <!-- ===== Reservas pendientes ===== -->
+    @if (pestana() === 'reservas') {
+      <section class="panel-card">
+        <h2>Reservas pendientes de recojo</h2>
+        @if (cargando()) {
+          <div class="empty">Cargando...</div>
+        } @else if (reservasPendientes().length === 0) {
+          <div class="empty">No hay reservas pendientes.</div>
+        } @else {
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Prestatario</th>
+                  <th>Libro</th>
+                  <th>Recoger antes de</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of reservasPendientes(); track r.idReserva) {
+                  <tr>
+                    <td>{{ r.idReserva }}</td>
+                    <td>{{ r.nombrePrestatario }}</td>
+                    <td>{{ r.tituloLibro }}</td>
+                    <td>{{ r.fechaRecojoLimite | date: 'dd/MM HH:mm' }}</td>
+                    <td><button class="btn primary" (click)="prestarDesdeReserva(r)">Entregar</button></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+  </main>
+
+  <!-- ===== Modal de devolución ===== -->
+  @if (prestamoADevolver(); as p) {
+    <div class="modal-backdrop">
+      <div class="modal-box">
+        <h3>Registrar devolución</h3>
+        <p>"{{ p.tituloLibro }}" – {{ p.nombrePrestatario }}. ¿En qué estado se devuelve el libro?</p>
+        <div class="opciones">
+          <label><input type="radio" name="estadoFisico" value="bueno" [(ngModel)]="estadoFisico" /> Bueno</label>
+          <label><input type="radio" name="estadoFisico" value="dañado" [(ngModel)]="estadoFisico" /> Dañado</label>
+        </div>
+        <div class="form-actions">
+          <button class="btn primary" (click)="confirmarDevolucion()">Confirmar</button>
+          <button class="btn secondary" (click)="prestamoADevolver.set(null)">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
