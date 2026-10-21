@@ -57,6 +57,11 @@ public class SesionService {
         }
     }
 
+    /** Cantidad de sesiones activas (no vencidas), para el monitoreo. */
+    public long contarActivas() {
+        return sesiones.values().stream().filter(s -> !s.estaExpirada()).count();
+    }
+
     /** Extrae el token del header "Authorization: Bearer <token>". */
     public static String tokenDesdeHeader(String header) {
         if (header == null || !header.startsWith(PREFIJO_BEARER)) {

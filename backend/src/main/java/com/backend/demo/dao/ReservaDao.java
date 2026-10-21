@@ -13,6 +13,8 @@ public interface ReservaDao extends JpaRepository<Reserva, Integer> {
     List<Reserva> findByPrestatarioIdUsuario(Integer idUsuario);
     List<Reserva> findByEstadoReserva(String estadoReserva);
 
+    long countByEstadoReserva(String estadoReserva);
+
     List<Reserva> findByPrestatarioIdUsuarioOrderByFechaReservaDesc(Integer idUsuario);
 
     List<Reserva> findAllByOrderByFechaReservaDesc();

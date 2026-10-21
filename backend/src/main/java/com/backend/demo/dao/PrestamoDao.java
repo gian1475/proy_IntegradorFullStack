@@ -1,6 +1,7 @@
 package com.backend.demo.dao;
 
 import com.backend.demo.dto.PrestamoDetalleDTO;
+import com.backend.demo.dto.ReportePrestamoDTO;
 import com.backend.demo.entity.Prestamo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,6 +13,8 @@ import java.util.List;
 
 @Repository
 public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
+
+    long countByEstadoPrestamo(String estadoPrestamo);
 
     /** ¿El libro tiene préstamos que aún no se devuelven? (para no darlo de baja). */
     boolean existsByLibroIdLibroAndEstadoPrestamoIn(Integer idLibro, List<String> estados);
@@ -31,6 +34,18 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
          + "WHERE p.estadoPrestamo IN ('activo', 'vencido') "
          + "ORDER BY p.fechaDevolucionPrevista")
     List<PrestamoDetalleDTO> listarActivosConDetalle();
+
+    /** Reporte: todos los préstamos con prestatario, encargado y libro (JOIN de cuatro tablas). */
+    @Query("SELECT new com.backend.demo.dto.ReportePrestamoDTO("
+         + "  p.idPrestamo, u.nombre, u.apellido, u.dni, e.nombre, e.apellido, l.titulo, "
+         + "  p.fechaPrestamo, p.fechaDevolucionPrevista, p.fechaDevolucionReal, "
+         + "  p.ampliado, p.estadoFisicoDevolucion, p.estadoPrestamo) "
+         + "FROM Prestamo p "
+         + "JOIN p.prestatario u "
+         + "JOIN p.encargado e "
+         + "JOIN p.libro l "
+         + "ORDER BY p.fechaPrestamo DESC")
+    List<ReportePrestamoDTO> listarParaReporte();
 
     /** Pasa a 'vencido' los préstamos activos cuya hora límite ya pasó. */
     @Modifying

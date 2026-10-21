@@ -187,12 +187,79 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 
 ---
 
+## Prioridad 4 – Librerías y pruebas ✅
+
+**Dependencias nuevas** en [pom.xml](backend/pom.xml) (versión fija para que todo el grupo use la misma):
+
+| Librería | Versión | Para qué |
+|---|---|---|
+| Google Guava | 33.4.8-jre | Bloquear el login tras varios intentos fallidos |
+| Apache POI (`poi-ooxml`) | 5.4.1 | Reporte de préstamos en Excel |
+| Apache Commons CSV | 1.14.0 | Exportar préstamos e importar libros en CSV |
+| OpenPDF | 2.0.3 | Reporte de préstamos en PDF |
+| Spring Boot Actuator | (versión de Spring Boot) | Monitoreo: salud, memoria, CPU, peticiones, BD |
+| Logback | (viene con Spring Boot) | Logs en consola y archivo |
+| JUnit 5 + Mockito | (vienen con `spring-boot-starter-webmvc-test`) | Pruebas unitarias |
+
+### Logback ✅
+- [logback-spring.xml](backend/src/main/resources/logback-spring.xml): consola + archivo `backend/logs/biblioteca.log`, un archivo por día, se guardan 30 días. La carpeta `logs/` está en el `.gitignore`.
+- Qué se registra:
+  - `AuthService`: login correcto, **login fallido (n/5)**, login bloqueado, usuario inactivo y nuevo registro. **Nunca se registra la contraseña.**
+  - `PrestamoService`: préstamo registrado (avisa si venía de una reserva), ampliado, devuelto (avisa **CON RETRASO** si pasó la hora límite) y anulado.
+  - `ReservaService`: creada, cancelada y vencida.
+  - `ReporteService`: reportes generados e importaciones.
+
+### Guava ✅
+- [seguridad/LimitadorIntentosLogin.java](backend/src/main/java/com/backend/demo/seguridad/LimitadorIntentosLogin.java): un `Cache` de Guava guarda `correo → intentos fallidos` y **borra la entrada solo a los 15 minutos** (`expireAfterWrite`). Con **5 fallos**, el login responde **429** "Demasiados intentos fallidos". Un login correcto reinicia el contador.
+- Probado en vivo: 5 intentos → 401, el 6° → 429, y todo queda en el log.
+
+### Apache POI y Commons CSV ✅
+- [service/ReporteService.java](backend/src/main/java/com/backend/demo/service/ReporteService.java):
+  - `generarExcelPrestamos()`: hoja "Préstamos" con título, fecha de generación, encabezado con color, columnas ajustadas y el encabezado fijo al bajar.
+  - `generarCsvPrestamos()`: CSV en UTF-8 con BOM, para que Excel muestre bien las tildes.
+  - `importarLibrosCsv()`: lee un CSV con columnas `titulo,isbn,anio_publicacion,editorial,stock,categoria` (acepta `,` o `;`). Cada fila se guarda por separado: si una falla, las demás igual se registran, y se informa el número de fila y el motivo.
+- [dao/PrestamoDao.java](backend/src/main/java/com/backend/demo/dao/PrestamoDao.java): nueva consulta `listarParaReporte` (JOIN prestamo + prestatario + encargado + libro). Su resultado es [dto/ReportePrestamoDTO.java](backend/src/main/java/com/backend/demo/dto/ReportePrestamoDTO.java).
+- [controller/ReporteController.java](backend/src/main/java/com/backend/demo/controller/ReporteController.java), solo Administrador: `GET /api/reportes/prestamos/excel`, `GET /api/reportes/prestamos/csv` y `POST /api/reportes/libros/csv` (archivo).
+- Frontend: pestaña **Reportes** en [admin-panel](frontend/src/app/pages/admin-panel/) y [services/reporte.service.ts](frontend/src/app/services/reporte.service.ts). La descarga se pide con HttpClient para que viaje el token.
+- Archivo de ejemplo para la demo: [database/ejemplo_importar_libros.csv](database/ejemplo_importar_libros.csv).
+
+### JUnit ✅ (34 pruebas, todas pasan: `./mvnw test`)
+
+| Clase de prueba | Qué prueba |
+|---|---|
+| [ValidadorContrasenaTest](backend/src/test/java/com/backend/demo/seguridad/ValidadorContrasenaTest.java) | 13 casos de la regla de contraseña: válidas, cada requisito que falta, 64/65 caracteres, nulo |
+| [LimitadorIntentosLoginTest](backend/src/test/java/com/backend/demo/seguridad/LimitadorIntentosLoginTest.java) | Bloqueo al 5° intento, desbloqueo a los 15 min (con un reloj falso), reinicio al acertar, contador por correo |
+| [PrestamoServiceTest](backend/src/test/java/com/backend/demo/service/PrestamoServiceTest.java) | **Cálculo de 3 horas** (incluso pasando la medianoche), ampliar solo una vez y no vencido, devolución (estado físico, stock, no devolver dos veces), anular sin borrar la fila |
+| [ReporteServiceTest](backend/src/test/java/com/backend/demo/service/ReporteServiceTest.java) | El Excel se puede abrir y tiene los datos; el PDF se genera (empieza con `%PDF`); el CSV tiene encabezado y filas; la importación crea las filas válidas y reporta las inválidas; acepta `;`; rechaza columnas incorrectas |
+| `DemoApplicationTests` (ya existía) | Spring arranca y se conecta a la BD |
+
+Las pruebas nuevas usan **Mockito** (DAOs simulados), así que no tocan la base de datos.
+
+### OpenPDF ✅ (`com.github.librepdf:openpdf:2.0.3`, elegida por el equipo el 21/10)
+- `ReporteService.generarPdfPrestamos()`: A4 horizontal, con título, fecha y total, y una tabla de 11 columnas con encabezado color marrón (el del sistema) que se repite en cada página.
+- `GET /api/reportes/prestamos/pdf` (Admin) y el botón **Descargar PDF** en la pestaña Reportes.
+
+### Monitoreo con Spring Boot Actuator ✅ (elegido por el equipo el 21/10)
+- Dependencia `spring-boot-starter-actuator`. Configuración en [application.properties](backend/src/main/resources/application.properties):
+  - Actuator corre en el **puerto 8081**, solo accesible desde la misma PC (`127.0.0.1`), separado de la API.
+  - Endpoints expuestos: `/actuator/health` (estado de la app, la **BD** y el disco), `/actuator/info` (nombre y versión) y `/actuator/metrics` (todas las métricas).
+- [service/MonitoreoService.java](backend/src/main/java/com/backend/demo/service/MonitoreoService.java) junta las métricas de Micrometer en un resumen:
+  - **Técnicas:** estado (UP/DOWN), tiempo activo, memoria heap usada y máxima, CPU, hilos, peticiones HTTP (total, con error, tiempo promedio) y conexiones a la BD (HikariCP).
+  - **Del negocio:** sesiones activas, préstamos activos y vencidos, reservas pendientes.
+- `GET /api/monitoreo` (solo Admin) y la pestaña **Monitoreo** en el panel del Administrador, con una tabla que explica cada métrica.
+- Probado en vivo: health `UP` con PostgreSQL `UP`; `/api/monitoreo` y el PDF sin token → 401.
+- Detalle técnico: `info.app.nombre` va **sin tildes**. Spring lee `application.properties` en ISO-8859-1, y Maven convierte `é` otra vez en `é` al compilar, así que la tilde se vería mal.
+
+---
+
 ## Pendientes generales
 - [ ] Actualizar el informe: mecanismo de autenticación (token de 8 h, 401/403, guards) y el máximo de 64 caracteres
 - [ ] Actualizar el comentario de `schema_postgresql.sql` que todavía dice `'123456'`
 - [ ] Confirmar cuántas horas suma una ampliación
 - [ ] Pantallas de incidencias y sanciones (Encargado) y de usuarios (Admin): no están en las prioridades actuales
-- [ ] Prioridad 4: Logback, POI (reporte Excel), Commons CSV, Guava, PDF (preguntar librería), JUnit
+- [ ] Confirmar con el profe que OpenPDF y Actuator le parecen bien (si pide otra cosa, se cambia)
+- [ ] Commit de la prioridad 4 (librerías y pruebas)
+- [ ] Prioridad 5: generar el `.jar`, alinear el README, actualizar el comentario de `123456` en el script
 - [ ] Commit del **login** (prioridades 1 y 2) y commit del **CRUD** (prioridad 3), por separado
 
 ## Capturas para el anexo
@@ -217,3 +284,12 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 3 | Admin: registrar, editar y dar de baja un libro (y que desaparezca del catálogo) | ⬜ |
 | 3 | Prestatario: reservar → aparece en "Mis Reservas" → cancelar | ⬜ |
 | 3 | Código: `PrestamoDao` (consulta de una tabla + consulta con JOIN) y `PrestamoService.registrar` | ⬜ |
+| 4 | Login bloqueado tras 5 intentos (mensaje "Demasiados intentos fallidos") | ⬜ |
+| 4 | Contenido de `backend/logs/biblioteca.log` con logins fallidos y préstamos | ⬜ |
+| 4 | Excel descargado y abierto (encabezado con color) | ⬜ |
+| 4 | CSV descargado; importación de `ejemplo_importar_libros.csv` con el resultado | ⬜ |
+| 4 | PDF descargado y abierto | ⬜ |
+| 4 | Pestaña Monitoreo del admin con las métricas | ⬜ |
+| 4 | Navegador en `http://localhost:8081/actuator/health` (db: UP) | ⬜ |
+| 4 | Terminal con `./mvnw test` → 34 pruebas, BUILD SUCCESS | ⬜ |
+| 4 | Código: `LimitadorIntentosLogin` (Guava), `ReporteService` (POI y CSV), `logback-spring.xml` | ⬜ |

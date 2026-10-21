@@ -6,8 +6,9 @@ import { HeaderComponent } from '../../components/header/header.component';
 import { AuthService } from '../../services/auth.service';
 import { Autor, Categoria, LibroBackend, LibroForm, LibroService } from '../../services/libro.service';
 import { PrestamoDetalle, PrestamoService } from '../../services/prestamo.service';
+import { FormatoReporte, Monitoreo, ReporteService, ResultadoImportacion } from '../../services/reporte.service';
 
-type Pestana = 'libros' | 'prestamos';
+type Pestana = 'libros' | 'prestamos' | 'reportes' | 'monitoreo';
 
 @Component({
   selector: 'app-admin-panel',
@@ -20,6 +21,12 @@ export class AdminPanelComponent implements OnInit {
   authService = inject(AuthService);
   private libroService = inject(LibroService);
   private prestamoService = inject(PrestamoService);
+  private reporteService = inject(ReporteService);
+
+  readonly descargando = signal(false);
+  readonly resultadoImportacion = signal<ResultadoImportacion | null>(null);
+  readonly monitoreo = signal<Monitoreo | null>(null);
+  archivoCsv: File | null = null;
 
   readonly pestana = signal<Pestana>('libros');
   readonly mensajeOk = signal('');
@@ -44,6 +51,7 @@ export class AdminPanelComponent implements OnInit {
     this.pestana.set(p);
     this.limpiarMensajes();
     if (p === 'libros') this.cargarLibros();
+    if (p === 'monitoreo') this.cargarMonitoreo();
     if (p === 'prestamos') {
       this.prestamoService.listarActivos().subscribe({
         next: data => this.prestamos.set(data),
@@ -102,6 +110,55 @@ export class AdminPanelComponent implements OnInit {
       next: res => { this.mensajeOk.set(res.mensaje); this.cargarLibros(); },
       error: err => this.mostrarError(err)
     });
+  }
+
+  // ---------- Reportes ----------
+
+  descargar(formato: FormatoReporte): void {
+    this.limpiarMensajes();
+    this.descargando.set(true);
+    this.reporteService.descargarPrestamos(formato).subscribe({
+      next: () => {
+        this.descargando.set(false);
+        this.mensajeOk.set(`Reporte ${formato.toUpperCase()} descargado`);
+      },
+      error: err => { this.descargando.set(false); this.mostrarError(err); }
+    });
+  }
+
+  seleccionarArchivo(evento: Event): void {
+    const input = evento.target as HTMLInputElement;
+    this.archivoCsv = input.files?.[0] ?? null;
+    this.resultadoImportacion.set(null);
+  }
+
+  importarCsv(): void {
+    if (!this.archivoCsv) {
+      this.mensajeError.set('Seleccione un archivo CSV');
+      return;
+    }
+    this.limpiarMensajes();
+    this.reporteService.importarLibros(this.archivoCsv).subscribe({
+      next: resultado => this.resultadoImportacion.set(resultado),
+      error: err => this.mostrarError(err)
+    });
+  }
+
+  // ---------- Monitoreo ----------
+
+  cargarMonitoreo(): void {
+    this.reporteService.obtenerMonitoreo().subscribe({
+      next: datos => this.monitoreo.set(datos),
+      error: err => this.mostrarError(err)
+    });
+  }
+
+  /** 3725 segundos -> "1 h 2 min" */
+  formatearTiempo(segundos: number | null): string {
+    if (segundos === null) return '-';
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    return horas > 0 ? `${horas} h ${minutos} min` : `${minutos} min`;
   }
 
   nombreAutores(libro: LibroBackend): string {

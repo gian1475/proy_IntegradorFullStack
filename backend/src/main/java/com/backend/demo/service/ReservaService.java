@@ -8,6 +8,8 @@ import com.backend.demo.entity.Libro;
 import com.backend.demo.entity.Reserva;
 import com.backend.demo.entity.Usuario;
 import com.backend.demo.exception.NegocioException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ import java.util.Optional;
  */
 @Service
 public class ReservaService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReservaService.class);
 
     public static final int DIAS_MAXIMOS_ANTICIPACION = 7;
 
@@ -71,7 +75,10 @@ public class ReservaService {
         reserva.setEstadoReserva("pendiente");
         reserva.setPosicionCola(1);
 
-        return ReservaRespuestaDTO.desde(reservaDao.save(reserva));
+        Reserva guardada = reservaDao.save(reserva);
+        log.info("Reserva #{} creada: libro '{}' para usuario {}, recojo hasta {}",
+                guardada.getIdReserva(), libro.getTitulo(), prestatario.getIdUsuario(), dto.getFechaRecojoLimite());
+        return ReservaRespuestaDTO.desde(guardada);
     }
 
     @Transactional
@@ -102,6 +109,7 @@ public class ReservaService {
         reserva.setEstadoReserva("cancelada");
         reservaDao.save(reserva);
         libroService.reponerStock(reserva.getLibro().getIdLibro());
+        log.info("Reserva #{} cancelada", idReserva);
     }
 
     /**
@@ -127,6 +135,7 @@ public class ReservaService {
             r.setEstadoReserva("vencida");
             reservaDao.save(r);
             libroService.reponerStock(r.getLibro().getIdLibro());
+            log.info("Reserva #{} vencida sin recoger; ejemplar liberado", r.getIdReserva());
         }
     }
 

@@ -11,6 +11,8 @@ import com.backend.demo.entity.Libro;
 import com.backend.demo.entity.Prestamo;
 import com.backend.demo.entity.Usuario;
 import com.backend.demo.exception.NegocioException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,8 @@ import java.util.List;
 /** Reglas del negocio de los préstamos en sala. */
 @Service
 public class PrestamoService {
+
+    private static final Logger log = LoggerFactory.getLogger(PrestamoService.class);
 
     public static final int HORAS_PRESTAMO = 3;
     public static final int HORAS_AMPLIACION = 3;
@@ -85,7 +89,11 @@ public class PrestamoService {
         prestamo.setAmpliado(false);
         prestamo.setEstadoPrestamo("activo");
 
-        return PrestamoDTO.desde(prestamoDao.save(prestamo));
+        Prestamo guardado = prestamoDao.save(prestamo);
+        log.info("Préstamo #{} registrado: libro '{}' a DNI {} (encargado {}), límite {}{}",
+                guardado.getIdPrestamo(), libro.getTitulo(), prestatario.getDni(), idEncargado,
+                guardado.getFechaDevolucionPrevista(), veniaDeReserva ? " [desde reserva]" : "");
+        return PrestamoDTO.desde(guardado);
     }
 
     // ---------- CONSULTAR ----------
@@ -127,6 +135,7 @@ public class PrestamoService {
 
         prestamo.setFechaDevolucionPrevista(prestamo.getFechaDevolucionPrevista().plusHours(HORAS_AMPLIACION));
         prestamo.setAmpliado(true);
+        log.info("Préstamo #{} ampliado hasta {}", idPrestamo, prestamo.getFechaDevolucionPrevista());
         return PrestamoDTO.desde(prestamoDao.save(prestamo));
     }
 
@@ -148,6 +157,8 @@ public class PrestamoService {
         prestamo.setEstadoPrestamo("devuelto");
 
         libroService.reponerStock(prestamo.getLibro().getIdLibro());
+        boolean conRetraso = prestamo.getFechaDevolucionReal().isAfter(prestamo.getFechaDevolucionPrevista());
+        log.info("Préstamo #{} devuelto en estado '{}'{}", idPrestamo, estadoFisico, conRetraso ? " CON RETRASO" : "");
         return PrestamoDTO.desde(prestamoDao.save(prestamo));
     }
 
@@ -166,6 +177,7 @@ public class PrestamoService {
         }
         prestamo.setEstadoPrestamo("anulado");
         prestamoDao.save(prestamo);
+        log.info("Préstamo #{} anulado (eliminación lógica)", idPrestamo);
     }
 
     // ---------- Auxiliares ----------

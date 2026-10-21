@@ -7,9 +7,12 @@ import com.backend.demo.dto.RegistroDTO;
 import com.backend.demo.dto.UsuarioDTO;
 import com.backend.demo.entity.Usuario;
 import com.backend.demo.exception.NegocioException;
+import com.backend.demo.seguridad.LimitadorIntentosLogin;
 import com.backend.demo.seguridad.Rol;
 import com.backend.demo.seguridad.Sesion;
 import com.backend.demo.seguridad.ValidadorContrasena;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,32 +21,48 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private final UsuarioDao usuarioDao;
     private final SesionService sesionService;
+    private final LimitadorIntentosLogin limitador;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public AuthService(UsuarioDao usuarioDao, SesionService sesionService) {
+    public AuthService(UsuarioDao usuarioDao, SesionService sesionService, LimitadorIntentosLogin limitador) {
         this.usuarioDao = usuarioDao;
         this.sesionService = sesionService;
+        this.limitador = limitador;
     }
 
     public LoginRespuestaDTO login(LoginDTO loginDTO) {
         if (loginDTO.getCorreo() == null || loginDTO.getContrasena() == null) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, "Datos incompletos");
         }
+        String correo = loginDTO.getCorreo().trim().toLowerCase();
 
-        Usuario usuario = usuarioDao.findByCorreo(loginDTO.getCorreo().trim().toLowerCase())
-                .orElseThrow(() -> new NegocioException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas"));
+        if (limitador.estaBloqueado(correo)) {
+            log.warn("Login bloqueado por intentos fallidos: {}", correo);
+            throw new NegocioException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Demasiados intentos fallidos. Intente de nuevo en "
+                    + LimitadorIntentosLogin.TIEMPO_BLOQUEO.toMinutes() + " minutos");
+        }
 
-        if (!passwordEncoder.matches(loginDTO.getContrasena(), usuario.getContrasena())) {
+        Usuario usuario = usuarioDao.findByCorreo(correo).orElse(null);
+        if (usuario == null || !passwordEncoder.matches(loginDTO.getContrasena(), usuario.getContrasena())) {
+            int intentos = limitador.registrarFallo(correo);
+            log.warn("Login fallido ({}/{}): {}", intentos, LimitadorIntentosLogin.MAX_INTENTOS, correo);
             throw new NegocioException(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         if ("inactivo".equals(usuario.getEstado())) {
+            log.warn("Login rechazado, usuario inactivo: {}", correo);
             throw new NegocioException(HttpStatus.FORBIDDEN, "El usuario se encuentra inactivo");
         }
 
-        return iniciarSesion(usuario, obtenerRol(usuario.getIdUsuario()));
+        limitador.registrarExito(correo);
+        String rol = obtenerRol(usuario.getIdUsuario());
+        log.info("Login correcto: {} ({})", correo, rol);
+        return iniciarSesion(usuario, rol);
     }
 
     @Transactional
@@ -79,6 +98,7 @@ public class AuthService {
         Usuario guardado = usuarioDao.save(nuevo);
         usuarioDao.registrarComoPrestatario(guardado.getIdUsuario());
 
+        log.info("Nuevo prestatario registrado: {}", correo);
         return iniciarSesion(guardado, Rol.PRESTATARIO);
     }
 
