@@ -24,3 +24,6 @@ Desktop.ini
 *.env
 application-secret.properties
 neon.json
+
+# Docs
+docs/Avance II Integrador (1).pdf
