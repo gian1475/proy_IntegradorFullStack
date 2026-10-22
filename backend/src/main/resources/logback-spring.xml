@@ -22,8 +22,8 @@
         </encoder>
     </appender>
 
-    <!-- Nuestro código (com.backend.demo) se registra en consola y en el archivo -->
-    <logger name="com.backend.demo" level="INFO" additivity="false">
+    <!-- Nuestro código (com.alejandria.biblioteca) se registra en consola y en el archivo -->
+    <logger name="com.alejandria.biblioteca" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ARCHIVO"/>
     </logger>
