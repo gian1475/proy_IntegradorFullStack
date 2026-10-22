@@ -1,6 +1,6 @@
 -- =====================================================================
 -- BASE DE DATOS POSTGRESQL: Sistema de Biblioteca (Biblioteca de Alejandría)
--- Transpilado directamente desde docs/modelofisico.sql y diccionario_de_datos.md
+-- Basado en docs/modelofisico_postgresql.sql (incluye la migracion_01_prestamo.sql)
 -- =====================================================================
 
 -- 0. Limpieza previa de tablas en cascada
@@ -22,7 +22,7 @@ CREATE TABLE usuario (
     id_usuario      SERIAL PRIMARY KEY,
     nombre          VARCHAR(50)  NOT NULL,
     apellido        VARCHAR(50)  NOT NULL,
-    dni             CHAR(8)      NOT NULL,
+    dni             VARCHAR(8)   NOT NULL,
     correo          VARCHAR(100) NOT NULL,
     contrasena      VARCHAR(255) NOT NULL,
     estado          VARCHAR(20)  NOT NULL,
@@ -33,6 +33,8 @@ CREATE TABLE usuario (
 );
 
 -- 2. Subtipos de USUARIO (Herencia JOINED)
+-- perfiles: usuario es la tabla padre y estas 3 son los perfiles.
+-- perfil 1 = administrador, perfil 2 = encargado, perfil 3 = prestatario
 CREATE TABLE administrador (
     id_usuario      INTEGER PRIMARY KEY,
     nivel_acceso    VARCHAR(30)  NOT NULL,
@@ -165,6 +167,7 @@ CREATE TABLE sancion (
     id_sancion      SERIAL PRIMARY KEY,
     id_incidencia   INTEGER NOT NULL,
     tipo_sancion    VARCHAR(50)  NOT NULL,
+    monto           DECIMAL(8,2) NULL,
     descripcion     VARCHAR(255) NULL,
     fecha_inicio    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_fin       TIMESTAMP NULL,
@@ -176,8 +179,10 @@ CREATE TABLE sancion (
         ON UPDATE CASCADE,
     CONSTRAINT chk_sancion_tipo 
         CHECK (tipo_sancion IN ('advertencia', 'suspensión', 'multa')),
-    CONSTRAINT chk_sancion_estado 
+    CONSTRAINT chk_sancion_estado
         CHECK (estado_sancion IN ('activa', 'cumplida', 'cancelada')),
+    CONSTRAINT chk_sancion_monto
+        CHECK (monto IS NULL OR monto >= 0),
     CONSTRAINT chk_sancion_fechas 
         CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio)
 );
@@ -230,23 +235,27 @@ INSERT INTO autor (nombre, apellido, nacionalidad) VALUES
 
 INSERT INTO libro (id_categoria, titulo, isbn, anio_publicacion, editorial, stock, estado_libro) VALUES
 (4, 'Clean Code', '9780132350884', 2008, 'Prentice Hall', 3, 'disponible'),
-(4, 'Core Java Volume I', '9780135166307', 2020, 'Prentice Hall', 2, 'disponible'),
-(3, 'Cien Años de Soledad', '9780307474728', 1967, 'Sudamericana', 1, 'disponible'),
-(3, 'La Ciudad y los Perros', '9788420471839', 1963, 'Seix Barral', 2, 'disponible')
+(4, 'Core Java Volume I', '9780135166307', 2018, 'Prentice Hall', 2, 'disponible'),
+(3, 'Cien Años de Soledad', '9780307474728', 2009, 'Vintage Español', 1, 'disponible'),
+(3, 'La Ciudad y los Perros', '9788432221026', 1984, 'Seix Barral', 2, 'disponible')
 ON CONFLICT (isbn) DO NOTHING;
 
 INSERT INTO libro_autor (id_libro, id_autor) VALUES
 (1, 2), (2, 4), (3, 1), (4, 3)
 ON CONFLICT DO NOTHING;
 
--- Usuarios iniciales (Contraseña de prueba: '123456' con hash BCrypt)
--- Hash real para '123456': $2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y
+-- Usuarios iniciales. La contraseña se guarda como hash BCrypt (nunca en texto plano).
+-- El hash es de una contraseña de prueba que cumple la regla de seguridad.
+-- Para cambiarla: backend\herramientas\cambiar-contrasena.cmd
+-- La contraseña de prueba la maneja el equipo y no se escribe en el repositorio.
 INSERT INTO usuario (nombre, apellido, dni, correo, contrasena, estado) VALUES
-('Admin', 'Principal', '11111111', 'admin@alejandria.edu.pe', '$2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y', 'activo'),
-('Carlos', 'Librero', '22222222', 'encargado@alejandria.edu.pe', '$2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y', 'activo'),
-('Juan', 'Estudiante', '33333333', 'alumno@alejandria.edu.pe', '$2a$10$ZCcTxVz1N.hEqEIUM5I9V..OXtXecJJSBP3BlZ9KfusVipQ3Q/i/y', 'activo')
+('Admin', 'Principal', '11111111', 'admin@alejandria.edu.pe', '$2a$10$unPYEyqjsqMSyZmhKg8KLu6kRD7DmEMsynrhMIdyD3jTeh3ixB2Re', 'activo'),
+('Carlos', 'Librero', '22222222', 'encargado@alejandria.edu.pe', '$2a$10$unPYEyqjsqMSyZmhKg8KLu6kRD7DmEMsynrhMIdyD3jTeh3ixB2Re', 'activo'),
+('Juan', 'Estudiante', '33333333', 'alumno@alejandria.edu.pe', '$2a$10$unPYEyqjsqMSyZmhKg8KLu6kRD7DmEMsynrhMIdyD3jTeh3ixB2Re', 'activo')
 ON CONFLICT (dni) DO NOTHING;
 
+-- crear perfil 1 (admin) y crear perfil 2 (encargado): se crean aqui en la bd.
+-- crear perfil 3 (prestatario): este es de prueba, los demas se crean al registrarse (AuthService.registro)
 INSERT INTO administrador (id_usuario, nivel_acceso) VALUES (1, 'SUPER_ADMIN') ON CONFLICT DO NOTHING;
 INSERT INTO encargado (id_usuario, turno) VALUES (2, 'mañana') ON CONFLICT DO NOTHING;
 INSERT INTO prestatario (id_usuario, tiempos_suspendido) VALUES (3, 0) ON CONFLICT DO NOTHING;
