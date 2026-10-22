@@ -13,12 +13,12 @@
 
       <form (ngSubmit)="onLogin()">
         <div class="form-group">
-          <label for="username">Ingresa tu nombre de Usuario o Correo</label>
+          <label for="username">Ingresa tu correo</label>
           <input
             id="username"
-            type="text"
+            type="email"
             class="form-input"
-            placeholder="usuario o correo@alejandria.edu.pe"
+            placeholder="correo@alejandria.edu.pe"
             [(ngModel)]="email"
             name="email"
             required
@@ -39,7 +39,7 @@
         </div>
 
         <div class="forgot-link-wrapper">
-          <a href="javascript:void(0)" class="forgot-link">¿Olvidaste tu Contraseña?</a>
+          <span class="forgot-link">¿Olvidaste tu contraseña? Acércate a la ventanilla de la biblioteca.</span>
         </div>
 
         <div class="button-group-row">

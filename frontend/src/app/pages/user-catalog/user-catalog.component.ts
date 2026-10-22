@@ -6,6 +6,9 @@ import { HeaderComponent } from '../../components/header/header.component';
 import { LibroService, LibroBackend } from '../../services/libro.service';
 import { AuthService } from '../../services/auth.service';
 import { ReservaBackend, ReservaService } from '../../services/reserva.service';
+import { Prestamo, PrestamoService } from '../../services/prestamo.service';
+import { mensajeDeError } from '../../utils/mensaje-error';
+import { portadaPorIsbn, usarPortadaPorDefecto } from '../../utils/portada';
 
 export interface CatalogBook {
   id: number;
@@ -34,10 +37,12 @@ export interface ReservaActiva {
   templateUrl: './user-catalog.component.html',
   styleUrl: './user-catalog.component.less',
 })
+// permisos prestatario: lo q ve el prestatario -> el catalogo, sus reservas (reservar y cancelar) y sus prestamos
 export class UserCatalogComponent implements OnInit {
   private libroService = inject(LibroService);
   private authService = inject(AuthService);
   private reservaService = inject(ReservaService);
+  private prestamoService = inject(PrestamoService);
 
   readonly selectedMenu = signal<string>('catalogo');
   readonly selectedCategory = signal<string>('Todas');
@@ -66,18 +71,40 @@ export class UserCatalogComponent implements OnInit {
   readonly errorReserva = signal<string>('');
   readonly errorCatalogo = signal<string>('');
 
-  private defaultCovers: Record<string, string> = {
-    'don quijote': 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80',
-    'cien años': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80',
-    'crimen': 'https://images.unsplash.com/photo-1532012164546-f432f2e3777f?auto=format&fit=crop&w=400&q=80',
-    'ciudad': 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=400&q=80',
-    'clean': 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=400&q=80',
-    'java': 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=400&q=80',
-  };
+  // Mis préstamos (consulta de una tabla)
+  readonly misPrestamos = signal<Prestamo[]>([]);
+  readonly errorPrestamos = signal<string>('');
+  readonly prestamosEnCurso = computed(() =>
+    this.misPrestamos().filter(p => p.estadoPrestamo === 'activo' || p.estadoPrestamo === 'vencido').length
+  );
+
+  /** Para usarla en el (error) de las imágenes del template. */
+  readonly usarPortadaPorDefecto = usarPortadaPorDefecto;
 
   ngOnInit(): void {
     this.cargarLibros();
     this.cargarReservas();
+    this.cargarPrestamos();
+  }
+
+  // consulta una tabla (front): "Mis préstamos" pide GET /api/prestamos/prestatario/{id}, que solo lee la
+  // tabla prestamo. de esa tabla se muestra una parte: inicio, hora limite, devolucion, ampliado, estado fisico
+  // y estado. no se muestran id_prestatario (es el mismo usuario) ni id_encargado.
+  // el titulo no viene en la consulta: se busca por id_libro en el catalogo q ya esta cargado en pantalla
+  cargarPrestamos(): void {
+    const usuario = this.authService.usuarioActual();
+    if (!usuario) return;
+
+    this.errorPrestamos.set('');
+    this.prestamoService.listarPorPrestatario(usuario.idUsuario).subscribe({
+      // eliminacion logica: los prestamos anulados no se le muestran al prestatario
+      next: data => this.misPrestamos.set(data.filter(p => p.estadoPrestamo !== 'anulado')),
+      error: (err: HttpErrorResponse) => this.errorPrestamos.set(mensajeDeError(err))
+    });
+  }
+
+  tituloDe(idLibro: number): string {
+    return this.books().find(b => b.id === idLibro)?.title ?? `Libro #${idLibro}`;
   }
 
   cargarLibros(): void {
@@ -89,16 +116,16 @@ export class UserCatalogComponent implements OnInit {
           id: item.idLibro,
           title: item.titulo,
           author: item.autores && item.autores.length > 0
-            ? `${item.autores[0].nombre} ${item.autores[0].apellido}`
+            ? `${item.autores[0].nombre} ${item.autores[0].apellido}` + (item.autores.length > 1 ? ' y otros' : '')
             : 'Autor desconocido',
           category: item.categoria ? item.categoria.nombre : '',
-          coverImage: this.portada(item.titulo),
+          coverImage: portadaPorIsbn(item.isbn),
           stock: item.stock
         })));
         this.cargando.set(false);
       },
       error: (err: HttpErrorResponse) => {
-        this.errorCatalogo.set(this.mensajeDeError(err));
+        this.errorCatalogo.set(mensajeDeError(err));
         this.cargando.set(false);
       }
     });
@@ -121,7 +148,7 @@ export class UserCatalogComponent implements OnInit {
               titulo: r.tituloLibro,
               autor: r.autor,
               categoria: r.categoria,
-              coverImage: this.portada(r.tituloLibro),
+              coverImage: portadaPorIsbn(r.isbnLibro),
               fechaRecojo: limite.toLocaleDateString('es-PE'),
               horario: 'hasta las ' + limite.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
             };
@@ -146,6 +173,7 @@ export class UserCatalogComponent implements OnInit {
 
   selectMenu(menu: string): void {
     this.selectedMenu.set(menu);
+    if (menu === 'prestamos') this.cargarPrestamos(); // al entrar se vuelve a consultar
   }
 
   selectCategory(cat: string): void {
@@ -165,6 +193,7 @@ export class UserCatalogComponent implements OnInit {
     this.modalConfiguracion.set(null);
   }
 
+  // reserva crear (front): el prestatario elige fecha y turno de recojo
   confirmarReserva(book: CatalogBook): void {
     const usuario = this.authService.usuarioActual();
     if (!usuario) return;
@@ -181,7 +210,7 @@ export class UserCatalogComponent implements OnInit {
         this.cargarReservas();
         this.cargarLibros();
       },
-      error: (err: HttpErrorResponse) => this.errorReserva.set(this.mensajeDeError(err))
+      error: (err: HttpErrorResponse) => this.errorReserva.set(mensajeDeError(err))
     });
   }
 
@@ -197,6 +226,7 @@ export class UserCatalogComponent implements OnInit {
     this.modalCancelar.set(null);
   }
 
+  // reserva cancelar (front)
   ejecutarCancelacion(item: ReservaActiva): void {
     this.reservaService.cancelar(item.idReserva).subscribe({
       next: () => {
@@ -207,7 +237,7 @@ export class UserCatalogComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.modalCancelar.set(null);
-        alert(this.mensajeDeError(err));
+        alert(mensajeDeError(err));
       }
     });
   }
@@ -216,21 +246,9 @@ export class UserCatalogComponent implements OnInit {
     this.modalCanceladaExitosa.set(false);
   }
 
-  private portada(titulo: string): string {
-    const lower = titulo.toLowerCase();
-    const clave = Object.keys(this.defaultCovers).find(k => lower.includes(k));
-    return clave ? this.defaultCovers[clave] : this.defaultCovers['don quijote'];
-  }
-
   /** Fecha de hoy en formato AAAA-MM-DD (hora local, para el input type="date"). */
   private hoy(): string {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
-  private mensajeDeError(err: HttpErrorResponse): string {
-    return err.status === 0
-      ? 'No se pudo conectar con el backend (puerto 8080)'
-      : err.error?.mensaje || 'Ocurrió un error inesperado';
   }
 }

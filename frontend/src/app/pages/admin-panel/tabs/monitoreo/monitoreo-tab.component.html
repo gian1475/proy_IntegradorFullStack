@@ -1,0 +1,46 @@
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<section class="panel-card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2 style="margin: 0;">Monitoreo del sistema</h2>
+    <button class="btn secondary" (click)="cargarMonitoreo()">Actualizar</button>
+  </div>
+
+  @if (monitoreo(); as m) {
+    <p class="panel-subtitle">
+      Estado general:
+      <span class="badge" [class.activo]="m.estado === 'UP'" [class.vencido]="m.estado !== 'UP'">{{ m.estado }}</span>
+      (aplicación y base de datos)
+    </p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Métrica</th><th>Valor</th><th>Qué significa</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Tiempo activo</td><td>{{ formatearTiempo(m.tiempoActivoSegundos) }}</td><td>Desde que se inició el backend</td></tr>
+          <tr><td>Memoria (heap)</td><td>{{ m.memoriaUsadaMB }} / {{ m.memoriaMaximaMB }} MB</td><td>Memoria usada por los objetos Java / máximo permitido</td></tr>
+          <tr><td>CPU del proceso</td><td>{{ m.cpuProcesoPorcentaje ?? '-' }} %</td><td>Uso de procesador del backend</td></tr>
+          <tr><td>Hilos activos</td><td>{{ m.hilosActivos ?? '-' }}</td><td>Tareas que la JVM ejecuta en paralelo</td></tr>
+          <tr><td>Peticiones HTTP</td><td>{{ m.peticionesHttp }}</td><td>Total atendidas desde el inicio</td></tr>
+          <tr><td>Peticiones con error</td><td>{{ m.peticionesConError }}</td><td>Respuestas 4xx y 5xx (por ejemplo, login fallido)</td></tr>
+          <tr><td>Tiempo de respuesta promedio</td><td>{{ m.tiempoRespuestaPromedioMs }} ms</td><td>Cuánto tarda el backend en responder</td></tr>
+          <tr><td>Conexiones a la BD</td><td>{{ m.conexionesBdActivas ?? '-' }} activas / {{ m.conexionesBdTotales ?? '-' }}</td><td>Pool de conexiones a Neon (HikariCP)</td></tr>
+          <tr><td>Sesiones activas</td><td>{{ m.sesionesActivas }}</td><td>Usuarios con sesión iniciada</td></tr>
+          <tr><td>Préstamos activos / vencidos</td><td>{{ m.prestamosActivos }} / {{ m.prestamosVencidos }}</td><td>Libros que están en sala ahora</td></tr>
+          <tr><td>Reservas pendientes</td><td>{{ m.reservasPendientes }}</td><td>Reservas aún no recogidas</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="panel-subtitle" style="margin-top: 1rem;">
+      Detalle completo de Actuator (solo desde esta PC):
+      <code>http://localhost:8081/actuator/health</code> ·
+      <code>http://localhost:8081/actuator/metrics</code>
+    </p>
+  } @else if (!mensajeError()) {
+    <div class="empty">Cargando métricas...</div>
+  }
+</section>

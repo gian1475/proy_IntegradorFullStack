@@ -1,3 +1,7 @@
+// Bootstrap encerrado en .dashboard-bootstrap (solo lo usa el dashboard del admin).
+// Va primero porque Bootstrap empieza con @charset, que tiene que ser la primera regla del archivo.
+@import "styles/bootstrap-dashboard.less";
+
 @bg-page: #fbf9f5;
 @bg-card: #ffffff;
 @bg-sidebar: #f5f1eb;
@@ -54,3 +58,7 @@ input, select {
   font-family: inherit;
   outline: none;
 }
+
+// Paneles del administrador y del encargado
+@import "styles/panel.less";
+

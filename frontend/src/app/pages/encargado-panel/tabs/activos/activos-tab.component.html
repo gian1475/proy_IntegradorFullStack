@@ -1,0 +1,90 @@
+@if (mensajeOk()) {
+  <div class="alert ok">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<!-- alertas 15 min (RF05): aviso arriba con cuantos estan vencidos o por vencer -->
+@if (cantidadVencidos() > 0) {
+  <div class="alert error">⚠ {{ cantidadVencidos() }} préstamo(s) <strong>vencido(s)</strong>: ya pasaron la hora límite.</div>
+}
+@if (cantidadPorVencer() > 0) {
+  <div class="alert aviso">⏰ {{ cantidadPorVencer() }} préstamo(s) vence(n) en {{ minutosAviso }} minutos o menos.</div>
+}
+
+<section class="panel-card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2 style="margin: 0;">Préstamos activos</h2>
+    <button class="btn secondary" (click)="cargarPrestamos()">Actualizar</button>
+  </div>
+  @if (cargando()) {
+    <div class="empty">Cargando...</div>
+  } @else if (prestamos().length === 0) {
+    <div class="empty">No hay préstamos activos.</div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Prestatario</th>
+            <th>DNI</th>
+            <th>Libro</th>
+            <th>Inicio</th>
+            <th>Hora límite</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of prestamosConAlerta(); track p.idPrestamo) {
+            <tr [class.fila-vencida]="p.alerta.tipo === 'vencido'" [class.fila-por-vencer]="p.alerta.tipo === 'por-vencer'">
+              <td>{{ p.idPrestamo }}</td>
+              <td>{{ p.nombrePrestatario }}</td>
+              <td>{{ p.dniPrestatario }}</td>
+              <td>{{ p.tituloLibro }}</td>
+              <td>{{ p.fechaPrestamo | date: 'dd/MM HH:mm' }}</td>
+              <td>
+                {{ p.fechaDevolucionPrevista | date: 'dd/MM HH:mm' }}
+                @if (p.ampliado) { <span class="badge">ampliado</span> }
+                <div class="tiempo-restante" [class]="p.alerta.tipo">{{ p.alerta.texto }}</div>
+              </td>
+              <td><span class="badge" [class]="p.alerta.tipo === 'vencido' ? 'vencido' : p.estadoPrestamo">{{ p.alerta.tipo === 'vencido' ? 'vencido' : p.estadoPrestamo }}</span></td>
+              <td>
+                <div class="acciones">
+                  <button class="btn secondary" (click)="ampliar(p)"
+                          [disabled]="p.ampliado || p.estadoPrestamo !== 'activo' || p.alerta.tipo === 'vencido'">Ampliar</button>
+                  <button class="btn primary" (click)="abrirDevolucion(p)">Devolver</button>
+                  <button class="btn danger" (click)="anular(p)">Anular</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<!-- ===== Modal de devolución ===== -->
+@if (prestamoADevolver(); as p) {
+  <div class="modal-backdrop">
+    <div class="modal-box">
+      <h3>Registrar devolución</h3>
+      <p>"{{ p.tituloLibro }}" – {{ p.nombrePrestatario }}. ¿En qué estado se devuelve el libro?</p>
+      <div class="opciones">
+        <label><input type="radio" name="estadoFisico" value="bueno" [(ngModel)]="estadoFisico" /> Bueno</label>
+        <label><input type="radio" name="estadoFisico" value="dañado" [(ngModel)]="estadoFisico" /> Dañado</label>
+      </div>
+      @if (estadoFisico === 'dañado') {
+        <!-- mantenimiento (RF02): el ejemplar danado no vuelve al stock -->
+        <p class="aviso-mantenimiento">El ejemplar no vuelve al stock: queda en mantenimiento hasta que el administrador lo reponga.</p>
+      }
+      <div class="form-actions">
+        <button class="btn primary" (click)="confirmarDevolucion()">Confirmar</button>
+        <button class="btn secondary" (click)="prestamoADevolver.set(null)">Cancelar</button>
+      </div>
+    </div>
+  </div>
+}

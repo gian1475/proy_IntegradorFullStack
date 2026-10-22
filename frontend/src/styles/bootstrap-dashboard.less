@@ -1,0 +1,18 @@
+// Bootstrap SOLO para el dashboard: todas sus reglas quedan dentro de .dashboard-bootstrap,
+// asi no cambia el diseño de las demas pantallas (que estan hechas con LESS).
+// Dentro va un elemento con data-bs-theme="light" para que se definan las variables de Bootstrap.
+.dashboard-bootstrap {
+  @import (less) "../../node_modules/bootstrap/dist/css/bootstrap.css";
+}
+
+// Colores del sistema (marrón) en vez del azul de Bootstrap, solo dentro del dashboard
+.dashboard-bootstrap [data-bs-theme=light] {
+  --bs-primary: #854d0e;
+  --bs-primary-rgb: 133, 77, 14;
+  --bs-link-color-rgb: 133, 77, 14;
+  font-family: inherit;
+
+  .progress {
+    --bs-progress-bar-bg: #854d0e;
+  }
+}

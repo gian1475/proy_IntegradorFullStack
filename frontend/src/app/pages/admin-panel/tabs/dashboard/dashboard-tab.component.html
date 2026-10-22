@@ -1,0 +1,134 @@
+<!-- dashboard: bootstrap solo funciona dentro de .dashboard-bootstrap (ver styles/bootstrap-dashboard.less) -->
+<div class="dashboard-bootstrap">
+  <div data-bs-theme="light">
+
+    @if (mensajeError()) {
+      <div class="alert alert-danger">{{ mensajeError() }}</div>
+    }
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div>
+        <h2 class="h5 mb-0 fw-bold">Dashboard{{ datos() ? ' · ' + datos()!.mes : '' }}</h2>
+        @if (datos(); as d) {
+          <small class="text-body-secondary">Actualizado: {{ d.generadoEn | date: 'dd/MM/yyyy HH:mm' }}</small>
+        }
+      </div>
+      <!-- el boton usa el estilo de los paneles (no el de bootstrap) para verse igual que en las otras pestañas -->
+      <button class="btn secondary" (click)="cargar()" [disabled]="cargando()">
+        {{ cargando() ? 'Actualizando...' : 'Actualizar' }}
+      </button>
+    </div>
+
+    @if (datos(); as d) {
+      <!-- Tarjetas con los números principales -->
+      <div class="row g-3 mb-4">
+        @for (t of tarjetas(); track t.titulo) {
+          <div class="col-6 col-md-4 col-xl-2">
+            <div class="card h-100 border-0 shadow-sm">
+              <div class="card-body">
+                <div class="small text-body-secondary">{{ t.titulo }}</div>
+                <div class="fs-2 fw-bold" [class]="t.color">{{ t.valor }}</div>
+                <div class="small text-body-secondary">{{ t.detalle }}</div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- indicadores: los 4 indicadores de gestion del apartado 1.2.2 del informe -->
+      <h3 class="h6 text-uppercase text-body-secondary fw-semibold mb-2">Indicadores de gestión del mes</h3>
+      <div class="row g-3 mb-4">
+        @for (i of d.indicadores; track i.codigo) {
+          <div class="col-md-6 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <span class="badge text-bg-dark">{{ i.codigo }}</span>
+                  @if (i.cumpleMeta === true) {
+                    <span class="badge text-bg-success">Cumple la meta</span>
+                  } @else if (i.cumpleMeta === false) {
+                    <span class="badge text-bg-danger">No cumple la meta</span>
+                  } @else {
+                    <span class="badge text-bg-secondary">Sin dato</span>
+                  }
+                </div>
+                <div class="fw-semibold">{{ i.nombre }}</div>
+                <div class="display-6 my-2">
+                  {{ i.valor !== null ? (i.valor | number: '1.0-1') + ' ' + i.unidad : '—' }}
+                </div>
+                <div class="small text-body-secondary">Línea base: {{ i.lineaBase }} · Meta: {{ i.meta }}</div>
+                <div class="small mt-2 mt-auto pt-2 border-top">{{ i.detalle }}</div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="row g-3">
+        <!-- Libros por estado -->
+        <div class="col-lg-6">
+          <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+              <h3 class="h6 fw-semibold mb-3">Libros por estado</h3>
+              @for (e of d.librosPorEstado; track e.nombre) {
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-capitalize">{{ e.nombre }}</span>
+                    <span class="fw-semibold">{{ e.cantidad }} ({{ porcentaje(e.cantidad, d.titulos) }} %)</span>
+                  </div>
+                  <div class="progress" style="height: 10px;">
+                    <div class="progress-bar" [class]="colorEstado(e.nombre)" [style.width.%]="porcentaje(e.cantidad, d.titulos)"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Préstamos del mes por categoría -->
+        <div class="col-lg-6">
+          <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+              <h3 class="h6 fw-semibold mb-3">Préstamos del mes por categoría</h3>
+              @for (c of d.prestamosPorCategoria; track c.nombre) {
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span>{{ c.nombre }}</span>
+                    <span class="fw-semibold">{{ c.cantidad }}</span>
+                  </div>
+                  <div class="progress" style="height: 10px;">
+                    <div class="progress-bar" [style.width.%]="porcentaje(c.cantidad, maximoCategoria())"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Préstamos de los últimos 7 días -->
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <h3 class="h6 fw-semibold mb-3">Préstamos de los últimos 7 días</h3>
+              <div class="d-flex align-items-end gap-2" style="height: 160px;">
+                @for (dia of d.prestamosUltimos7Dias; track dia.nombre) {
+                  <div class="flex-fill d-flex flex-column align-items-center justify-content-end h-100">
+                    <small class="fw-semibold mb-1">{{ dia.cantidad }}</small>
+                    <div class="w-100 bg-primary rounded-top" style="min-height: 4px;"
+                         [style.height.%]="porcentaje(dia.cantidad, maximoDia()) * 0.8"></div>
+                    <small class="text-body-secondary mt-1 text-capitalize">{{ dia.nombre }}</small>
+                  </div>
+                }
+              </div>
+              <div class="small text-body-secondary mt-3">
+                Este mes · devoluciones con retraso: {{ d.devolucionesConRetrasoMes }} · devueltos dañados: {{ d.devolucionesDanadasMes }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else if (cargando()) {
+      <div class="text-center text-body-secondary py-5">Cargando dashboard...</div>
+    }
+  </div>
+</div>

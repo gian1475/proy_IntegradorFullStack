@@ -21,6 +21,7 @@ export class LoginComponent {
   errorMessage = signal<string>('');
   cargando = signal<boolean>(false);
 
+  // login: revisa q no esten vacios, llama al backend y si sale bien lo manda a la pantalla de su rol
   onLogin(): void {
     if (!this.email || !this.password) {
       this.errorMessage.set('Por favor ingrese usuario y contraseña');

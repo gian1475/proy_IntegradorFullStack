@@ -1,0 +1,43 @@
+@if (mensajeOk()) {
+  <div class="alert ok">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<section class="panel-card">
+  <h2>Reporte de préstamos</h2>
+  <p class="panel-subtitle">Todos los préstamos con prestatario, encargado, libro, fechas y estado.</p>
+  <div class="form-actions">
+    <button class="btn primary" (click)="descargar('excel')" [disabled]="descargando()">Descargar Excel (.xlsx)</button>
+    <button class="btn primary" (click)="descargar('pdf')" [disabled]="descargando()">Descargar PDF</button>
+    <button class="btn secondary" (click)="descargar('csv')" [disabled]="descargando()">Descargar CSV</button>
+  </div>
+</section>
+
+<section class="panel-card">
+  <h2>Importar libros desde CSV</h2>
+  <p class="panel-subtitle">
+    La primera fila debe tener las columnas:
+    <code>titulo, isbn, anio_publicacion, editorial, stock, categoria</code>.
+    Se acepta coma o punto y coma como separador.
+  </p>
+  <div class="form-actions">
+    <input type="file" accept=".csv,text/csv" (change)="seleccionarArchivo($event)" />
+    <button class="btn primary" (click)="importarCsv()">Importar</button>
+  </div>
+
+  @if (resultadoImportacion(); as r) {
+    <div class="alert ok" style="margin-top: 1rem;">{{ r.creados }} libro(s) importado(s).</div>
+    @if (r.errores.length > 0) {
+      <div class="alert error">
+        <strong>{{ r.errores.length }} fila(s) con error:</strong>
+        <ul style="margin: 0.4rem 0 0 1.2rem;">
+          @for (e of r.errores; track $index) {
+            <li>{{ e }}</li>
+          }
+        </ul>
+      </div>
+    }
+  }
+</section>

@@ -27,14 +27,15 @@ export class RegisterComponent {
   cargando = signal<boolean>(false);
 
   /** Misma regla que ValidadorContrasena del backend. */
+  // regla contra (front): los mismos 5 criterios del backend, se van marcando mientras escribe
   requisitosContrasena(): { texto: string; cumple: boolean }[] {
     const c = this.contrasena;
     return [
-      { texto: 'Entre 8 y 64 caracteres', cumple: c.length >= 8 && c.length <= 64 },
-      { texto: 'Una letra minúscula', cumple: /\p{Ll}/u.test(c) },
-      { texto: 'Una letra mayúscula', cumple: /\p{Lu}/u.test(c) },
-      { texto: 'Un número', cumple: /\d/.test(c) },
-      { texto: 'Un símbolo especial (ej. @ # $ % !)', cumple: /[^\p{L}\d\s]/u.test(c) },
+      { texto: 'Entre 8 y 64 caracteres', cumple: c.length >= 8 && c.length <= 64 },  // criterio 1
+      { texto: 'Una letra minúscula', cumple: /\p{Ll}/u.test(c) },                    // criterio 2
+      { texto: 'Una letra mayúscula', cumple: /\p{Lu}/u.test(c) },                    // criterio 3
+      { texto: 'Un número', cumple: /\d/.test(c) },                                   // criterio 4
+      { texto: 'Un símbolo especial (ej. @ # $ % !)', cumple: /[^\p{L}\d\s]/u.test(c) }, // criterio 5
     ];
   }
 
@@ -42,12 +43,24 @@ export class RegisterComponent {
     return this.requisitosContrasena().every(r => r.cumple);
   }
 
+  // crear perfil 3 (front): el formulario de registro siempre crea un prestatario
   onRegister(): void {
-    if (!this.nombre || !this.apellido || !this.dni || !this.correo || !this.contrasena) {
+    if (!this.nombre.trim() || !this.apellido.trim() || !this.dni || !this.correo || !this.contrasena) {
       this.errorMessage.set('Por favor completa todos los campos');
       return;
     }
 
+    // validar datos (front): las mismas reglas de ValidadorUsuario del backend
+    if (!/^\d{8}$/.test(this.dni.trim())) {
+      this.errorMessage.set('El DNI debe tener 8 dígitos');
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.correo.trim())) {
+      this.errorMessage.set('El correo no es válido');
+      return;
+    }
+
+    // regla contra: si falta algun criterio no deja enviar
     if (!this.contrasenaValida()) {
       this.errorMessage.set('La contraseña no cumple los requisitos de seguridad');
       return;
@@ -62,8 +75,8 @@ export class RegisterComponent {
     this.errorMessage.set('');
 
     this.authService.registro({
-      nombre: this.nombre,
-      apellido: this.apellido,
+      nombre: this.nombre.trim(),
+      apellido: this.apellido.trim(),
       dni: this.dni.trim(),
       correo: this.correo.trim(),
       contrasena: this.contrasena

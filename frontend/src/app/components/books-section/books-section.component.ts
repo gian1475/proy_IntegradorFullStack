@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LibroService, LibroBackend } from '../../services/libro.service';
+import { portadaPorIsbn, usarPortadaPorDefecto } from '../../utils/portada';
 
 export interface Book {
   id: number;
@@ -26,67 +27,31 @@ export class BooksSectionComponent implements OnInit {
   readonly searchTerm = input<string>('');
   readonly bookSelected = output<Book>();
 
-  readonly books = signal<Book[]>([
-    {
-      id: 4,
-      title: 'La Ciudad y los Perros',
-      author: 'Mario Vargas Llosa',
-      year: 1963,
-      editorial: 'Seix Barral',
-      category: 'Novela',
-      stock: 2,
-      coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-      id: 101,
-      title: 'Conversación en La Catedral',
-      author: 'Mario Vargas Llosa',
-      year: 1969,
-      editorial: 'Seix Barral',
-      category: 'Novela',
-      stock: 3,
-      coverImage: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-      id: 102,
-      title: 'La Fiesta del Chivo',
-      author: 'Mario Vargas Llosa',
-      year: 2000,
-      editorial: 'Alfaguara',
-      category: 'Novela',
-      stock: 2,
-      coverImage: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-      id: 103,
-      title: 'La Tía Julia y el Escribidor',
-      author: 'Mario Vargas Llosa',
-      year: 1977,
-      editorial: 'Seix Barral',
-      category: 'Novela',
-      stock: 1,
-      coverImage: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=400&q=80',
-    }
-  ]);
+  // datos reales: los libros salen de la bd. antes habia 4 libros escritos a mano (3 no existian en la bd)
+  readonly books = signal<Book[]>([]);
+  readonly usarPortadaPorDefecto = usarPortadaPorDefecto;
+  readonly cargando = signal(true);
+  readonly error = signal(false);
 
   ngOnInit(): void {
     this.libroService.getLibrosPorAutor('Mario').subscribe({
       next: (data: LibroBackend[]) => {
-        if (data && data.length > 0) {
-          const loaded: Book[] = data.map(item => ({
-            id: item.idLibro,
-            title: item.titulo,
-            author: 'Mario Vargas Llosa',
-            year: item.anioPublicacion,
-            editorial: item.editorial,
-            category: item.categoria ? item.categoria.nombre : 'Novela',
-            stock: item.stock,
-            coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=400&q=80'
-          }));
-          this.books.set(loaded);
-        }
+        this.books.set(data.map(item => ({
+          id: item.idLibro,
+          title: item.titulo,
+          author: (item.autores ?? []).map(a => `${a.nombre} ${a.apellido}`).join(', '),
+          year: item.anioPublicacion,
+          editorial: item.editorial,
+          category: item.categoria?.nombre ?? '',
+          stock: item.stock,
+          coverImage: portadaPorIsbn(item.isbn)
+        })));
+        this.cargando.set(false);
       },
-      error: () => {}
+      error: () => {
+        this.error.set(true);
+        this.cargando.set(false);
+      }
     });
   }
 

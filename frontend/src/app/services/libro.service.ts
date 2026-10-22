@@ -48,6 +48,7 @@ export interface Autor {
 })
 export class LibroService {
   private http = inject(HttpClient);
+  // ruta crud libro (front): aqui estan las llamadas al backend del crud de libros
   private apiUrl = 'http://localhost:8080/api/libros';
 
   getLibros(): Observable<LibroBackend[]> {

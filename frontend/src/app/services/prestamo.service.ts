@@ -33,6 +33,7 @@ export interface Prestamo {
 })
 export class PrestamoService {
   private http = inject(HttpClient);
+  // ruta crud prestamo (front): aqui estan las llamadas al backend del crud de prestamos
   private apiUrl = 'http://localhost:8080/api/prestamos';
 
   registrar(dniPrestatario: string, idLibro: number): Observable<Prestamo> {

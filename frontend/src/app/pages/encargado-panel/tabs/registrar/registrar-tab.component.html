@@ -1,0 +1,30 @@
+@if (mensajeOk()) {
+  <div class="alert ok">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<section class="panel-card">
+  <h2>Registrar préstamo en sala</h2>
+  <form (ngSubmit)="registrarPrestamo()">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="dni">DNI del prestatario</label>
+        <input id="dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="dniPrestatario" />
+      </div>
+      <div class="form-field">
+        <label for="libro">Libro</label>
+        <select id="libro" name="libro" [(ngModel)]="idLibroSeleccionado">
+          <option [ngValue]="null">Seleccione un libro</option>
+          @for (l of librosPrestables(); track l.idLibro) {
+            <option [ngValue]="l.idLibro">{{ l.titulo }} (stock: {{ l.stock }})</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn primary">Registrar préstamo</button>
+    </div>
+  </form>
+</section>

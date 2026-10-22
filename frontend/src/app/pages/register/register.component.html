@@ -19,6 +19,7 @@
             type="text"
             class="form-input"
             placeholder="Ingrese su nombre"
+            maxlength="50"
             [(ngModel)]="nombre"
             name="nombre"
             required
@@ -32,6 +33,7 @@
             type="text"
             class="form-input"
             placeholder="Ingrese su apellido"
+            maxlength="50"
             [(ngModel)]="apellido"
             name="apellido"
             required
@@ -39,13 +41,14 @@
         </div>
 
         <div class="form-row">
-          <label for="dni">DNI / CDE</label>
+          <label for="dni">DNI</label>
           <input
             id="dni"
             type="text"
             maxlength="8"
             class="form-input"
             placeholder="8 dígitos"
+            inputmode="numeric"
             [(ngModel)]="dni"
             name="dni"
             required
@@ -53,12 +56,13 @@
         </div>
 
         <div class="form-row">
-          <label for="correo">Usuario / Correo</label>
+          <label for="correo">Correo</label>
           <input
             id="correo"
             type="email"
             class="form-input"
-            placeholder="usuario@alejandria.edu.pe"
+            placeholder="correo@alejandria.edu.pe"
+            maxlength="100"
             [(ngModel)]="correo"
             name="correo"
             required

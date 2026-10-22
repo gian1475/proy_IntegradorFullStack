@@ -28,6 +28,44 @@ export interface Monitoreo {
   reservasPendientes: number;
 }
 
+/** Un nombre con su cantidad (barras del dashboard). */
+export interface Conteo {
+  nombre: string;
+  cantidad: number;
+}
+
+/** Indicador de gestión del apartado 1.2.2 del informe. valor = null si el sistema no puede medirlo. */
+export interface Indicador {
+  codigo: string;
+  nombre: string;
+  valor: number | null;
+  unidad: string;
+  lineaBase: string;
+  meta: string;
+  cumpleMeta: boolean | null;
+  detalle: string;
+}
+
+/** Datos de /api/dashboard. */
+export interface Dashboard {
+  generadoEn: string;
+  mes: string;
+  titulos: number;
+  ejemplaresDisponibles: number;
+  librosPorEstado: Conteo[];
+  prestamosActivos: number;
+  prestamosVencidos: number;
+  reservasPendientes: number;
+  prestatarios: number;
+  prestamosMes: number;
+  devolucionesMes: number;
+  devolucionesConRetrasoMes: number;
+  devolucionesDanadasMes: number;
+  indicadores: Indicador[];
+  prestamosPorCategoria: Conteo[];
+  prestamosUltimos7Dias: Conteo[];
+}
+
 const EXTENSIONES: Record<FormatoReporte, string> = { excel: 'xlsx', pdf: 'pdf', csv: 'csv' };
 
 @Injectable({
@@ -53,6 +91,11 @@ export class ReporteService {
 
   obtenerMonitoreo(): Observable<Monitoreo> {
     return this.http.get<Monitoreo>('http://localhost:8080/api/monitoreo');
+  }
+
+  // dashboard (front): pide el resumen del dashboard del admin
+  obtenerDashboard(): Observable<Dashboard> {
+    return this.http.get<Dashboard>('http://localhost:8080/api/dashboard');
   }
 
   /** Crea un enlace temporal y lo "clickea" para que el navegador descargue el archivo. */

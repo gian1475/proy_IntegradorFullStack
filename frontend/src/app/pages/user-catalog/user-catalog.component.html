@@ -29,6 +29,17 @@
             </svg>
             <span>Mis Reservas ({{ misReservas().length }})</span>
           </li>
+          <li
+            class="menu-item"
+            [class.active]="selectedMenu() === 'prestamos'"
+            (click)="selectMenu('prestamos')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+            <span>Mis Préstamos ({{ prestamosEnCurso() }})</span>
+          </li>
         </ul>
       </div>
 
@@ -71,7 +82,7 @@
             @for (book of filteredBooks(); track book.id) {
               <article class="book-card">
                 <div class="cover-box">
-                  <img [src]="book.coverImage" [alt]="book.title" loading="lazy" />
+                  <img [src]="book.coverImage" [alt]="book.title" loading="lazy" (error)="usarPortadaPorDefecto($event)" />
                 </div>
                 <div class="card-details">
                   <span class="badge-category">{{ book.category }}</span>
@@ -87,7 +98,7 @@
             }
           </div>
         }
-      } @else {
+      } @else if (selectedMenu() === 'reservas') {
         <!-- Vista Mis Reservas (Figura 39) -->
         <div class="content-header">
           <h1 class="page-title">Mis Reservas</h1>
@@ -106,7 +117,7 @@
             @for (reserva of misReservas(); track reserva.idReserva) {
               <article class="book-card">
                 <div class="cover-box">
-                  <img [src]="reserva.coverImage" [alt]="reserva.titulo" loading="lazy" />
+                  <img [src]="reserva.coverImage" [alt]="reserva.titulo" loading="lazy" (error)="usarPortadaPorDefecto($event)" />
                 </div>
                 <div class="card-details">
                   <span class="badge-category">{{ reserva.categoria }}</span>
@@ -125,6 +136,49 @@
             }
           </div>
         }
+      } @else {
+        <!-- Vista Mis Préstamos: consulta de una tabla (prestamo) -->
+        <div class="content-header">
+          <h1 class="page-title">Mis Préstamos</h1>
+          <span class="results-count">{{ prestamosEnCurso() }} en curso</span>
+        </div>
+
+        @if (errorPrestamos()) {
+          <div class="aviso-error">No se pudieron cargar tus préstamos: {{ errorPrestamos() }}</div>
+        } @else if (misPrestamos().length === 0) {
+          <div class="aviso-vacio">Todavía no tienes préstamos registrados.</div>
+        } @else {
+          <div class="tabla-prestamos">
+            <table>
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Libro</th>
+                  <th>Inicio</th>
+                  <th>Hora límite</th>
+                  <th>Devuelto</th>
+                  <th>Ampliado</th>
+                  <th>Estado del libro</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of misPrestamos(); track p.idPrestamo) {
+                  <tr>
+                    <td>{{ p.idPrestamo }}</td>
+                    <td>{{ tituloDe(p.idLibro) }}</td>
+                    <td>{{ p.fechaPrestamo | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ p.fechaDevolucionPrevista | date: 'HH:mm' }}</td>
+                    <td>{{ p.fechaDevolucionReal ? (p.fechaDevolucionReal | date: 'dd/MM HH:mm') : '-' }}</td>
+                    <td>{{ p.ampliado ? 'Sí' : 'No' }}</td>
+                    <td>{{ p.estadoFisicoDevolucion ?? '-' }}</td>
+                    <td><span class="estado" [class]="p.estadoPrestamo">{{ p.estadoPrestamo }}</span></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       }
     </main>
   </div>
@@ -136,7 +190,7 @@
         <h2 class="modal-title">Confirmar Reserva</h2>
         <div class="modal-form">
           <div class="modal-book-preview">
-            <img [src]="book.coverImage" [alt]="book.title" />
+            <img [src]="book.coverImage" [alt]="book.title" (error)="usarPortadaPorDefecto($event)" />
             <div class="preview-info">
               <div class="preview-title">{{ book.title }}</div>
               <div class="preview-author">{{ book.author }}</div>

@@ -1,0 +1,37 @@
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<section class="panel-card">
+  <h2>Reservas pendientes de recojo</h2>
+  @if (cargando()) {
+    <div class="empty">Cargando...</div>
+  } @else if (reservasPendientes().length === 0) {
+    <div class="empty">No hay reservas pendientes.</div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Prestatario</th>
+            <th>Libro</th>
+            <th>Recoger antes de</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of reservasPendientes(); track r.idReserva) {
+            <tr>
+              <td>{{ r.idReserva }}</td>
+              <td>{{ r.nombrePrestatario }}</td>
+              <td>{{ r.tituloLibro }}</td>
+              <td>{{ r.fechaRecojoLimite | date: 'dd/MM HH:mm' }}</td>
+              <td><button class="btn primary" (click)="entregar.emit(r)">Entregar</button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

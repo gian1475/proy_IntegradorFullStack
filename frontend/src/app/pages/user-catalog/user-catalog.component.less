@@ -415,3 +415,58 @@
     }
   }
 }
+
+// ---------- Mis Préstamos (consulta de una tabla) ----------
+.tabla-prestamos {
+  background-color: @bg-card;
+  border: 1px solid @border-color;
+  border-radius: 12px;
+  overflow-x: auto;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid @border-color;
+  }
+
+  th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: @text-muted;
+  }
+
+  .estado {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: @primary-soft;
+    color: @primary-color;
+
+    &.activo, &.devuelto { background-color: #dcfce7; color: #15803d; }
+    &.vencido { background-color: #fee2e2; color: #b91c1c; }
+  }
+}
+
+.aviso-vacio, .aviso-error {
+  padding: 2rem;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px solid @border-color;
+  background-color: @bg-card;
+  color: @text-muted;
+}
+
+.aviso-error {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}

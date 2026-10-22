@@ -20,6 +20,9 @@ export interface RespuestaLogin {
 
 const CLAVE_SESION = 'sesion_alejandria';
 
+/** Mismo valor que app.sesion.inactividad-minutos del backend (RNF04). */
+const MINUTOS_INACTIVIDAD = 15;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -53,6 +56,7 @@ export class AuthService {
     this.usuarioActual.set(respuesta.usuario);
   }
 
+  // proceso login (front): manda correo y contra al backend y si sale bien guarda el token y el usuario
   login(correo: string, contrasena: string): Observable<RespuestaLogin> {
     return this.http.post<RespuestaLogin>(`${this.apiUrl}/login`, { correo, contrasena }).pipe(
       tap(respuesta => this.guardarSesion(respuesta))
@@ -75,6 +79,15 @@ export class AuthService {
     }
   }
 
+  // sesion 15 min (front): igual q en el backend, cada respuesta correcta renueva los 15 minutos.
+  // si el usuario pasa 15 min sin hacer nada, al volver lo manda al login
+  renovarSesion(): void {
+    if (!this.sesion) return;
+    const nuevoVencimiento = new Date(Date.now() + MINUTOS_INACTIVIDAD * 60 * 1000);
+    this.sesion = { ...this.sesion, expiraEn: nuevoVencimiento.toISOString() };
+    localStorage.setItem(CLAVE_SESION, JSON.stringify(this.sesion));
+  }
+
   /** Borra la sesión solo en el navegador (por ejemplo, cuando el backend dice que el token venció). */
   cerrarSesionLocal(): void {
     localStorage.removeItem(CLAVE_SESION);
@@ -94,11 +107,12 @@ export class AuthService {
   }
 
   /** Pantalla principal de cada perfil. */
+  // redirigir por perfil: despues del login cada perfil va a su propia pantalla
   rutaInicio(rol?: string): string {
     switch (rol ?? this.usuarioActual()?.rol) {
-      case 'ADMINISTRADOR': return '/admin';
-      case 'ENCARGADO': return '/encargado';
-      case 'PRESTATARIO': return '/catalogo';
+      case 'ADMINISTRADOR': return '/admin';    // perfil 1
+      case 'ENCARGADO': return '/encargado';    // perfil 2
+      case 'PRESTATARIO': return '/catalogo';   // perfil 3
       default: return '/login';
     }
   }

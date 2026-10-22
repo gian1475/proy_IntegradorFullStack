@@ -24,7 +24,7 @@
     @for (book of filteredBooks(); track book.id) {
       <article class="book-card">
         <div class="card-cover">
-          <img [src]="book.coverImage" [alt]="book.title" loading="lazy" />
+          <img [src]="book.coverImage" [alt]="book.title" loading="lazy" (error)="usarPortadaPorDefecto($event)" />
           <span class="status-badge" [class.disponible]="book.stock > 0" [class.prestado]="book.stock === 0">
             {{ book.stock > 0 ? 'Disponible' : 'Agotado' }}
           </span>
@@ -44,6 +44,10 @@
           </div>
         </div>
       </article>
+    } @empty {
+      <p class="subtitle">
+        {{ cargando() ? 'Cargando libros...' : error() ? 'No se pudo conectar con el servidor.' : 'No hay libros de este autor en el catálogo.' }}
+      </p>
     }
   </div>
 </section>

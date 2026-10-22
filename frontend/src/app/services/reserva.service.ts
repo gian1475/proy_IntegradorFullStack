@@ -6,6 +6,7 @@ export interface ReservaBackend {
   idReserva: number;
   idLibro: number;
   tituloLibro: string;
+  isbnLibro: string;
   autor: string;
   categoria: string;
   idPrestatario: number;
@@ -35,7 +36,13 @@ export class ReservaService {
     return this.http.get<ReservaBackend[]>(this.apiUrl);
   }
 
+  /** Eliminación lógica: la reserva queda 'cancelada' (PUT). */
   cancelar(idReserva: number): Observable<{ mensaje: string }> {
     return this.http.put<{ mensaje: string }>(`${this.apiUrl}/${idReserva}/cancelar`, {});
+  }
+
+  // eliminacion fisica (front): DELETE, la reserva se borra de la bd. solo el admin y solo canceladas o vencidas
+  eliminar(idReserva: number): Observable<{ mensaje: string }> {
+    return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/${idReserva}`);
   }
 }
