@@ -2,6 +2,8 @@
 frontend/node_modules/
 frontend/.angular/
 frontend/dist/
+# Caché de Angular creada al correr ng desde la raíz
+.angular/
 
 # Java / Spring Boot / Maven
 backend/target/
@@ -27,9 +29,17 @@ application-secret.properties
 neon.json
 !.env.example
 
-# Docs
+# Docs (el informe y las notas internas del equipo no se suben)
 docs/Avance II Integrador (1).pdf
+docs/Avance_III_IntegradorV2.pdf
+docs/*.txt
 
 # Claude Code
 CLAUDE.md
 .claude/
+
+# Planes de trabajo del equipo (solo locales)
+PLAN_CODIGO.md
+PLAN_INFORME.md
+GUION_SUSTENTACION.md
+PASOS_COMMITS.md
