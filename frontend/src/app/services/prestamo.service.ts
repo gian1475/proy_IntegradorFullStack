@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 /** Préstamo con nombre del prestatario y título del libro (consulta con JOIN). */
@@ -28,6 +28,29 @@ export interface Prestamo {
   estadoPrestamo: string;
 }
 
+/** Fila del historial (RF07): préstamo con prestatario, encargado y libro (consulta con JOIN). */
+export interface HistorialPrestamo {
+  idPrestamo: number;
+  prestatario: string;
+  dniPrestatario: string;
+  encargado: string;
+  tituloLibro: string;
+  fechaPrestamo: string;
+  fechaDevolucionPrevista: string;
+  fechaDevolucionReal: string | null;
+  ampliado: boolean;
+  estadoFisicoDevolucion: string | null;
+  estadoPrestamo: string;
+}
+
+/** Filtros del historial. Los vacíos no se envían. Fechas en formato AAAA-MM-DD. */
+export interface FiltrosHistorial {
+  dni: string;
+  libro: string;
+  desde: string;
+  hasta: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -42,6 +65,15 @@ export class PrestamoService {
 
   listarActivos(): Observable<PrestamoDetalle[]> {
     return this.http.get<PrestamoDetalle[]>(`${this.apiUrl}/activos`);
+  }
+
+  // historial (front): GET /api/prestamos/historial con los filtros q no esten vacios
+  historial(filtros: FiltrosHistorial): Observable<HistorialPrestamo[]> {
+    let params = new HttpParams();
+    for (const [clave, valor] of Object.entries(filtros)) {
+      if (valor && valor.trim()) params = params.set(clave, valor.trim());
+    }
+    return this.http.get<HistorialPrestamo[]>(`${this.apiUrl}/historial`, { params });
   }
 
   listarPorPrestatario(idPrestatario: number): Observable<Prestamo[]> {

@@ -5,6 +5,7 @@ import { PrestamoService } from '../../../../services/prestamo.service';
 import { LibroBackend, LibroService } from '../../../../services/libro.service';
 import { ReservaBackend } from '../../../../services/reserva.service';
 import { mensajeDeError } from '../../../../utils/mensaje-error';
+import { coincideBusqueda, etiquetaEstado } from '../../../../utils/estado-libro';
 
 /** Pestaña "Registrar préstamo" del encargado. */
 @Component({
@@ -24,9 +25,17 @@ export class RegistrarTabComponent implements OnInit {
   readonly mensajeError = signal('');
 
   readonly libros = signal<LibroBackend[]>([]);
+  // consulta disponibilidad (RF03): el encargado busca el libro por titulo, autor, categoria o isbn
+  readonly busqueda = signal('');
   readonly librosPrestables = computed(() =>
-    this.libros().filter(l => l.estadoLibro !== 'mantenimiento')
+    this.libros().filter(l => l.estadoLibro !== 'mantenimiento' && coincideBusqueda(this.busqueda(), {
+      titulo: l.titulo,
+      autores: (l.autores ?? []).map(a => `${a.nombre} ${a.apellido}`).join(', '),
+      categoria: l.categoria?.nombre ?? '',
+      isbn: l.isbn,
+    }))
   );
+  readonly etiquetaEstado = etiquetaEstado;
   dniPrestatario = '';
   idLibroSeleccionado: number | null = null;
 
@@ -55,7 +64,11 @@ export class RegistrarTabComponent implements OnInit {
     }
     this.prestamoService.registrar(this.dniPrestatario.trim(), this.idLibroSeleccionado).subscribe({
       next: p => {
-        this.mensajeOk.set(`Préstamo #${p.idPrestamo} registrado. Hora límite: ${this.formatearHora(p.fechaDevolucionPrevista)}`);
+        // horario de atencion: si el limite quedo antes de las 3 horas es porque se ajusto al cierre (20:00)
+        const tresHoras = new Date(p.fechaPrestamo).getTime() + 3 * 60 * 60 * 1000;
+        const ajustado = new Date(p.fechaDevolucionPrevista).getTime() < tresHoras;
+        this.mensajeOk.set(`Préstamo #${p.idPrestamo} registrado. Hora límite: ${this.formatearHora(p.fechaDevolucionPrevista)}`
+          + (ajustado ? ' (ajustada a la hora de cierre de la biblioteca)' : ''));
         this.dniPrestatario = '';
         this.idLibroSeleccionado = null;
         this.cargarLibros();

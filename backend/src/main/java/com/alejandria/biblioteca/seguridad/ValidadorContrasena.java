@@ -1,16 +1,21 @@
 package com.alejandria.biblioteca.seguridad;
 
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 /**
- * Regla de contraseña: de 8 a 64 caracteres, con al menos una minúscula,
+ * Regla de contraseña: de 8 a 64 caracteres (y no más de 72 bytes), con al menos una minúscula,
  * una mayúscula, un número y un símbolo especial (cualquier caracter que no
  * sea letra, número ni espacio).
  */
 public final class ValidadorContrasena {
 
     public static final String MENSAJE_REGLA =
-            "La contraseña debe tener entre 8 y 64 caracteres, una minúscula, una mayúscula, un número y un símbolo especial";
+            "La contraseña debe tener entre 8 y 64 caracteres (máximo 72 bytes: las tildes y la ñ ocupan 2), "
+            + "una minúscula, una mayúscula, un número y un símbolo especial";
+
+    /** BCrypt solo usa los primeros 72 bytes: con más, dos contraseñas distintas darían el mismo hash. */
+    public static final int MAX_BYTES = 72;
 
     // regla contra: aqui estan los 5 criterios q pidio el profe, todos en una sola expresion regular
     private static final Pattern PATRON = Pattern.compile(
@@ -23,8 +28,10 @@ public final class ValidadorContrasena {
 
     private ValidadorContrasena() {}
 
-    // regla contra: devuelve true solo si cumple los 5 criterios. se llama en AuthService.registro
+    // regla contra: devuelve true solo si cumple los 5 criterios. se llama al registrar prestatarios y encargados.
+    // criterio 1 en bytes: 64 caracteres con tildes o ñ pueden pasar los 72 bytes q procesa bcrypt
     public static boolean esValida(String contrasena) {
-        return contrasena != null && PATRON.matcher(contrasena).matches();
+        return contrasena != null && PATRON.matcher(contrasena).matches()
+                && contrasena.getBytes(StandardCharsets.UTF_8).length <= MAX_BYTES;
     }
 }

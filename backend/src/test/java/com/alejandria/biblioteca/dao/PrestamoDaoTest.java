@@ -1,6 +1,8 @@
 package com.alejandria.biblioteca.dao;
 
+import com.alejandria.biblioteca.dto.reporte.ReportePrestamoDTO;
 import com.alejandria.biblioteca.entity.Prestamo;
+import com.alejandria.biblioteca.service.RangoFechas;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.DisplayName;
@@ -10,8 +12,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -125,6 +129,57 @@ class PrestamoDaoTest {
                         .setParameter("inc", idIncidencia)
                         .setParameter("inicio", LocalDateTime.now())
                         .executeUpdate());
+    }
+
+    // ---------- Historial (RF07) y reportes (RF08) ----------
+
+    @Test
+    void elHistorialFiltraPorDniLibroYFechas() {
+        LocalDateTime inicio = LocalDateTime.of(2020, 1, 15, 10, 0); // una fecha sin otros prestamos
+        Prestamo p = prestamoDePrueba(inicio, inicio.plusHours(3));
+        String dni = (String) em.createNativeQuery("SELECT dni FROM usuario WHERE id_usuario = "
+                + p.getPrestatario().getIdUsuario()).getSingleResult();
+        String titulo = (String) em.createNativeQuery("SELECT titulo FROM libro WHERE id_libro = "
+                + p.getLibro().getIdLibro()).getSingleResult();
+        LocalDateTime dia = inicio.toLocalDate().atStartOfDay();
+
+        RangoFechas todas = new RangoFechas(null, null);
+        assertTrue(contiene(prestamoDao.buscarHistorial(null, null, todas.inicio(), todas.fin()), p));
+        assertTrue(contiene(prestamoDao.buscarHistorial(dni, null, dia, dia.plusDays(1)), p));
+        assertTrue(contiene(prestamoDao.buscarHistorial(null, titulo.substring(0, 4).toLowerCase(), dia, dia.plusDays(1)), p));
+        assertFalse(contiene(prestamoDao.buscarHistorial("00000000", null, todas.inicio(), todas.fin()), p)); // otro prestatario
+        assertFalse(contiene(prestamoDao.buscarHistorial(null, null, dia.plusDays(1), todas.fin()), p));    // fuera del rango
+    }
+
+    @Test
+    void lasConsultasDeLosReportesTraenLosDatosDelPeriodo() {
+        LocalDateTime inicio = LocalDateTime.of(2020, 2, 10, 9, 0);
+        Prestamo p = prestamoDePrueba(inicio, inicio.plusHours(3));
+        p.setFechaDevolucionReal(inicio.plusMinutes(90)); // estuvo 1 h 30 min en sala
+        p.setEstadoFisicoDevolucion("bueno");
+        p.setEstadoPrestamo("devuelto");
+        prestamoDao.saveAndFlush(p);
+        Integer idIncidencia = idDe("INSERT INTO incidencia (id_prestamo, tipo_incidencia, descripcion, fecha_incidencia, estado_incidencia) "
+                + "VALUES (" + p.getIdPrestamo() + ", 'retraso', 'prueba', '2020-02-10 12:30', 'pendiente') RETURNING id_incidencia");
+        em.createNativeQuery("INSERT INTO sancion (id_incidencia, tipo_sancion, monto, fecha_inicio, estado_sancion) "
+                + "VALUES (" + idIncidencia + ", 'multa', 10, '2020-02-10 12:30', 'activa')").executeUpdate();
+        LocalDateTime dia = inicio.toLocalDate().atStartOfDay();
+
+        assertTrue(prestamoDao.listarDevoluciones(dia, dia.plusDays(1)).stream()
+                .anyMatch(d -> d.idPrestamo().equals(p.getIdPrestamo())));
+
+        List<Object[]> incidencias = prestamoDao.listarIncidenciasConSancion(dia, dia.plusDays(1));
+        assertEquals(1, incidencias.size());
+        assertEquals("multa", incidencias.get(0)[9]);
+
+        List<Object[]> tiempos = prestamoDao.tiemposPorCategoria(dia, dia.plusDays(1));
+        assertEquals(1, tiempos.size());
+        assertEquals(90, ((Number) tiempos.get(0)[2]).intValue()); // minimo
+        assertEquals(90, ((Number) tiempos.get(0)[4]).intValue()); // maximo
+    }
+
+    private boolean contiene(List<ReportePrestamoDTO> filas, Prestamo p) {
+        return filas.stream().anyMatch(f -> f.idPrestamo().equals(p.getIdPrestamo()));
     }
 
     // ---------- Auxiliares ----------

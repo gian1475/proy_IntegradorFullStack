@@ -1,6 +1,6 @@
 -- =====================================================================
 -- BASE DE DATOS POSTGRESQL: Sistema de Biblioteca (Biblioteca de Alejandría)
--- Basado en docs/modelofisico_postgresql.sql (incluye la migracion_01_prestamo.sql)
+-- Basado en docs/modelofisico_postgresql.sql (incluye las migraciones 01, 02 y 03)
 -- =====================================================================
 
 -- 0. Limpieza previa de tablas en cascada
@@ -204,8 +204,9 @@ CREATE TABLE reserva (
         FOREIGN KEY (id_libro) REFERENCES libro(id_libro)
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
-    CONSTRAINT chk_reserva_estado 
-        CHECK (estado_reserva IN ('pendiente', 'atendida', 'cancelada', 'vencida'))
+    -- 'en_espera': cola de espera (sin stock), ver migracion_03_reserva_cola.sql
+    CONSTRAINT chk_reserva_estado
+        CHECK (estado_reserva IN ('pendiente', 'en_espera', 'atendida', 'cancelada', 'vencida'))
 );
 
 -- Índices

@@ -1,19 +1,8 @@
-@if (mensajeOk()) {
-  <div class="alert ok">{{ mensajeOk() }}</div>
-}
+<app-reportes-descarga />
+
 @if (mensajeError()) {
   <div class="alert error">{{ mensajeError() }}</div>
 }
-
-<section class="panel-card">
-  <h2>Reporte de préstamos</h2>
-  <p class="panel-subtitle">Todos los préstamos con prestatario, encargado, libro, fechas y estado.</p>
-  <div class="form-actions">
-    <button class="btn primary" (click)="descargar('excel')" [disabled]="descargando()">Descargar Excel (.xlsx)</button>
-    <button class="btn primary" (click)="descargar('pdf')" [disabled]="descargando()">Descargar PDF</button>
-    <button class="btn secondary" (click)="descargar('csv')" [disabled]="descargando()">Descargar CSV</button>
-  </div>
-</section>
 
 <section class="panel-card">
   <h2>Importar libros desde CSV</h2>

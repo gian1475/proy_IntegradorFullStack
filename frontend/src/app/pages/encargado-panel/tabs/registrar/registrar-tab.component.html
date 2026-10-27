@@ -7,6 +7,7 @@
 
 <section class="panel-card">
   <h2>Registrar préstamo en sala</h2>
+  <p class="panel-subtitle">Horario de atención: de 08:00 a 20:00. La hora límite es de 3 horas y nunca pasa del cierre.</p>
   <form (ngSubmit)="registrarPrestamo()">
     <div class="form-grid">
       <div class="form-field">
@@ -14,11 +15,16 @@
         <input id="dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="dniPrestatario" />
       </div>
       <div class="form-field">
-        <label for="libro">Libro</label>
+        <label for="buscar-libro">Buscar libro</label>
+        <input id="buscar-libro" name="buscarLibro" placeholder="Título, autor, categoría o ISBN"
+               [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" />
+      </div>
+      <div class="form-field">
+        <label for="libro">Libro ({{ librosPrestables().length }})</label>
         <select id="libro" name="libro" [(ngModel)]="idLibroSeleccionado">
           <option [ngValue]="null">Seleccione un libro</option>
           @for (l of librosPrestables(); track l.idLibro) {
-            <option [ngValue]="l.idLibro">{{ l.titulo }} (stock: {{ l.stock }})</option>
+            <option [ngValue]="l.idLibro">{{ l.titulo }} ({{ etiquetaEstado(l.estadoLibro) }}, stock: {{ l.stock }})</option>
           }
         </select>
       </div>

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
 export interface ResultadoImportacion {
@@ -8,6 +8,26 @@ export interface ResultadoImportacion {
 }
 
 export type FormatoReporte = 'excel' | 'pdf' | 'csv';
+
+/** Un tipo de reporte (RF08). usaFechas: false si el rango de fechas no lo cambia (es una foto de ahora). */
+export interface TipoReporte {
+  valor: string;
+  nombre: string;
+  descripcion: string;
+  usaFechas: boolean;
+}
+
+// reportes rf08 (front): los 8 reportes, mismos nombres q en ReporteService del backend
+export const TIPOS_REPORTE: TipoReporte[] = [
+  { valor: 'prestamos', nombre: 'Préstamos', descripcion: 'Todos los préstamos del periodo con prestatario, encargado, libro, fechas y estado.', usaFechas: true },
+  { valor: 'devoluciones', nombre: 'Devoluciones', descripcion: 'Libros devueltos en el periodo, a tiempo o con retraso, y su estado físico.', usaFechas: true },
+  { valor: 'reservas', nombre: 'Reservas', descripcion: 'Reservas hechas en el periodo, con su estado y su puesto si están en la cola de espera.', usaFechas: true },
+  { valor: 'incidencias', nombre: 'Incidencias y sanciones', descripcion: 'Incidencias por retraso, daño o pérdida, con la sanción que se aplicó.', usaFechas: true },
+  { valor: 'bajas', nombre: 'Bajas lógicas', descripcion: 'Libros dados de baja, préstamos anulados y usuarios inactivos (siguen en la base de datos).', usaFechas: true },
+  { valor: 'stock', nombre: 'Stock por categoría', descripcion: 'Títulos y ejemplares disponibles de cada categoría en este momento.', usaFechas: false },
+  { valor: 'indicadores', nombre: 'Indicadores de gestión', descripcion: 'TAP, PDF, IPI y TIM del periodo, con su línea base y su meta.', usaFechas: true },
+  { valor: 'tiempos', nombre: 'Tiempos de préstamo', descripcion: 'Tiempo mínimo, promedio y máximo que estuvieron los libros en sala, por categoría.', usaFechas: true },
+];
 
 /** Métricas de /api/monitoreo (Spring Boot Actuator + datos del negocio). */
 export interface Monitoreo {
@@ -75,11 +95,14 @@ export class ReporteService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8080/api/reportes';
 
-  /** Descarga el reporte de préstamos. Se pide con HttpClient para que viaje el token. */
-  descargarPrestamos(formato: FormatoReporte): Observable<Blob> {
+  /** Descarga un reporte. desde / hasta en formato AAAA-MM-DD (vacío = sin límite). Se pide con HttpClient para que viaje el token. */
+  descargar(tipo: string, formato: FormatoReporte, desde: string, hasta: string): Observable<Blob> {
+    let params = new HttpParams();
+    if (desde) params = params.set('desde', desde);
+    if (hasta) params = params.set('hasta', hasta);
     const hoy = new Date().toISOString().slice(0, 10);
-    return this.http.get(`${this.apiUrl}/prestamos/${formato}`, { responseType: 'blob' }).pipe(
-      tap(archivo => this.guardarArchivo(archivo, `reporte_prestamos_${hoy}.${EXTENSIONES[formato]}`))
+    return this.http.get(`${this.apiUrl}/${tipo}/${formato}`, { params, responseType: 'blob' }).pipe(
+      tap(archivo => this.guardarArchivo(archivo, `reporte_${tipo}_${hoy}.${EXTENSIONES[formato]}`))
     );
   }
 

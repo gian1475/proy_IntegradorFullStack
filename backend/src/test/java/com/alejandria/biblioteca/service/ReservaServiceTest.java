@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,12 +29,14 @@ class ReservaServiceTest {
     @Mock private UsuarioDao usuarioDao;
     @Mock private LibroService libroService;
     @Mock private PrestatarioService prestatarioService;
+    @Mock private ColaEsperaService colaEspera;
 
     private ReservaService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new ReservaService(reservaDao, usuarioDao, libroService, prestatarioService);
+        servicio = new ReservaService(reservaDao, usuarioDao, libroService, prestatarioService, colaEspera,
+                HorarioAtencionTest.horario(LocalDateTime.of(2026, 10, 28, 10, 0)));
     }
 
     @ParameterizedTest

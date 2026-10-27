@@ -17,7 +17,7 @@
   </div>
   <p class="panel-subtitle">
     Las reservas canceladas o vencidas se pueden <strong>eliminar de la base de datos</strong> (eliminación física).
-    Las pendientes y las atendidas no se pueden eliminar.
+    Las pendientes, las que están en la cola de espera y las atendidas no se pueden eliminar.
   </p>
 
   @if (cargando()) {
@@ -45,7 +45,13 @@
               <td>{{ r.nombrePrestatario }}</td>
               <td>{{ r.tituloLibro }}</td>
               <td>{{ r.fechaReserva | date: 'dd/MM HH:mm' }}</td>
-              <td>{{ r.fechaRecojoLimite | date: 'dd/MM HH:mm' }}</td>
+              <td>
+                @if (r.estadoReserva === 'en_espera') {
+                  En cola (puesto {{ r.posicionCola }})
+                } @else {
+                  {{ r.fechaRecojoLimite | date: 'dd/MM HH:mm' }}
+                }
+              </td>
               <td><span class="badge" [class]="r.estadoReserva">{{ r.estadoReserva }}</span></td>
               <td>
                 @if (sePuedeEliminar(r)) {

@@ -8,7 +8,7 @@ Sirve para preparar la sustentación: cada integrante debe poder explicar cualqu
 ## Cómo levantar el proyecto
 
 1. **Credenciales de la BD**: crear `backend/.env` (copiar de [backend/.env.example](backend/.env.example)) y completar URL, usuario y contraseña de Neon. Este archivo **no se sube a GitHub**.
-2. **Base de datos**: si la BD de Neon se creó con una versión anterior del script, ejecutar en el SQL Editor de Neon las migraciones que falten, en orden (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`). Para tener los 21 libros de la demo, ejecutar `database/datos_demo.sql`. Todos se pueden ejecutar más de una vez. (En Neon ya están las dos migraciones y los libros, al 21/10.)
+2. **Base de datos**: si la BD de Neon se creó con una versión anterior del script, ejecutar en el SQL Editor de Neon las migraciones que falten, en orden (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`). Para tener los 21 libros de la demo, ejecutar `database/datos_demo.sql`. Todos se pueden ejecutar más de una vez. (En Neon ya están las migraciones 01 y 02 y los libros, al 21/10. **La 03 falta ejecutarla en Neon**: sin ella, reservar un libro sin stock da error.)
 3. **Backend** (desde la carpeta `backend/`, porque ahí busca el `.env`):
    ```
    cd backend
@@ -47,6 +47,16 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 21/10 | CRUD de usuarios (RF09, RF12, RF13): **no entra en el Avance III**, queda opcional para el final | Decisión del equipo. La eliminación física se hace con las reservas canceladas o vencidas (RF17). El informe debe pasar "usuarios" del Sprint 3 al Sprint 4 |
 | 21/10 | Herencia de `Usuario`: se corrige el informe | La herencia está en la BD (tablas de subtipo), no en clases Java |
 | 21/10 | Se comprobó que la BD de Neon trabaja en hora GMT y Java en hora de Lima | Causa del error B1 (préstamos vencidos al instante) |
+| 27/10 | Horario de atención **08:00–20:00**: fuera de ese horario no se presta y la hora límite nunca pasa de las 20:00 (`limitarAlCierre`). Se valida la **hora**, no el día de la semana | RF01 y RF05 piden no pasar del cierre. Las horas están en `application.properties` para poder probar de noche sin tocar el código |
+| 27/10 | La ampliación es **"hasta" 1 hora**: si la hora límite es 19:30, se amplía hasta las 20:00. Si ya termina a las 20:00, no se amplía | RF05: "una sola ampliación de hasta una hora", sin superar el cierre |
+| 27/10 | Cola de espera: estado nuevo **`en_espera`** (migración 03). Sin stock, la reserva entra a la cola sin fecha; cuando vuelve un ejemplar, **no sube el stock**: pasa al primero de la cola, que tiene hasta las **20:00 del día siguiente** para recogerlo | RF04 y RF16. No hay correo ni SMS (limitación del informe): el prestatario lo ve en "Mis Reservas" |
+| 27/10 | Si alguien está en la cola de un libro, tampoco se amplía su préstamo ni se da de baja el libro | Ampliar haría esperar más a la cola (RF05); dar de baja dejaría la cola sin libro (RF14) |
+| 27/10 | El historial del prestatario ("Mis Préstamos") se filtra **en pantalla** | Para que la consulta siga siendo de **una sola tabla** (la que pidió el profe) |
+| 27/10 | Reportes: un solo generador de Excel, PDF y CSV para los 8 reportes (`TablaReporte`). El encargado también puede descargarlos; importar libros sigue siendo solo del admin | RF08 y CU11 (actor: Administrador y Encargado) |
+| 27/10 | Sin fechas, los reportes y el historial no filtran: se usa del año 1900 al 3000 | PostgreSQL no acepta una fecha en `null` dentro de la consulta (`could not determine data type`) |
+| 27/10 | El admin registra **encargados** desde su panel (turno `mañana` o `tarde`). Actualizar y eliminar usuarios (RF12, RF13) sigue pendiente | RF09. Los demás requisitos de usuarios son del Sprint 4 |
+| 27/10 | Al iniciar sesión, el usuario tiene que estar en **un solo** perfil; si no, 403. Antes, sin perfil entraba como prestatario | "Perfil único", pendiente del informe (3.5) |
+| 27/10 | La contraseña además no puede pasar de **72 bytes** | BCrypt solo usa 72 bytes; 64 caracteres con tildes o ñ podían pasarse |
 
 ---
 
@@ -530,6 +540,134 @@ Para las capturas se insertaron 4 préstamos de prueba, que se borraron al final
 
 ---
 
+## Requisitos que funcionaban en parte (27/10) ✅
+
+Se completaron los RF que estaban a medias: **RF01, RF03, RF04, RF05, RF07, RF08 y RF09**, además de RF16 (avance de la cola) y las validaciones pendientes de 3.5 (horario, perfil único y contraseña en bytes).
+
+### RF01 y RF05 – Horario de atención (08:00 a 20:00)
+
+| Archivo | Qué cambió |
+|---|---|
+| [service/HorarioAtencion.java](backend/src/main/java/com/alejandria/biblioteca/service/HorarioAtencion.java) (nuevo) | Lee `app.horario.apertura` y `app.horario.cierre`. `validarAbierto` (no se presta antes de abrir ni desde el cierre), `limitarAlCierre` (la hora límite no pasa de las 20:00), `esHoraDeRecojo` y `cierreDeManana`. También da la hora actual con un reloj que las pruebas pueden fijar |
+| [PrestamoService.java](backend/src/main/java/com/alejandria/biblioteca/service/PrestamoService.java) | `registrar`: rechaza fuera de horario (409) y la hora límite es `limitarAlCierre(inicio + 3 h)`. `ampliar`: suma **hasta** 1 hora sin pasar del cierre; si ya termina a las 20:00, responde 409 |
+| [ReservaService.java](backend/src/main/java/com/alejandria/biblioteca/service/ReservaService.java) | La hora de recojo tiene que estar dentro del horario (400) |
+| [application.properties](backend/src/main/resources/application.properties) | `app.horario.apertura=08:00`, `app.horario.cierre=20:00` |
+| Pestaña Registrar préstamo | Muestra el horario y avisa si la hora límite se ajustó al cierre |
+
+> **Para probar de noche:** poner `app.horario.cierre=23:59` en `application.properties` (o la variable de entorno `APP_HORARIO_CIERRE=23:59`) y volverlo a `20:00` antes de la demo.
+
+### RF03 – Consulta de disponibilidad
+
+| Archivo | Qué cambió |
+|---|---|
+| [LibroDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/LibroDao.java) | `buscarEnCatalogo`: un solo texto busca en título, ISBN (con o sin guiones), autor y categoría. Reemplaza a `findByTituloContainingIgnoreCase` (solo título), que ya no se usa |
+| [LibroService.java](backend/src/main/java/com/alejandria/biblioteca/service/LibroService.java), [LibroController.java](backend/src/main/java/com/alejandria/biblioteca/controller/LibroController.java) | `buscarPorTitulo` → `buscar` (`GET /api/libros/buscar?q=`) |
+| [utils/estado-libro.ts](frontend/src/app/utils/estado-libro.ts) (nuevo) | `etiquetaEstado`: `prestado` → "Prestado en sala", `mantenimiento` → "En mantenimiento", etc. `coincideBusqueda`: la búsqueda del catálogo, sin importar tildes |
+| Catálogo del prestatario | Cada libro muestra su **estado** y su **stock** (antes no se veían). La búsqueda encuentra por ISBN y por cualquier autor (antes solo título y primer autor). También la usa la sección de libros del inicio |
+| Pestaña Registrar préstamo | Buscador de libro (título, autor, categoría o ISBN) y el estado de cada libro en la lista |
+
+### RF04 y RF16 – Cola de espera de reservas
+
+**Migración** [database/migracion_03_reserva_cola.sql](database/migracion_03_reserva_cola.sql): `estado_reserva` acepta además `en_espera`. También está en [schema_postgresql.sql](database/schema_postgresql.sql). **Falta ejecutarla en Neon.**
+
+| Paso | Qué pasa |
+|---|---|
+| Reservar con stock | Igual que antes: `pendiente`, aparta un ejemplar (el stock baja) |
+| Reservar **sin** stock | Entra a la cola: `en_espera`, sin fecha de recojo, con su puesto en `posicion_cola` (1, 2, 3...) |
+| Vuelve un ejemplar (devolución en buen estado, anulación, cancelación o vencimiento de una reserva, o el admin sube el stock) | Si hay cola, **el stock no sube**: la reserva del primero pasa a `pendiente` con recojo hasta las 20:00 del día siguiente, y los demás avanzan un puesto. Sin cola, el ejemplar vuelve al stock como antes |
+| Salir de la cola | La reserva queda `cancelada` y los de atrás avanzan un puesto (RF16). El stock no cambia |
+
+| Archivo | Qué cambió |
+|---|---|
+| [service/ColaEsperaService.java](backend/src/main/java/com/alejandria/biblioteca/service/ColaEsperaService.java) (nuevo) | `siguientePosicion`, `asignarAlSiguiente` y `reordenar` |
+| [LibroService.java](backend/src/main/java/com/alejandria/biblioteca/service/LibroService.java) | `reponerStock` primero ofrece el ejemplar a la cola; `actualizar` reparte los ejemplares nuevos a la cola; `darDeBaja` no deja dar de baja un libro con gente en la cola |
+| [ReservaService.java](backend/src/main/java/com/alejandria/biblioteca/service/ReservaService.java) | `crear` decide entre reserva normal y cola; `cancelar` también saca de la cola; `hayReservasPendientes` cuenta la cola (no se amplía el préstamo) |
+| [ReservaDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/ReservaDao.java), [ReservaRespuestaDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/reserva/ReservaRespuestaDTO.java) | Consultas de la cola; la respuesta trae `posicionCola` |
+| Catálogo del prestatario | Sin stock, el botón dice **Unirme a la cola** (antes "Agotado", desactivado). "Mis Reservas" muestra el puesto y el botón **Salir de la cola** |
+| Pestaña Reservas pendientes (encargado) | Tabla nueva **En cola de espera** (libro, puesto, prestatario) |
+| Pestaña Reservas (admin) | Las reservas en cola muestran su puesto. No se pueden eliminar físicamente |
+
+### RF07 – Historial de préstamos con filtros
+
+| Archivo | Qué cambió |
+|---|---|
+| [PrestamoDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/PrestamoDao.java) | `buscarHistorial(dni, libro, desde, hasta)`: JOIN de cuatro tablas (prestamo, prestatario, encargado y libro) con filtros opcionales. Trae todos los estados, también los anulados. El reporte de préstamos usa la misma consulta (`listarParaReporte`) |
+| [PrestamoService.java](backend/src/main/java/com/alejandria/biblioteca/service/PrestamoService.java), [PrestamoController.java](backend/src/main/java/com/alejandria/biblioteca/controller/PrestamoController.java) | `GET /api/prestamos/historial?dni=&libro=&desde=&hasta=` (encargado y admin). "Hasta el 27/10" incluye todo el 27 |
+| [service/RangoFechas.java](backend/src/main/java/com/alejandria/biblioteca/service/RangoFechas.java) (nuevo) | El rango de fechas de los filtros (lo usan el historial y los reportes). Rechaza "desde" posterior a "hasta" (400) |
+| [components/historial-prestamos/](frontend/src/app/components/historial-prestamos/) (nuevo) | Pestaña **Historial** en los paneles del encargado y del admin: filtros por DNI, libro (título o ISBN) y fechas |
+| "Mis Préstamos" (prestatario) | Filtros por libro y fechas, en pantalla: la consulta sigue siendo de una sola tabla |
+
+### RF08 – Reportes por fechas
+
+Los 8 reportes del RF08, en **Excel, PDF y CSV**, con rango de fechas. Ahora el **encargado** también puede descargarlos.
+
+| Reporte | Qué trae |
+|---|---|
+| Préstamos | Todos los préstamos del periodo (como antes, ahora con fechas) |
+| Devoluciones | Libros devueltos en el periodo, "A tiempo" o "Con retraso (N min)", y su estado físico |
+| Reservas | Reservas del periodo con su estado y su puesto si están en la cola. Aclara que las eliminadas físicamente (RF17) ya no aparecen |
+| Incidencias y sanciones | Cada incidencia con su sanción (tipo, monto, fechas). Las incidencias se registran con RF06 (pendiente): el reporte muestra las que estén en la BD |
+| Bajas lógicas | Libros en `baja`, préstamos `anulado` y usuarios `inactivo`. La BD no guarda la fecha de baja de libros ni usuarios: el rango solo filtra los préstamos anulados |
+| Stock por categoría | Títulos, ejemplares disponibles, títulos sin stock y en mantenimiento, con una fila de total. Es la foto de ahora (no usa fechas) |
+| Indicadores de gestión | TAP, PDF, IPI y TIM del periodo. Sin datos suficientes dicen "Sin dato" |
+| Tiempos de préstamo | Mínimo, promedio y máximo que estuvo el libro en sala (de la entrega a la devolución), por categoría y en total |
+
+| Archivo | Qué cambió |
+|---|---|
+| [ReporteService.java](backend/src/main/java/com/alejandria/biblioteca/service/ReporteService.java) | Cada reporte se arma como una [TablaReporte](backend/src/main/java/com/alejandria/biblioteca/dto/reporte/TablaReporte.java) y la misma tabla se convierte con `generarExcel` (POI), `generarPdf` (OpenPDF) o `generarCsv` (Commons CSV). Reemplazan a `generarExcelPrestamos`, `generarPdfPrestamos` y `generarCsvPrestamos` |
+| [ReporteController.java](backend/src/main/java/com/alejandria/biblioteca/controller/ReporteController.java) | `GET /api/reportes/{tipo}/{formato}?desde=&hasta=` (admin y encargado). Los enlaces viejos (`/prestamos/excel`...) siguen funcionando. Importar libros sigue siendo solo del admin |
+| [IndicadoresGestion.java](backend/src/main/java/com/alejandria/biblioteca/service/IndicadoresGestion.java) | `calcular`: los 4 indicadores, antes dentro de `DashboardService`. Los usan el dashboard (mes actual) y el reporte (periodo elegido) |
+| Consultas nuevas | `listarDevoluciones`, `listarIncidenciasConSancion`, `tiemposPorCategoria` (PrestamoDao), `listarParaReporte` (ReservaDao), `stockPorCategoria` y `findByEstadoLibroOrderByTitulo` (LibroDao), `findByEstadoOrderByApellidoAscNombreAsc` (UsuarioDao) |
+| [components/reportes-descarga/](frontend/src/app/components/reportes-descarga/) (nuevo) | Elegir reporte, fechas (por defecto, del 1 del mes a hoy) y formato. Está en la pestaña Reportes del admin (junto con importar libros) y en una pestaña **Reportes** nueva del encargado |
+
+### 🐞 Error encontrado: el BOM del CSV quedaba después del encabezado
+El CSV escribe un BOM para que Excel lea bien las tildes, pero el `CSVPrinter` escribe el encabezado **apenas se crea**, así que el BOM quedaba detrás del encabezado y Excel podía mostrar mal las tildes. Se vio al probar en vivo (el BOM aparecía al inicio de la segunda línea). **Arreglo:** el BOM se escribe antes de crear el `CSVPrinter`. Prueba: `elCsvDePrestamosTieneEncabezadoYDatos` ahora revisa que el archivo empiece con el BOM.
+
+### RF09 – El admin registra encargados
+
+| Archivo | Qué cambió |
+|---|---|
+| [service/UsuarioService.java](backend/src/main/java/com/alejandria/biblioteca/service/UsuarioService.java) (nuevo) | `crearCuenta`: valida datos, regla de contraseña, que no se repita DNI ni correo, y guarda con BCrypt. La usan el registro del prestatario (`AuthService.registro`, que antes tenía todo esto adentro) y el registro de encargados. `registrarEncargado` (turno `mañana` o `tarde`) y `listarEncargados` |
+| [controller/UsuarioController.java](backend/src/main/java/com/alejandria/biblioteca/controller/UsuarioController.java) (nuevo) | `GET` y `POST /api/usuarios/encargados`, solo admin |
+| [UsuarioDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/UsuarioDao.java) | `registrarComoEncargado`, `listarEncargados` y `contarPerfiles` |
+| [AuthService.java](backend/src/main/java/com/alejandria/biblioteca/service/AuthService.java) | **Perfil único:** si el usuario no está en ninguna tabla de perfil, o está en dos, el login responde 403 |
+| [ValidadorContrasena.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/ValidadorContrasena.java), [utils/regla-contrasena.ts](frontend/src/app/utils/regla-contrasena.ts) (nuevo) | La contraseña tampoco puede pasar de 72 bytes. La regla del frontend está en un solo archivo y la usan el registro y el formulario de encargados |
+| [tabs/encargados/](frontend/src/app/pages/admin-panel/tabs/encargados/) (nuevo) | Pestaña **Encargados** del admin: formulario (con los ✓ / ✗ de la contraseña) y tabla de encargados |
+
+### Pruebas: de 90 a 154 en el backend y de 8 a 16 en el frontend, todas pasan
+
+| Clase de prueba | Qué prueba |
+|---|---|
+| `HorarioAtencionTest` (6) | Dentro y fuera del horario, la hora límite queda en las 20:00, hora de recojo, cierre de mañana |
+| `PrestamoServiceTest` (+7) | Préstamo a las 10:00 → 13:00; a las 18:30 → 20:00 (no 21:30); a las 21:00 → 409; ampliación hasta las 20:00; no se amplía si ya termina a las 20:00; historial con filtros y fechas al revés. Ahora usa un **reloj fijo**: las pruebas dan lo mismo aunque se corran de noche |
+| `ColaEsperaServiceTest` (4), `ReservaColaEsperaTest` (8) | El primero recibe el ejemplar y los demás avanzan; sin cola el ejemplar vuelve al stock; sin stock se entra a la cola; no se reserva dos veces; fecha obligatoria con stock; recojo en horario; salir de la cola no toca el stock |
+| `ColaEsperaBdTest` (1, BD real) | Flujo completo con 3 prestatarios: reservar, cola, cancelar, avanzar y volver al stock. Necesita la migración 03 |
+| `LibroServiceTest` (+3) | No se da de baja con cola; el ejemplar devuelto es para la cola; el admin agrega ejemplares y primero se reparten a la cola |
+| `LibroDaoTest` (5, BD real) | Búsqueda por título, ISBN con y sin guiones, autor y categoría, sin bajas ni repetidos |
+| `PrestamoDaoTest` (+2, BD real) | Historial por DNI, libro y fechas; consultas de devoluciones, incidencias y tiempos |
+| `ReporteServiceTest` (+8) | Rango de días completos; fechas al revés, tipo y formato inválidos; puntualidad; puesto en la cola; bajas lógicas; total del stock; "Sin dato"; tiempos con promedio ponderado; BOM del CSV |
+| `ReporteBdTest` (11, BD real) | Los 8 reportes con y sin fechas y los 3 formatos |
+| `UsuarioServiceTest` (4), `UsuarioBdTest` (1, BD real), `AuthServicePerfilTest` (3) | Registro del encargado (BCrypt, turno, correo repetido, contraseña débil); queda en la tabla `encargado` con un solo perfil; login con 0, 1 o 2 perfiles |
+| `ValidadorContrasenaTest` (+1) | 64 caracteres con ñ que pasan los 72 bytes |
+| Frontend: `estado-libro.spec.ts` (5), `regla-contrasena.spec.ts` (3) | Nombres del estado y búsqueda; regla de contraseña en bytes |
+
+Las pruebas con BD real se corrieron contra una copia local de PostgreSQL 16 creada con `schema_postgresql.sql`, las 3 migraciones y `datos_demo.sql` (con la BD en hora GMT y Java en hora de Lima, igual que con Neon). **Conviene correrlas también contra Neon después de ejecutar la migración 03.**
+
+### Prueba en vivo (27/10, BD local, a las 18:20)
+Por la API, con las mismas peticiones de la web: el admin registra una encargada → 201 y ella entra con rol ENCARGADO · el encargado intenta registrar encargados → 403 · turno "noche" → 400 · contraseña de 64 caracteres y 124 bytes → 400 · búsqueda `978-0307474728` → *Cien Años de Soledad* · recojo a las 21:00 → 400 · reserva con stock → `pendiente` · otra prestataria sin stock → `en_espera`, puesto 1 · entrar dos veces → 409 · el primero cancela → la reserva de la cola pasa a `pendiente` con recojo hasta el 28/10 20:00 y el stock sigue en 0 · el préstamo de las 18:21 queda con hora límite **20:00** · ampliarlo → 409 "ya termina a la hora de cierre" · historial por DNI, libro y fechas → correcto; fechas al revés → 400; el prestatario → 403 · los 8 reportes en los 3 formatos → 200 para el encargado; tipo inválido → 400; el prestatario → 403.
+
+En el navegador (Chrome sin ventana, con los 3 perfiles) se recorrieron las mismas pantallas sin errores de consola. Las portadas no cargaron porque ese entorno no tenía acceso a Open Library; en la PC del equipo sí cargan.
+
+### Qué cambiar en el informe
+- **Tabla 2 y fichas de RF01, RF03, RF04, RF05, RF07, RF08, RF09 y RF16:** quitar "pendiente", "entrega final" y "no se acredita en este avance" donde ya se cumple. RF08: el encargado ya tiene acceso.
+- **Pendientes para la entrega final (3.5):** quedan RF06 (incidencias y sanciones), RF12, RF13 y RF15. Sacar de la lista la cola de espera, los reportes, la creación de personal y las validaciones de horario, perfil único y bytes.
+- **Diccionario de datos:** `estado_reserva` acepta `en_espera`; `posicion_cola` es el puesto en la cola de espera; `fecha_recojo_limite` es `NULL` mientras la reserva está en la cola; `fecha_devolucion_prevista` ya no dice "validación automática del cierre pendiente".
+- **Librerías (2.x):** los métodos ahora son `generarExcel`, `generarPdf` y `generarCsv` de `ReporteService` (antes `generarExcelPrestamos`, `generarPdfPrestamos` y `generarCsvPrestamos`) y generan los 8 reportes.
+- **Pantallas (3.5):** nuevas pestañas Historial, Encargados y Reportes del encargado; botón "Unirme a la cola"; estado y stock en el catálogo. Las capturas están en `docs/capturas/` (ver la tabla de abajo).
+- **Pruebas:** 154 del backend y 16 del frontend.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -568,6 +706,14 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Qué pasa si devuelven un libro dañado? | `mantenimiento` |
 | ¿Dónde está el dashboard y cómo se calculan los indicadores? | `dashboard`, `indicadores` |
 | ¿De dónde salen las portadas? | `portadas` |
+| ¿Dónde se valida el horario de 8:00 a 20:00? | `horario de atencion` |
+| ¿Cómo funciona la cola de espera? | `cola de espera` |
+| ¿Dónde se busca por título, autor, categoría o ISBN? | `consulta disponibilidad` |
+| ¿Dónde está el historial con filtros? | `historial`, `filtro de fechas` |
+| ¿Dónde están los reportes del RF08? | `reportes rf08`, `reporte devoluciones`, `reporte reservas`, `reporte incidencias`, `reporte bajas logicas`, `reporte stock`, `reporte indicadores`, `reporte tiempos` |
+| ¿Dónde se crea el encargado desde el panel? | `crear perfil 2` |
+| ¿Cómo se evita que un usuario tenga dos perfiles? | `perfil unico` |
+| ¿Por qué la contraseña se mide en bytes? | `criterio 1 en bytes` |
 
 ---
 
@@ -623,6 +769,17 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 5 | Encargado: pestaña Reservas pendientes | ✅ `encargado-reservas-pendientes.png` |
 | 5 | Admin: pestaña Reportes (Excel, PDF, CSV, importar CSV) | ✅ `admin-reportes.png` |
 | 5 | `logs/biblioteca.log` con "eliminada físicamente de la BD" | ⬜ |
+| 6 | Encargado: buscar libro por autor en Registrar préstamo (RF03) | ✅ `encargado-buscar-libro.png` |
+| 6 | Encargado: reservas pendientes y tabla "En cola de espera" (RF04) | ✅ `encargado-cola-espera.png` |
+| 6 | Encargado: historial filtrado por DNI, con hora límite 20:00 (RF07 y RF01) | ✅ `encargado-historial.png` |
+| 6 | Encargado: pestaña Reportes (RF08) | ✅ `encargado-reportes.png` |
+| 6 | Admin: pestaña Encargados con el registro y la tabla (RF09) | ✅ `admin-encargados.png` |
+| 6 | Admin: historial (RF07) | ✅ `admin-historial.png` |
+| 6 | Admin: reservas con una en cola (RF04) | ✅ `admin-reservas-cola.png` |
+| 6 | Admin: reportes con el selector de los 8 tipos (RF08) | ✅ `admin-reportes-rf08.png` |
+| 6 | Prestatario: Mis Préstamos con filtros (RF07) | ✅ `prestatario-mis-prestamos-filtros.png` |
+| 6 | Prestatario: catálogo con estado y stock, botón "Unirme a la cola", modal de la cola y "Mis Reservas" con el puesto | ⬜ tómenlas en vivo (en la prueba no cargaron las portadas) |
+| 6 | Un PDF o Excel de los reportes nuevos abierto (por ejemplo, reservas o tiempos) | ⬜ |
 | 4 | Código: `LimitadorIntentosLogin` (Guava), `ReporteService` (POI y CSV), `logback-spring.xml` | ⬜ |
 | 5 | Terminal con `./mvnw clean package` → BUILD SUCCESS | ⬜ |
 | 5 | Explorador mostrando `backend/target/biblioteca-alejandria.jar` | ⬜ |

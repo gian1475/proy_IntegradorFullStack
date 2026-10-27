@@ -31,12 +31,13 @@ class LibroServiceTest {
     @Mock private AutorDao autorDao;
     @Mock private PrestamoDao prestamoDao;
     @Mock private ReservaDao reservaDao;
+    @Mock private ColaEsperaService colaEspera;
 
     private LibroService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new LibroService(libroDao, categoriaDao, autorDao, prestamoDao, reservaDao);
+        servicio = new LibroService(libroDao, categoriaDao, autorDao, prestamoDao, reservaDao, colaEspera);
     }
 
     @Test
@@ -68,6 +69,48 @@ class LibroServiceTest {
         NegocioException error = assertThrows(NegocioException.class, () -> servicio.darDeBaja(10));
         assertEquals("El libro tiene reservas pendientes", error.getMessage());
         verify(libroDao, never()).save(any());
+    }
+
+    @Test
+    void noSeDaDeBajaUnLibroConGenteEnLaColaDeEspera() {
+        when(libroDao.findById(10)).thenReturn(Optional.of(libro("prestado")));
+        when(reservaDao.existsByLibroIdLibroAndEstadoReserva(10, "pendiente")).thenReturn(false);
+        when(reservaDao.existsByLibroIdLibroAndEstadoReserva(10, "en_espera")).thenReturn(true);
+
+        NegocioException error = assertThrows(NegocioException.class, () -> servicio.darDeBaja(10));
+        assertEquals("El libro tiene prestatarios en la cola de espera", error.getMessage());
+        verify(libroDao, never()).save(any());
+    }
+
+    // ---------- Cola de espera (RF04) ----------
+
+    @Test
+    void siAlguienEstaEnLaColaElEjemplarDevueltoEsParaElYElStockNoSube() {
+        Libro libro = libro("prestado");
+        libro.setStock(0);
+        when(libroDao.buscarParaActualizar(10)).thenReturn(Optional.of(libro));
+        when(colaEspera.asignarAlSiguiente(10)).thenReturn(true);
+
+        servicio.reponerStock(10);
+
+        assertEquals(0, libro.getStock());
+        assertEquals("reservado", libro.getEstadoLibro()); // no hay ejemplares libres para otros
+    }
+
+    @Test
+    void siElAdminAgregaEjemplaresPrimeroSeRepartenALaCola() {
+        Libro libro = libro("prestado");
+        libro.setStock(0);
+        when(libroDao.findById(10)).thenReturn(Optional.of(libro));
+        when(categoriaDao.findById(4)).thenReturn(Optional.of(new Categoria(4, "Tecnología", null)));
+        when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(colaEspera.asignarAlSiguiente(10)).thenReturn(true, false); // hay 1 persona en la cola
+
+        LibroFormDTO form = formulario(3); // el admin agrega 3 ejemplares
+
+        var resultado = servicio.actualizar(10, form);
+        assertEquals(2, resultado.stock());               // 1 se lo lleva la cola
+        assertEquals("disponible", resultado.estadoLibro());
     }
 
     // ---------- Ejemplar dañado y mantenimiento (RF02) ----------
@@ -117,15 +160,20 @@ class LibroServiceTest {
         when(categoriaDao.findById(4)).thenReturn(Optional.of(new Categoria(4, "Tecnología", null)));
         when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        LibroFormDTO form = formulario(1); // el ejemplar ya se reparó
+
+        assertEquals("disponible", servicio.actualizar(10, form).estadoLibro());
+    }
+
+    private LibroFormDTO formulario(int stock) {
         LibroFormDTO form = new LibroFormDTO();
         form.setTitulo("Clean Code");
         form.setIsbn("9780132350884");
         form.setEditorial("Prentice Hall");
         form.setAnioPublicacion(2008);
-        form.setStock(1); // el ejemplar ya se reparó
+        form.setStock(stock);
         form.setIdCategoria(4);
-
-        assertEquals("disponible", servicio.actualizar(10, form).estadoLibro());
+        return form;
     }
 
     private Libro libro(String estado) {

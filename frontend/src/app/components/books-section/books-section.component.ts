@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, input, output, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { LibroService, LibroBackend } from '../../services/libro.service';
 import { portadaPorIsbn, usarPortadaPorDefecto } from '../../utils/portada';
+import { coincideBusqueda } from '../../utils/estado-libro';
 
 export interface Book {
   id: number;
@@ -11,6 +12,7 @@ export interface Book {
   editorial: string;
   category: string;
   stock: number;
+  isbn: string;
   coverImage: string;
 }
 
@@ -44,6 +46,7 @@ export class BooksSectionComponent implements OnInit {
           editorial: item.editorial,
           category: item.categoria?.nombre ?? '',
           stock: item.stock,
+          isbn: item.isbn,
           coverImage: portadaPorIsbn(item.isbn)
         })));
         this.cargando.set(false);
@@ -55,13 +58,11 @@ export class BooksSectionComponent implements OnInit {
     });
   }
 
+  // consulta disponibilidad (RF03): la misma busqueda del catalogo (titulo, autor, categoria o isbn)
   readonly filteredBooks = computed(() => {
-    const term = this.searchTerm().trim().toLowerCase();
-    if (!term) return this.books();
-    return this.books().filter(b => 
-      b.title.toLowerCase().includes(term) ||
-      b.author.toLowerCase().includes(term) ||
-      b.category.toLowerCase().includes(term)
+    const term = this.searchTerm();
+    return this.books().filter(b =>
+      coincideBusqueda(term, { titulo: b.title, autores: b.author, categoria: b.category, isbn: b.isbn })
     );
   });
 

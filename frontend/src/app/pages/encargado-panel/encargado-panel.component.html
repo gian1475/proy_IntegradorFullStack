@@ -9,12 +9,16 @@
       <button [class.active]="pestana() === 'activos'" (click)="cambiarPestana('activos')">Préstamos activos</button>
       <button [class.active]="pestana() === 'registrar'" (click)="cambiarPestana('registrar')">Registrar préstamo</button>
       <button [class.active]="pestana() === 'reservas'" (click)="cambiarPestana('reservas')">Reservas pendientes</button>
+      <button [class.active]="pestana() === 'historial'" (click)="cambiarPestana('historial')">Historial</button>
+      <button [class.active]="pestana() === 'reportes'" (click)="cambiarPestana('reportes')">Reportes</button>
     </nav>
 
     @switch (pestana()) {
       @case ('activos') { <app-activos-tab /> }
       @case ('registrar') { <app-registrar-tab [reserva]="reservaAEntregar()" /> }
       @case ('reservas') { <app-reservas-tab (entregar)="entregar($event)" /> }
+      @case ('historial') { <app-historial-prestamos /> }
+      @case ('reportes') { <app-reportes-descarga /> }
     }
   </main>
 </div>

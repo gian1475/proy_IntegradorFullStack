@@ -6,7 +6,6 @@ import com.alejandria.biblioteca.dao.ReservaDao;
 import com.alejandria.biblioteca.dao.UsuarioDao;
 import com.alejandria.biblioteca.dto.reporte.DashboardDTO;
 import com.alejandria.biblioteca.dto.reporte.DashboardDTO.Conteo;
-import com.alejandria.biblioteca.dto.reporte.IndicadorDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,28 +80,9 @@ public class DashboardService {
                 prestamoDao.contarDevueltosEntre(inicioMes, finMes),
                 conRetraso,
                 prestamoDao.contarDevueltosDanadosEntre(inicioMes, finMes),
-                indicadores(prestamosMes, conRetraso, conIncidencia),
+                IndicadoresGestion.calcular(prestamosMes, conRetraso, conIncidencia, "este mes"),
                 aConteos(prestamoDao.prestamosPorCategoriaEntre(inicioMes, finMes)),
                 ultimos7Dias(ahora.toLocalDate())
-        );
-    }
-
-    // indicadores: los 4 del apartado 1.2.2, con su linea base y su meta.
-    // PDF y TIM se calculan con los prestamos del mes. TAP e IPI no se inventan: se dice q falta para medirlos
-    private List<IndicadorDTO> indicadores(long prestamosMes, long conRetraso, long conIncidencia) {
-        Double pdf = IndicadoresGestion.porcentaje(conRetraso, prestamosMes);
-        Double tim = IndicadoresGestion.porcentaje(conIncidencia, prestamosMes);
-        return List.of(
-                new IndicadorDTO("TAP", "Tiempo promedio de atención por préstamo", null, "min", "6 min", "≤ 2 min", null,
-                        "Para calcularlo falta guardar la hora en que empieza la atención de cada préstamo."),
-                new IndicadorDTO("PDF", "Porcentaje de devoluciones fuera de plazo", pdf, "%", "15 %", "≤ 5 %",
-                        IndicadoresGestion.cumpleMetaMaxima(pdf, 5),
-                        "Devoluciones con retraso: " + conRetraso + " de " + prestamosMes + " préstamos este mes."),
-                new IndicadorDTO("IPI", "Índice de precisión del inventario", null, "%", "70 %", "≥ 95 %", null,
-                        "Se calcula con la auditoría física mensual: libros que coinciden / libros auditados."),
-                new IndicadorDTO("TIM", "Tasa de incidencias mensual", tim, "%", "2 %", "≤ 1 %",
-                        IndicadoresGestion.cumpleMetaMaxima(tim, 1),
-                        "Préstamos con incidencia por daño o pérdida: " + conIncidencia + " de " + prestamosMes + " este mes.")
         );
     }
 

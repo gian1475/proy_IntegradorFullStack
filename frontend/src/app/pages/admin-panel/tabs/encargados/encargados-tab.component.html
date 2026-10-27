@@ -1,0 +1,82 @@
+@if (mensajeOk()) {
+  <div class="alert ok">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<section class="panel-card">
+  <h2>Registrar encargado</h2>
+  <p class="panel-subtitle">El encargado inicia sesión con su correo y esta contraseña. Después puede atender la ventanilla de préstamos.</p>
+  <form (ngSubmit)="registrar()">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="e-nombre">Nombres</label>
+        <input id="e-nombre" name="nombre" maxlength="50" [(ngModel)]="form.nombre" />
+      </div>
+      <div class="form-field">
+        <label for="e-apellido">Apellidos</label>
+        <input id="e-apellido" name="apellido" maxlength="50" [(ngModel)]="form.apellido" />
+      </div>
+      <div class="form-field">
+        <label for="e-dni">DNI</label>
+        <input id="e-dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="form.dni" />
+      </div>
+      <div class="form-field">
+        <label for="e-correo">Correo</label>
+        <input id="e-correo" name="correo" type="email" maxlength="100" [(ngModel)]="form.correo" />
+      </div>
+      <div class="form-field">
+        <label for="e-contrasena">Contraseña</label>
+        <input id="e-contrasena" name="contrasena" type="password" maxlength="64" autocomplete="new-password" [(ngModel)]="form.contrasena" />
+      </div>
+      <div class="form-field">
+        <label for="e-turno">Turno</label>
+        <select id="e-turno" name="turno" [(ngModel)]="form.turno">
+          <option value="mañana">Mañana</option>
+          <option value="tarde">Tarde</option>
+        </select>
+      </div>
+    </div>
+    <ul class="requisitos">
+      @for (r of requisitos(); track r.texto) {
+        <li [class.cumple]="r.cumple">{{ r.cumple ? '✓' : '✗' }} {{ r.texto }}</li>
+      }
+    </ul>
+    <div class="form-actions">
+      <button type="submit" class="btn primary" [disabled]="guardando()">Registrar encargado</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel-card">
+  <h2>Encargados ({{ encargados().length }})</h2>
+  @if (encargados().length === 0) {
+    <div class="empty">No hay encargados registrados.</div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>DNI</th>
+            <th>Correo</th>
+            <th>Turno</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of encargados(); track e.idUsuario) {
+            <tr>
+              <td>{{ e.nombre }} {{ e.apellido }}</td>
+              <td>{{ e.dni }}</td>
+              <td>{{ e.correo }}</td>
+              <td>{{ e.turno }}</td>
+              <td><span class="badge" [class]="e.estado">{{ e.estado }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

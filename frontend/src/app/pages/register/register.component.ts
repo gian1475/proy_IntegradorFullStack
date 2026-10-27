@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HeaderComponent } from '../../components/header/header.component';
+import { contrasenaValida, requisitosContrasena } from '../../utils/regla-contrasena';
 
 @Component({
   selector: 'app-register',
@@ -26,21 +27,14 @@ export class RegisterComponent {
   errorMessage = signal<string>('');
   cargando = signal<boolean>(false);
 
-  /** Misma regla que ValidadorContrasena del backend. */
+  /** Misma regla que ValidadorContrasena del backend (los criterios están en utils/regla-contrasena.ts). */
   // regla contra (front): los mismos 5 criterios del backend, se van marcando mientras escribe
   requisitosContrasena(): { texto: string; cumple: boolean }[] {
-    const c = this.contrasena;
-    return [
-      { texto: 'Entre 8 y 64 caracteres', cumple: c.length >= 8 && c.length <= 64 },  // criterio 1
-      { texto: 'Una letra minúscula', cumple: /\p{Ll}/u.test(c) },                    // criterio 2
-      { texto: 'Una letra mayúscula', cumple: /\p{Lu}/u.test(c) },                    // criterio 3
-      { texto: 'Un número', cumple: /\d/.test(c) },                                   // criterio 4
-      { texto: 'Un símbolo especial (ej. @ # $ % !)', cumple: /[^\p{L}\d\s]/u.test(c) }, // criterio 5
-    ];
+    return requisitosContrasena(this.contrasena);
   }
 
   contrasenaValida(): boolean {
-    return this.requisitosContrasena().every(r => r.cumple);
+    return contrasenaValida(this.contrasena);
   }
 
   // crear perfil 3 (front): el formulario de registro siempre crea un prestatario

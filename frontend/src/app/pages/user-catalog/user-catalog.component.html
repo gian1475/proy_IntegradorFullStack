@@ -88,10 +88,19 @@
                   <span class="badge-category">{{ book.category }}</span>
                   <h3 class="book-title" [title]="book.title">{{ book.title }}</h3>
                   <p class="book-author">{{ book.author }}</p>
+                  <!-- consulta disponibilidad (RF03): estado agregado y stock disponible del titulo -->
+                  <p class="book-stock">
+                    <span class="estado-libro" [class]="book.estado">{{ etiquetaEstado(book.estado) }}</span>
+                    <span>Stock: {{ book.stock }}</span>
+                  </p>
                   <div class="card-action">
-                    <button class="btn-reserve" (click)="abrirModalConfiguracion(book)" [disabled]="book.stock === 0">
-                      {{ book.stock === 0 ? 'Agotado' : 'Reservar' }}
-                    </button>
+                    @if (book.stock === 0 && book.estado === 'mantenimiento') {
+                      <button class="btn-reserve" disabled>En mantenimiento</button>
+                    } @else {
+                      <button class="btn-reserve" (click)="abrirModalConfiguracion(book)">
+                        {{ book.stock === 0 ? 'Unirme a la cola' : 'Reservar' }}
+                      </button>
+                    }
                   </div>
                 </div>
               </article>
@@ -123,12 +132,18 @@
                   <span class="badge-category">{{ reserva.categoria }}</span>
                   <h3 class="book-title">{{ reserva.titulo }}</h3>
                   <p class="book-author">{{ reserva.autor }}</p>
-                  <div class="reserve-meta">
-                    Recojo: {{ reserva.fechaRecojo }} ({{ reserva.horario }})
-                  </div>
+                  @if (reserva.enCola) {
+                    <div class="reserve-meta">
+                      En cola de espera: puesto {{ reserva.posicion }}
+                    </div>
+                  } @else {
+                    <div class="reserve-meta">
+                      Recojo: {{ reserva.fechaRecojo }} ({{ reserva.horario }})
+                    </div>
+                  }
                   <div class="card-action">
                     <button class="btn-cancel" (click)="abrirModalCancelar(reserva)">
-                      Cancelar
+                      {{ reserva.enCola ? 'Salir de la cola' : 'Cancelar' }}
                     </button>
                   </div>
                 </div>
@@ -148,6 +163,25 @@
         } @else if (misPrestamos().length === 0) {
           <div class="aviso-vacio">Todavía no tienes préstamos registrados.</div>
         } @else {
+          <!-- historial (RF07): filtros por libro y por rango de fechas -->
+          <div class="filtros-prestamos">
+            <label>
+              Libro
+              <input type="text" placeholder="Título" [ngModel]="filtroLibro()" (ngModelChange)="filtroLibro.set($event)" />
+            </label>
+            <label>
+              Desde
+              <input type="date" [ngModel]="filtroDesde()" (ngModelChange)="filtroDesde.set($event)" />
+            </label>
+            <label>
+              Hasta
+              <input type="date" [ngModel]="filtroHasta()" (ngModelChange)="filtroHasta.set($event)" />
+            </label>
+            <button type="button" (click)="limpiarFiltrosPrestamos()">Limpiar</button>
+          </div>
+          @if (prestamosFiltrados().length === 0) {
+            <div class="aviso-vacio">No hay préstamos con esos filtros.</div>
+          }
           <div class="tabla-prestamos">
             <table>
               <thead>
@@ -163,7 +197,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (p of misPrestamos(); track p.idPrestamo) {
+                @for (p of prestamosFiltrados(); track p.idPrestamo) {
                   <tr>
                     <td>{{ p.idPrestamo }}</td>
                     <td>{{ tituloDe(p.idLibro) }}</td>
@@ -187,7 +221,7 @@
   @if (modalConfiguracion(); as book) {
     <div class="modal-backdrop">
       <div class="modal-box">
-        <h2 class="modal-title">Confirmar Reserva</h2>
+        <h2 class="modal-title">{{ book.stock === 0 ? 'Cola de Espera' : 'Confirmar Reserva' }}</h2>
         <div class="modal-form">
           <div class="modal-book-preview">
             <img [src]="book.coverImage" [alt]="book.title" (error)="usarPortadaPorDefecto($event)" />
@@ -197,6 +231,14 @@
             </div>
           </div>
 
+          @if (book.stock === 0) {
+          <!-- cola de espera (RF04): sin ejemplares no se elige fecha, se entra a la cola -->
+          <p class="modal-desc">
+            No hay ejemplares disponibles. Si te unes a la cola, el próximo ejemplar que se devuelva será para el primero
+            de la cola. Cuando te toque, tu reserva aparecerá con su fecha de recojo en "Mis Reservas" y tendrás hasta
+            el cierre (20:00) del día siguiente para recogerlo.
+          </p>
+          } @else {
           <div class="form-group">
             <label for="fechaRecojo">Selecciona la fecha de recojo</label>
             <input 
@@ -216,6 +258,7 @@
               <option value="17:30 - 20:00">17:30 - 20:00 (Turno Noche)</option>
             </select>
           </div>
+          }
         </div>
 
         @if (errorReserva()) {
@@ -226,7 +269,7 @@
 
         <div class="modal-actions-row">
           <button class="btn-cancel-modal" (click)="cerrarModalConfiguracion()">Cancelar</button>
-          <button class="btn-confirm-modal" (click)="confirmarReserva(book)">Reservar</button>
+          <button class="btn-confirm-modal" (click)="confirmarReserva(book)">{{ book.stock === 0 ? 'Unirme a la cola' : 'Reservar' }}</button>
         </div>
       </div>
     </div>
@@ -252,6 +295,27 @@
     </div>
   }
 
+  <!-- Cola de espera (RF04): la reserva entró a la cola con su puesto -->
+  @if (modalEnCola(); as puesto) {
+    <div class="modal-backdrop">
+      <div class="modal-box">
+        <div class="modal-icon-circle success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h2 class="modal-title">Estás en la Cola</h2>
+        <p class="modal-desc">
+          Tu puesto en la cola de espera es el <strong>{{ puesto }}</strong>. Revisa "Mis Reservas": cuando se devuelva
+          un ejemplar y te toque, verás hasta cuándo puedes recogerlo.
+        </p>
+        <div class="modal-actions-row">
+          <button class="btn-single-modal" (click)="cerrarModalEnCola()">Volver</button>
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- MODAL FIGURA 40: Confirmación de cancelación de reserva -->
   @if (modalCancelar(); as item) {
     <div class="modal-backdrop">
@@ -265,7 +329,11 @@
         </div>
         <h2 class="modal-title">¿Desea Cancelar?</h2>
         <p class="modal-desc">
-          ¿Está seguro en la cancelación de su reserva de <strong>"{{ item.titulo }}"</strong>?
+          @if (item.enCola) {
+            ¿Está seguro de salir de la cola de espera de <strong>"{{ item.titulo }}"</strong>? Perderá su puesto.
+          } @else {
+            ¿Está seguro en la cancelación de su reserva de <strong>"{{ item.titulo }}"</strong>?
+          }
         </p>
         <div class="modal-actions-row">
           <button class="btn-confirm-modal" (click)="ejecutarCancelacion(item)">Sí, acepto</button>

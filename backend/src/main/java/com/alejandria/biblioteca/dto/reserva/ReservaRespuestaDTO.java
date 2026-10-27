@@ -6,7 +6,7 @@ import com.alejandria.biblioteca.entity.Reserva;
 
 import java.time.LocalDateTime;
 
-/** Reserva con los datos del libro y del prestatario, lista para mostrar en pantalla. */
+/** Reserva con los datos del libro y del prestatario, lista para mostrar en pantalla (con su puesto si está en la cola). */
 public record ReservaRespuestaDTO(
         Integer idReserva,
         Integer idLibro,
@@ -18,6 +18,7 @@ public record ReservaRespuestaDTO(
         String nombrePrestatario,
         LocalDateTime fechaReserva,
         LocalDateTime fechaRecojoLimite,
+        Integer posicionCola,
         String estadoReserva
 ) {
     /** Debe llamarse dentro de una transacción, porque lee la lista LAZY de autores del libro. */
@@ -37,6 +38,7 @@ public record ReservaRespuestaDTO(
                 r.getPrestatario().getNombre() + " " + r.getPrestatario().getApellido(),
                 r.getFechaReserva(),
                 r.getFechaRecojoLimite(),
+                r.getPosicionCola(),
                 r.getEstadoReserva()
         );
     }

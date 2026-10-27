@@ -38,6 +38,13 @@ class ValidadorContrasenaTest {
     }
 
     @Test
+    void rechazaMasDe72BytesAunqueTengaMenosDe64Caracteres() {
+        // la ñ ocupa 2 bytes: 4 + 60 x 2 = 124 bytes en 64 caracteres. bcrypt solo procesa 72
+        assertFalse(ValidadorContrasena.esValida("Aa1!" + "ñ".repeat(60)));
+        assertTrue(ValidadorContrasena.esValida("Aa1!" + "ñ".repeat(34))); // 4 + 68 = 72 bytes justos
+    }
+
+    @Test
     void rechazaNulo() {
         assertFalse(ValidadorContrasena.esValida(null));
     }

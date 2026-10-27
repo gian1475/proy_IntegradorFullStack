@@ -12,7 +12,10 @@ export interface ReservaBackend {
   idPrestatario: number;
   nombrePrestatario: string;
   fechaReserva: string;
-  fechaRecojoLimite: string;
+  /** null mientras está en la cola de espera (todavía no le toca un ejemplar). */
+  fechaRecojoLimite: string | null;
+  /** Puesto en la cola de espera (solo cuenta si estadoReserva es 'en_espera'). */
+  posicionCola: number;
   estadoReserva: string;
 }
 
@@ -23,8 +26,11 @@ export class ReservaService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8080/api/reservas';
 
-  /** fechaRecojoLimite en formato local "AAAA-MM-DDTHH:mm:ss" (hasta cuándo puede recoger el libro). */
-  crearReserva(idLibro: number, idUsuario: number, fechaRecojoLimite: string): Observable<ReservaBackend> {
+  /**
+   * fechaRecojoLimite en formato local "AAAA-MM-DDTHH:mm:ss" (hasta cuándo puede recoger el libro).
+   * Sin stock va null: el backend pone la reserva en la cola de espera (RF04).
+   */
+  crearReserva(idLibro: number, idUsuario: number, fechaRecojoLimite: string | null): Observable<ReservaBackend> {
     return this.http.post<ReservaBackend>(this.apiUrl, { idLibro, idUsuario, fechaRecojoLimite });
   }
 

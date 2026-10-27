@@ -36,19 +36,21 @@ frontend/src/
 └── app/
     ├── pages/          Pantallas: home, login, registro, catálogo y los paneles
     │   ├── admin-panel/       Panel del Administrador; cada pestaña está en tabs/
-    │   │   └── tabs/          libros, prestamos, reportes, monitoreo
+    │   │   └── tabs/          dashboard, libros, prestamos, reservas, encargados, reportes, monitoreo
     │   └── encargado-panel/   Panel del Encargado; cada pestaña está en tabs/
     │       └── tabs/          activos, registrar, reservas
-    ├── components/     Header, banner, secciones de libros
-    ├── services/       Llamadas al backend (auth, libros, préstamos, reservas, reportes)
+    ├── components/     Header, banner, secciones de libros, historial de préstamos y descarga de reportes
+    │                   (estos dos últimos los usan los paneles del admin y del encargado)
+    ├── services/       Llamadas al backend (auth, libros, préstamos, reservas, reportes, usuarios)
     ├── guards/         Bloqueo de rutas por rol
     ├── interceptors/   Agrega el token a cada petición y renueva la sesión
-    └── utils/          Funciones compartidas (mensajes de error)
+    └── utils/          Funciones compartidas (mensajes de error, alertas, estado del libro, regla de contraseña)
 
 database/
 ├── schema_postgresql.sql        Script completo de la base de datos con datos iniciales
 ├── migracion_01_prestamo.sql    Cambios para una base creada con una versión anterior (préstamos)
 ├── migracion_02_sancion_monto.sql  Monto de las multas
+├── migracion_03_reserva_cola.sql   Estado 'en_espera' para la cola de espera de reservas
 ├── datos_demo.sql               21 libros reales con sus autores (datos verificados en Open Library)
 └── ejemplo_importar_libros.csv  Archivo de ejemplo para importar libros
 ```
@@ -67,16 +69,17 @@ Flujo de una petición: **controller → service → dao → base de datos**.
 
 | Perfil | Pantalla | Puede |
 |---|---|---|
-| Administrador | `/admin` | Dashboard con los indicadores de gestión, gestionar libros (CRUD), ver préstamos activos, eliminar reservas canceladas o vencidas, descargar reportes, ver el monitoreo |
-| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas |
-| Prestatario | `/catalogo` | Ver el catálogo, reservar y cancelar sus reservas |
+| Administrador | `/admin` | Dashboard con los indicadores de gestión, gestionar libros (CRUD), ver préstamos activos y el historial, eliminar reservas canceladas o vencidas, registrar encargados, descargar reportes, ver el monitoreo |
+| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas y ver la cola de espera, ver el historial, descargar reportes |
+| Prestatario | `/catalogo` | Ver el catálogo (stock y estado de cada libro), reservar, entrar a la cola de espera si no hay stock, cancelar sus reservas, ver y filtrar sus préstamos |
 
 El backend valida el rol en cada endpoint (`@RolesPermitidos`): sin sesión responde **401** y con un rol no permitido responde **403**.
 
 ## Cómo levantar el proyecto
 
 1. **Credenciales**: copiar `backend/.env.example` como `backend/.env` y completar la URL, el usuario y la contraseña de Neon. El `.env` no se sube a GitHub.
-2. **Base de datos**: si es una base nueva, ejecutar en el SQL Editor de Neon `database/schema_postgresql.sql` y después `database/datos_demo.sql` (libros para la demo). Si ya existía, ejecutar las migraciones que falten (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`) y `datos_demo.sql`. Todos se pueden ejecutar más de una vez.
+2. **Base de datos**: si es una base nueva, ejecutar en el SQL Editor de Neon `database/schema_postgresql.sql` y después `database/datos_demo.sql` (libros para la demo). Si ya existía, ejecutar las migraciones que falten (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`) y `datos_demo.sql`. Todos se pueden ejecutar más de una vez.
+   **Horario de atención:** el backend no registra préstamos fuera de 08:00–20:00 y la hora límite nunca pasa de las 20:00 (`app.horario.apertura` y `app.horario.cierre` en `application.properties`). Para probar de noche se puede poner `app.horario.cierre=23:59` y volverlo a `20:00` antes de la demo.
 3. **Backend** (desde la carpeta `backend/`, porque ahí busca el `.env`):
    ```
    cd backend
@@ -107,9 +110,9 @@ cd backend
 ./mvnw test
 ```
 
-90 pruebas del backend: regla de contraseña, validación de datos del usuario, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), ampliación (1 hora, sin reservas), devolución (dañado → mantenimiento), anulación, baja de libros, eliminación física de reservas, indicadores del dashboard, monto de las multas, manejo de errores, reportes y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
+154 pruebas del backend: regla de contraseña (también en bytes), validación de datos del usuario, perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo, cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
 
-Frontend (alertas de 15 minutos del panel del encargado):
+Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña), 16 pruebas:
 
 ```
 cd frontend
@@ -121,10 +124,12 @@ npx ng test --watch=false
 | Recurso | Endpoints | Quién |
 |---|---|---|
 | Autenticación | `POST /api/auth/login`, `POST /api/auth/registro`, `POST /api/auth/logout` | Público |
-| Libros | `GET /api/libros` (público); `POST`, `PUT /{id}`, `DELETE /{id}` | Administrador |
-| Préstamos | `POST /api/prestamos`, `GET /activos`, `GET /prestatario/{id}`, `PUT /{id}/ampliar`, `PUT /{id}/devolucion`, `DELETE /{id}` | Encargado (y Administrador en las consultas) |
-| Reservas | `GET /api/reservas`, `GET /usuario/{id}`, `POST`, `PUT /{id}/cancelar`; `DELETE /{id}` (solo admin) | Según el rol |
-| Reportes | `GET /api/reportes/prestamos/excel`, `/pdf`, `/csv`; `POST /api/reportes/libros/csv` | Administrador |
+| Libros | `GET /api/libros`, `GET /buscar?q=` (título, autor, categoría o ISBN) (públicos); `POST`, `PUT /{id}`, `DELETE /{id}` | Administrador |
+| Préstamos | `POST /api/prestamos`, `GET /activos`, `GET /historial?dni=&libro=&desde=&hasta=`, `GET /prestatario/{id}`, `PUT /{id}/ampliar`, `PUT /{id}/devolucion`, `DELETE /{id}` | Encargado (y Administrador en las consultas) |
+| Reservas | `GET /api/reservas`, `GET /usuario/{id}`, `POST` (sin stock entra a la cola de espera), `PUT /{id}/cancelar`; `DELETE /{id}` (solo admin) | Según el rol |
+| Reportes | `GET /api/reportes/{tipo}/{formato}?desde=&hasta=` (tipo: `prestamos`, `devoluciones`, `reservas`, `incidencias`, `bajas`, `stock`, `indicadores`, `tiempos`; formato: `excel`, `pdf`, `csv`) | Administrador y Encargado |
+| Importar libros | `POST /api/reportes/libros/csv` | Administrador |
+| Encargados | `GET /api/usuarios/encargados`, `POST /api/usuarios/encargados` | Administrador |
 | Monitoreo | `GET /api/monitoreo` | Administrador |
 | Dashboard | `GET /api/dashboard` | Administrador |
 
@@ -137,9 +142,9 @@ Las eliminaciones de libros y préstamos son **lógicas**: el registro no se bor
 | PostgreSQL JDBC + Spring Data JPA | Conexión y consultas a la base de datos |
 | Spring Security Crypto (BCrypt) | Guardar las contraseñas cifradas |
 | Google Guava | Bloquear el login 15 minutos después de 3 intentos fallidos |
-| Apache POI | Reporte de préstamos en Excel |
-| Apache Commons CSV | Exportar préstamos e importar libros en CSV |
-| OpenPDF | Reporte de préstamos en PDF |
+| Apache POI | Los reportes en Excel |
+| Apache Commons CSV | Exportar los reportes e importar libros en CSV |
+| OpenPDF | Los reportes en PDF |
 | Logback | Registro de logins y préstamos en `backend/logs/biblioteca.log` |
 | Spring Boot Actuator | Monitoreo: estado de la aplicación y de la BD, memoria, CPU, peticiones |
 | Bootstrap 5.3 | Diseño del dashboard del administrador (encerrado en `.dashboard-bootstrap` para no cambiar las otras pantallas) |
