@@ -1,35 +1,22 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormatoReporte, ReporteService, ResultadoImportacion } from '../../../../services/reporte.service';
+import { ReporteService, ResultadoImportacion } from '../../../../services/reporte.service';
+import { ReportesDescargaComponent } from '../../../../components/reportes-descarga/reportes-descarga.component';
 import { mensajeDeError } from '../../../../utils/mensaje-error';
 
-/** Pestaña "Reportes" del admin: Excel (Apache POI), PDF (OpenPDF) y CSV (Commons CSV). */
+/** Pestaña "Reportes" del admin: los reportes del RF08 (Excel, PDF y CSV) e importar libros desde CSV. */
 @Component({
   selector: 'app-reportes-tab',
   standalone: true,
+  imports: [ReportesDescargaComponent],
   templateUrl: './reportes-tab.component.html',
 })
 export class ReportesTabComponent {
   private reporteService = inject(ReporteService);
 
-  readonly mensajeOk = signal('');
   readonly mensajeError = signal('');
-  readonly descargando = signal(false);
   readonly resultadoImportacion = signal<ResultadoImportacion | null>(null);
   archivoCsv: File | null = null;
-
-  // reporte prestamos (front): descarga el excel, pdf o csv
-  descargar(formato: FormatoReporte): void {
-    this.limpiarMensajes();
-    this.descargando.set(true);
-    this.reporteService.descargarPrestamos(formato).subscribe({
-      next: () => {
-        this.descargando.set(false);
-        this.mensajeOk.set(`Reporte ${formato.toUpperCase()} descargado`);
-      },
-      error: err => { this.descargando.set(false); this.mostrarError(err); }
-    });
-  }
 
   seleccionarArchivo(evento: Event): void {
     const input = evento.target as HTMLInputElement;
@@ -51,7 +38,6 @@ export class ReportesTabComponent {
   }
 
   private limpiarMensajes(): void {
-    this.mensajeOk.set('');
     this.mensajeError.set('');
   }
 

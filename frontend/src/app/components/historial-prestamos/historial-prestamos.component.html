@@ -1,0 +1,78 @@
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<section class="panel-card">
+  <h2>Historial de préstamos</h2>
+  <p class="panel-subtitle">Todos los préstamos, también los devueltos y los anulados. Los filtros vacíos no se aplican.</p>
+  <form (ngSubmit)="buscar()">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="h-dni">DNI del prestatario</label>
+        <input id="h-dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="filtros.dni" />
+      </div>
+      <div class="form-field">
+        <label for="h-libro">Libro (título o ISBN)</label>
+        <input id="h-libro" name="libro" placeholder="Ej. Clean Code" [(ngModel)]="filtros.libro" />
+      </div>
+      <div class="form-field">
+        <label for="h-desde">Desde</label>
+        <input id="h-desde" name="desde" type="date" [(ngModel)]="filtros.desde" />
+      </div>
+      <div class="form-field">
+        <label for="h-hasta">Hasta</label>
+        <input id="h-hasta" name="hasta" type="date" [(ngModel)]="filtros.hasta" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn primary" [disabled]="cargando()">Buscar</button>
+      <button type="button" class="btn secondary" (click)="limpiar()">Limpiar filtros</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel-card">
+  <h2>{{ prestamos().length }} préstamo(s)</h2>
+  @if (cargando()) {
+    <div class="empty">Cargando...</div>
+  } @else if (prestamos().length === 0) {
+    <div class="empty">No hay préstamos con esos filtros.</div>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Prestatario</th>
+            <th>DNI</th>
+            <th>Libro</th>
+            <th>Encargado</th>
+            <th>Inicio</th>
+            <th>Hora límite</th>
+            <th>Devolución</th>
+            <th>Ampliado</th>
+            <th>Estado físico</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of prestamos(); track p.idPrestamo) {
+            <tr>
+              <td>{{ p.idPrestamo }}</td>
+              <td>{{ p.prestatario }}</td>
+              <td>{{ p.dniPrestatario }}</td>
+              <td>{{ p.tituloLibro }}</td>
+              <td>{{ p.encargado }}</td>
+              <td>{{ p.fechaPrestamo | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ p.fechaDevolucionPrevista | date: 'HH:mm' }}</td>
+              <td>{{ p.fechaDevolucionReal ? (p.fechaDevolucionReal | date: 'dd/MM HH:mm') : '-' }}</td>
+              <td>{{ p.ampliado ? 'Sí' : 'No' }}</td>
+              <td>{{ p.estadoFisicoDevolucion ?? '-' }}</td>
+              <td><span class="badge" [class]="p.estadoPrestamo">{{ p.estadoPrestamo }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

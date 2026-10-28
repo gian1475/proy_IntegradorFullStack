@@ -35,3 +35,34 @@
     </div>
   }
 </section>
+
+@if (enCola().length > 0) {
+  <section class="panel-card">
+    <h2>En cola de espera</h2>
+    <p class="panel-subtitle">
+      No hay ejemplares de estos libros. Cuando se devuelva uno, pasa solo al primero de la cola y aparece arriba como reserva pendiente.
+    </p>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Libro</th>
+            <th>Puesto</th>
+            <th>Prestatario</th>
+            <th>En la cola desde</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of enCola(); track r.idReserva) {
+            <tr>
+              <td>{{ r.tituloLibro }}</td>
+              <td>{{ r.posicionCola }}</td>
+              <td>{{ r.nombrePrestatario }}</td>
+              <td>{{ r.fechaReserva | date: 'dd/MM HH:mm' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

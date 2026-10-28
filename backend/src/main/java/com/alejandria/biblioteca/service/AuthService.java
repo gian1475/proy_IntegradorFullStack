@@ -10,8 +10,6 @@ import com.alejandria.biblioteca.exception.NegocioException;
 import com.alejandria.biblioteca.seguridad.LimitadorIntentosLogin;
 import com.alejandria.biblioteca.seguridad.Rol;
 import com.alejandria.biblioteca.seguridad.Sesion;
-import com.alejandria.biblioteca.seguridad.ValidadorContrasena;
-import com.alejandria.biblioteca.seguridad.ValidadorUsuario;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -25,12 +23,15 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UsuarioDao usuarioDao;
+    private final UsuarioService usuarioService;
     private final SesionService sesionService;
     private final LimitadorIntentosLogin limitador;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public AuthService(UsuarioDao usuarioDao, SesionService sesionService, LimitadorIntentosLogin limitador) {
+    public AuthService(UsuarioDao usuarioDao, UsuarioService usuarioService, SesionService sesionService,
+                       LimitadorIntentosLogin limitador) {
         this.usuarioDao = usuarioDao;
+        this.usuarioService = usuarioService;
         this.sesionService = sesionService;
         this.limitador = limitador;
     }
@@ -76,45 +77,13 @@ public class AuthService {
     // datos q se piden: nombre, apellido, dni, correo y contraseña
     @Transactional
     public LoginRespuestaDTO registro(RegistroDTO registroDTO) {
-        if (registroDTO.getNombre() == null || registroDTO.getApellido() == null
-                || registroDTO.getCorreo() == null || registroDTO.getDni() == null
-                || registroDTO.getContrasena() == null) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "Todos los campos obligatorios deben completarse");
-        }
-
-        // validar datos: dni de 8 digitos, correo bien escrito y largos q entren en la bd
-        ValidadorUsuario.validar(registroDTO.getNombre(), registroDTO.getApellido(),
-                registroDTO.getDni(), registroDTO.getCorreo());
-
-        // regla contra: el backend vuelve a validar la contraseña aunque el front ya lo hizo
-        if (!ValidadorContrasena.esValida(registroDTO.getContrasena())) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, ValidadorContrasena.MENSAJE_REGLA);
-        }
-
-        String correo = registroDTO.getCorreo().trim().toLowerCase();
-        String dni = registroDTO.getDni().trim();
-
-        if (usuarioDao.existsByCorreo(correo)) {
-            throw new NegocioException(HttpStatus.CONFLICT, "El correo ya se encuentra registrado");
-        }
-        if (usuarioDao.existsByDni(dni)) {
-            throw new NegocioException(HttpStatus.CONFLICT, "El DNI ya se encuentra registrado");
-        }
-
-        Usuario nuevo = new Usuario();
-        nuevo.setNombre(registroDTO.getNombre().trim());
-        nuevo.setApellido(registroDTO.getApellido().trim());
-        nuevo.setDni(dni);
-        nuevo.setCorreo(correo);
-        // bcrypt: la contra se guarda encriptada (hash), en la bd nunca queda la contra real
-        nuevo.setContrasena(passwordEncoder.encode(registroDTO.getContrasena()));
-        nuevo.setEstado("activo");
-
+        // validar datos, regla contra y bcrypt: los hace UsuarioService.crearCuenta (lo mismo q al registrar encargados)
         // crear perfil 3: primero se guarda en la tabla usuario y despues en la tabla prestatario
-        Usuario guardado = usuarioDao.save(nuevo);
+        Usuario guardado = usuarioService.crearCuenta(registroDTO.getNombre(), registroDTO.getApellido(),
+                registroDTO.getDni(), registroDTO.getCorreo(), registroDTO.getContrasena());
         usuarioDao.registrarComoPrestatario(guardado.getIdUsuario());
 
-        log.info("Nuevo prestatario registrado: {}", correo);
+        log.info("Nuevo prestatario registrado: {}", guardado.getCorreo());
         return iniciarSesion(guardado, Rol.PRESTATARIO);
     }
 
@@ -122,16 +91,21 @@ public class AuthService {
         sesionService.invalidar(token);
     }
 
-    /** El rol se deduce de la tabla de subtipo en la que está el usuario. */
+    /** El rol se deduce de la tabla de subtipo en la que está el usuario (tiene que estar en una sola). */
     // detectar rol: aqui se sabe q perfil es cada usuario segun la tabla donde esta registrado
     private String obtenerRol(Integer idUsuario) {
+        // perfil unico: si el usuario no esta en ninguna tabla de perfil, o esta en dos, la cuenta esta mal armada
+        if (usuarioDao.contarPerfiles(idUsuario) != 1) {
+            log.warn("Login rechazado, el usuario {} no tiene un único perfil", idUsuario);
+            throw new NegocioException(HttpStatus.FORBIDDEN, "La cuenta no tiene un perfil válido. Comuníquese con el administrador");
+        }
         if (usuarioDao.esAdministrador(idUsuario)) {
             return Rol.ADMINISTRADOR; // perfil 1: esta en la tabla administrador
         }
         if (usuarioDao.esEncargado(idUsuario)) {
             return Rol.ENCARGADO; // perfil 2: esta en la tabla encargado
         }
-        return Rol.PRESTATARIO; // perfil 3: si no es ninguno de los dos es prestatario
+        return Rol.PRESTATARIO; // perfil 3: tiene un solo perfil y no es ninguno de los dos, es prestatario
     }
 
     // token: se crea la sesion y se le devuelve al front el token + los datos del usuario con su rol

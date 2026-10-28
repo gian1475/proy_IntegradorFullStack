@@ -1,0 +1,41 @@
+@if (mensajeOk()) {
+  <div class="alert ok">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert error">{{ mensajeError() }}</div>
+}
+
+<section class="panel-card">
+  <h2>Reportes</h2>
+  <div class="form-grid">
+    <div class="form-field">
+      <label for="r-tipo">Reporte</label>
+      <select id="r-tipo" name="tipo" [(ngModel)]="tipo">
+        @for (t of tipos; track t.valor) {
+          <option [value]="t.valor">{{ t.nombre }}</option>
+        }
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="r-desde">Desde</label>
+      <input id="r-desde" name="desde" type="date" [(ngModel)]="desde" [disabled]="!tipoElegido.usaFechas" />
+    </div>
+    <div class="form-field">
+      <label for="r-hasta">Hasta</label>
+      <input id="r-hasta" name="hasta" type="date" [(ngModel)]="hasta" [disabled]="!tipoElegido.usaFechas" />
+    </div>
+  </div>
+  <p class="panel-subtitle">
+    {{ tipoElegido.descripcion }}
+    @if (tipoElegido.usaFechas) {
+      Si deja las fechas vacías, incluye todo.
+    } @else {
+      Este reporte no depende de las fechas.
+    }
+  </p>
+  <div class="form-actions">
+    <button class="btn primary" (click)="descargar('excel')" [disabled]="descargando()">Descargar Excel (.xlsx)</button>
+    <button class="btn primary" (click)="descargar('pdf')" [disabled]="descargando()">Descargar PDF</button>
+    <button class="btn secondary" (click)="descargar('csv')" [disabled]="descargando()">Descargar CSV</button>
+  </div>
+</section>

@@ -43,8 +43,9 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
          + "ORDER BY p.fechaDevolucionPrevista")
     List<PrestamoDetalleDTO> listarActivosConDetalle();
 
-    /** Reporte: todos los préstamos con prestatario, encargado y libro (JOIN de cuatro tablas). */
-    // reporte prestamos: esta consulta es la q usan el excel (poi), el pdf (openpdf) y el csv
+    /** Historial (RF07): préstamos con prestatario, encargado y libro (JOIN de cuatro tablas), con filtros opcionales. */
+    // historial: filtra por prestatario (dni), por libro (parte del titulo o isbn) y por rango de fechas del prestamo.
+    // dni o libro en null no se aplican. trae todos los estados, tambien los anulados (eliminacion logica)
     @Query("SELECT new com.alejandria.biblioteca.dto.reporte.ReportePrestamoDTO("
          + "  p.idPrestamo, u.nombre, u.apellido, u.dni, e.nombre, e.apellido, l.titulo, "
          + "  p.fechaPrestamo, p.fechaDevolucionPrevista, p.fechaDevolucionReal, "
@@ -53,8 +54,63 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
          + "JOIN p.prestatario u "
          + "JOIN p.encargado e "
          + "JOIN p.libro l "
+         + "WHERE (:dni IS NULL OR u.dni = :dni) "
+         + "  AND (:libro IS NULL OR LOWER(l.titulo) LIKE LOWER(CONCAT('%', :libro, '%')) OR l.isbn = :libro) "
+         + "  AND p.fechaPrestamo >= :desde AND p.fechaPrestamo < :hasta "
          + "ORDER BY p.fechaPrestamo DESC")
-    List<ReportePrestamoDTO> listarParaReporte();
+    List<ReportePrestamoDTO> buscarHistorial(@Param("dni") String dni, @Param("libro") String libro,
+                                             @Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    /** Reporte de préstamos: la misma consulta del historial, solo con el rango de fechas. */
+    // reporte prestamos: esta consulta es la q usan el excel (poi), el pdf (openpdf) y el csv
+    default List<ReportePrestamoDTO> listarParaReporte(LocalDateTime desde, LocalDateTime hasta) {
+        return buscarHistorial(null, null, desde, hasta);
+    }
+
+    /** Reporte de devoluciones: préstamos devueltos, filtrados por la fecha en que se devolvieron. */
+    @Query("SELECT new com.alejandria.biblioteca.dto.reporte.ReportePrestamoDTO("
+         + "  p.idPrestamo, u.nombre, u.apellido, u.dni, e.nombre, e.apellido, l.titulo, "
+         + "  p.fechaPrestamo, p.fechaDevolucionPrevista, p.fechaDevolucionReal, "
+         + "  p.ampliado, p.estadoFisicoDevolucion, p.estadoPrestamo) "
+         + "FROM Prestamo p JOIN p.prestatario u JOIN p.encargado e JOIN p.libro l "
+         + "WHERE p.estadoPrestamo = 'devuelto' "
+         + "  AND p.fechaDevolucionReal >= :desde AND p.fechaDevolucionReal < :hasta "
+         + "ORDER BY p.fechaDevolucionReal DESC")
+    List<ReportePrestamoDTO> listarDevoluciones(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    /**
+     * Reporte de incidencias y sanciones (RF06 las registra). Cada fila: [id incidencia, id prestamo, prestatario,
+     * dni, libro, tipo, descripcion, fecha, estado, tipo sancion, monto, inicio sancion, fin sancion, estado sancion].
+     */
+    // reporte incidencias: incidencia + su sancion (LEFT JOIN: puede no tener sancion) + prestamo, usuario y libro
+    @Query(value = "SELECT i.id_incidencia, p.id_prestamo, u.nombre || ' ' || u.apellido, u.dni, l.titulo, "
+                 + "  i.tipo_incidencia, i.descripcion, i.fecha_incidencia, i.estado_incidencia, "
+                 + "  s.tipo_sancion, s.monto, s.fecha_inicio, s.fecha_fin, s.estado_sancion "
+                 + "FROM incidencia i "
+                 + "JOIN prestamo p ON p.id_prestamo = i.id_prestamo "
+                 + "JOIN usuario u ON u.id_usuario = p.id_prestatario "
+                 + "JOIN libro l ON l.id_libro = p.id_libro "
+                 + "LEFT JOIN sancion s ON s.id_incidencia = i.id_incidencia "
+                 + "WHERE i.fecha_incidencia >= :desde AND i.fecha_incidencia < :hasta "
+                 + "ORDER BY i.fecha_incidencia DESC", nativeQuery = true)
+    List<Object[]> listarIncidenciasConSancion(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    /**
+     * Reporte de tiempos: duración de los préstamos devueltos (de la entrega a la devolución), por categoría.
+     * Cada fila: [categoria, cantidad, minimo, promedio, maximo] (en minutos).
+     */
+    // reporte tiempos: minimo, promedio y maximo q el libro estuvo prestado en sala. EXTRACT(EPOCH) da segundos
+    @Query(value = "SELECT c.nombre, COUNT(*), "
+                 + "  MIN(EXTRACT(EPOCH FROM (p.fecha_devolucion_real - p.fecha_prestamo)) / 60), "
+                 + "  AVG(EXTRACT(EPOCH FROM (p.fecha_devolucion_real - p.fecha_prestamo)) / 60), "
+                 + "  MAX(EXTRACT(EPOCH FROM (p.fecha_devolucion_real - p.fecha_prestamo)) / 60) "
+                 + "FROM prestamo p "
+                 + "JOIN libro l ON l.id_libro = p.id_libro "
+                 + "JOIN categoria c ON c.id_categoria = l.id_categoria "
+                 + "WHERE p.estado_prestamo = 'devuelto' AND p.fecha_devolucion_real IS NOT NULL "
+                 + "  AND p.fecha_prestamo >= :desde AND p.fecha_prestamo < :hasta "
+                 + "GROUP BY c.nombre ORDER BY c.nombre", nativeQuery = true)
+    List<Object[]> tiemposPorCategoria(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 
     // ---------- Dashboard: conteos del mes (las fechas "desde" y "hasta" las manda java, hora de lima) ----------
 

@@ -7,6 +7,7 @@ import com.alejandria.biblioteca.dto.prestamo.DevolucionDTO;
 import com.alejandria.biblioteca.dto.prestamo.PrestamoDTO;
 import com.alejandria.biblioteca.dto.prestamo.PrestamoDetalleDTO;
 import com.alejandria.biblioteca.dto.prestamo.RegistroPrestamoDTO;
+import com.alejandria.biblioteca.dto.reporte.ReportePrestamoDTO;
 import com.alejandria.biblioteca.entity.Libro;
 import com.alejandria.biblioteca.entity.Prestamo;
 import com.alejandria.biblioteca.entity.Usuario;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -35,16 +37,18 @@ public class PrestamoService {
     private final LibroService libroService;
     private final PrestatarioService prestatarioService;
     private final ReservaService reservaService;
+    private final HorarioAtencion horario;
 
     public PrestamoService(PrestamoDao prestamoDao, LibroDao libroDao, UsuarioDao usuarioDao,
                            LibroService libroService, PrestatarioService prestatarioService,
-                           ReservaService reservaService) {
+                           ReservaService reservaService, HorarioAtencion horario) {
         this.prestamoDao = prestamoDao;
         this.libroDao = libroDao;
         this.usuarioDao = usuarioDao;
         this.libroService = libroService;
         this.prestatarioService = prestatarioService;
         this.reservaService = reservaService;
+        this.horario = horario;
     }
 
     /** Hora límite de devolución: inicio + 3 horas. */
@@ -63,6 +67,10 @@ public class PrestamoService {
         if (dto.getDniPrestatario() == null || dto.getIdLibro() == null) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, "Debe indicar el DNI del prestatario y el libro");
         }
+
+        // horario de atencion: fuera de 8:00-20:00 no se presta
+        LocalDateTime ahora = horario.ahora();
+        horario.validarAbierto(ahora);
 
         Usuario prestatario = usuarioDao.findByDni(dto.getDniPrestatario().trim())
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "No existe un usuario con ese DNI"));
@@ -85,13 +93,13 @@ public class PrestamoService {
             libroService.descontarStock(libro, "prestado"); // stock automatico: baja 1 (si hay 0 no deja prestar)
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
         Prestamo prestamo = new Prestamo();
         prestamo.setPrestatario(prestatario);
         prestamo.setEncargado(usuarioDao.getReferenceById(idEncargado));
         prestamo.setLibro(libro);
         prestamo.setFechaPrestamo(ahora);
-        prestamo.setFechaDevolucionPrevista(calcularHoraLimite(ahora));
+        // horario de atencion: si las 3 horas pasan de las 20:00, la hora limite queda en las 20:00
+        prestamo.setFechaDevolucionPrevista(horario.limitarAlCierre(calcularHoraLimite(ahora)));
         prestamo.setAmpliado(false);
         prestamo.setEstadoPrestamo("activo");
 
@@ -110,7 +118,7 @@ public class PrestamoService {
     // y despues trae los activos con el JOIN (ver PrestamoDao.listarActivosConDetalle)
     @Transactional
     public List<PrestamoDetalleDTO> listarActivos() {
-        prestamoDao.marcarVencidos(LocalDateTime.now());
+        prestamoDao.marcarVencidos(horario.ahora());
         return prestamoDao.listarActivosConDetalle();
     }
 
@@ -119,10 +127,20 @@ public class PrestamoService {
     // se ve en la pantalla "Mis préstamos" del prestatario. antes de consultar se marcan los vencidos
     @Transactional
     public List<PrestamoDTO> listarPorPrestatario(Integer idPrestatario) {
-        prestamoDao.marcarVencidos(LocalDateTime.now());
+        prestamoDao.marcarVencidos(horario.ahora());
         return prestamoDao.buscarPorPrestatario(idPrestatario).stream()
                 .map(PrestamoDTO::desde)
                 .toList();
+    }
+
+    /** Historial (RF07) para el encargado y el admin: filtros opcionales por DNI, libro y rango de fechas. */
+    // historial: consulta con JOIN (prestamo + prestatario + encargado + libro), ver PrestamoDao.buscarHistorial.
+    // trae todos los prestamos, tambien los anulados y los de usuarios dados de baja
+    @Transactional
+    public List<ReportePrestamoDTO> historial(String dni, String libro, LocalDate desde, LocalDate hasta) {
+        RangoFechas rango = new RangoFechas(desde, hasta); // valida q "desde" no sea despues de "hasta"
+        prestamoDao.marcarVencidos(horario.ahora());
+        return prestamoDao.buscarHistorial(textoOpcional(dni), textoOpcional(libro), rango.inicio(), rango.fin());
     }
 
     @Transactional(readOnly = true)
@@ -140,7 +158,7 @@ public class PrestamoService {
         Prestamo prestamo = buscar(idPrestamo);
 
         if (!"activo".equals(prestamo.getEstadoPrestamo())
-                || LocalDateTime.now().isAfter(prestamo.getFechaDevolucionPrevista())) {
+                || horario.ahora().isAfter(prestamo.getFechaDevolucionPrevista())) {
             throw new NegocioException(HttpStatus.CONFLICT, "Solo se puede ampliar un préstamo activo y no vencido");
         }
         if (prestamo.getAmpliado()) {
@@ -150,7 +168,15 @@ public class PrestamoService {
             throw new NegocioException(HttpStatus.CONFLICT, "No se puede ampliar: el libro tiene reservas pendientes");
         }
 
-        prestamo.setFechaDevolucionPrevista(prestamo.getFechaDevolucionPrevista().plusHours(HORAS_AMPLIACION));
+        // horario de atencion: "hasta" 1 hora, sin pasar del cierre. si ya termina a las 20:00 no hay nada q ampliar
+        LocalDateTime limiteActual = prestamo.getFechaDevolucionPrevista();
+        LocalDateTime nuevoLimite = horario.limitarAlCierre(limiteActual.plusHours(HORAS_AMPLIACION));
+        if (!nuevoLimite.isAfter(limiteActual)) {
+            throw new NegocioException(HttpStatus.CONFLICT,
+                    "No se puede ampliar: el préstamo ya termina a la hora de cierre (" + horario.getCierre() + ")");
+        }
+
+        prestamo.setFechaDevolucionPrevista(nuevoLimite);
         prestamo.setAmpliado(true);
         log.info("Préstamo #{} ampliado hasta {}", idPrestamo, prestamo.getFechaDevolucionPrevista());
         return PrestamoDTO.desde(prestamoDao.save(prestamo));
@@ -171,7 +197,7 @@ public class PrestamoService {
             throw new NegocioException(HttpStatus.CONFLICT, "El préstamo ya fue devuelto o anulado");
         }
 
-        prestamo.setFechaDevolucionReal(LocalDateTime.now());
+        prestamo.setFechaDevolucionReal(horario.ahora());
         prestamo.setEstadoFisicoDevolucion(estadoFisico);
         prestamo.setEstadoPrestamo("devuelto");
 
@@ -212,6 +238,11 @@ public class PrestamoService {
     private Prestamo buscar(Integer idPrestamo) {
         return prestamoDao.findById(idPrestamo)
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Préstamo no encontrado"));
+    }
+
+    /** Un filtro vacío ("" o espacios) es lo mismo que no filtrar. */
+    private String textoOpcional(String texto) {
+        return texto == null || texto.isBlank() ? null : texto.trim();
     }
 
     /** Un préstamo está en curso si el libro aún no se devuelve (activo o vencido). */

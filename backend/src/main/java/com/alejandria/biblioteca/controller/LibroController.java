@@ -35,9 +35,10 @@ public class LibroController {
         return libroService.buscarPorAutor(nombre);
     }
 
+    // consulta disponibilidad (RF03): GET /api/libros/buscar?q=texto (titulo, autor, categoria o isbn)
     @GetMapping("/buscar")
-    public List<LibroDTO> buscarPorTitulo(@RequestParam(name = "q", defaultValue = "") String query) {
-        return libroService.buscarPorTitulo(query);
+    public List<LibroDTO> buscar(@RequestParam(name = "q", defaultValue = "") String query) {
+        return libroService.buscar(query);
     }
 
     @GetMapping("/{id}")

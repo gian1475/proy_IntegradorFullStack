@@ -20,7 +20,8 @@ import java.util.Optional;
 
 /**
  * Reservas: al reservar se aparta un ejemplar (baja el stock).
- * Si se cancela o vence sin recogerse, el ejemplar vuelve al stock.
+ * Si se cancela o vence sin recogerse, el ejemplar vuelve al stock (o pasa al primero de la cola de espera).
+ * Si el libro no tiene ejemplares, la reserva entra a la cola de espera.
  */
 @Service
 public class ReservaService {
@@ -29,44 +30,53 @@ public class ReservaService {
 
     public static final int DIAS_MAXIMOS_ANTICIPACION = 7;
 
+    private static final String PENDIENTE = "pendiente";
+    private static final String EN_ESPERA = ColaEsperaService.EN_ESPERA;
+
     private final ReservaDao reservaDao;
     private final UsuarioDao usuarioDao;
     private final LibroService libroService;
     private final PrestatarioService prestatarioService;
+    private final ColaEsperaService colaEspera;
+    private final HorarioAtencion horario;
 
     public ReservaService(ReservaDao reservaDao, UsuarioDao usuarioDao,
-                          LibroService libroService, PrestatarioService prestatarioService) {
+                          LibroService libroService, PrestatarioService prestatarioService,
+                          ColaEsperaService colaEspera, HorarioAtencion horario) {
         this.reservaDao = reservaDao;
         this.usuarioDao = usuarioDao;
         this.libroService = libroService;
         this.prestatarioService = prestatarioService;
+        this.colaEspera = colaEspera;
+        this.horario = horario;
     }
 
     // reserva crear: el prestatario (o el encargado en ventanilla) reserva y se aparta 1 ejemplar.
-    // valida: fecha de recojo dentro de 7 dias, prestatario sin sancion y q no tenga otra reserva del mismo libro
+    // valida: fecha de recojo dentro de 7 dias, prestatario sin sancion y q no tenga otra reserva del mismo libro.
+    // si el libro no tiene stock la reserva entra a la cola de espera (RF04)
     @Transactional
     public ReservaRespuestaDTO crear(ReservaDTO dto) {
-        if (dto.getIdLibro() == null || dto.getIdUsuario() == null || dto.getFechaRecojoLimite() == null) {
+        if (dto.getIdLibro() == null || dto.getIdUsuario() == null) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, "Datos incompletos para procesar la reserva");
-        }
-
-        LocalDateTime ahora = LocalDateTime.now();
-        if (!dto.getFechaRecojoLimite().isAfter(ahora)
-                || dto.getFechaRecojoLimite().isAfter(ahora.plusDays(DIAS_MAXIMOS_ANTICIPACION))) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST,
-                    "El recojo debe ser en el futuro y dentro de los próximos " + DIAS_MAXIMOS_ANTICIPACION + " días");
         }
 
         Usuario prestatario = usuarioDao.findById(dto.getIdUsuario())
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
         prestatarioService.validarHabilitado(prestatario);
 
-        if (reservaDao.findFirstByPrestatarioIdUsuarioAndLibroIdLibroAndEstadoReserva(
-                dto.getIdUsuario(), dto.getIdLibro(), "pendiente").isPresent()) {
-            throw new NegocioException(HttpStatus.CONFLICT, "Ya tiene una reserva pendiente de este libro");
+        if (reservaDao.existsByPrestatarioIdUsuarioAndLibroIdLibroAndEstadoReservaIn(
+                dto.getIdUsuario(), dto.getIdLibro(), List.of(PENDIENTE, EN_ESPERA))) {
+            throw new NegocioException(HttpStatus.CONFLICT, "Ya tiene una reserva pendiente o está en la cola de este libro");
         }
 
+        liberarVencidas(); // si una reserva vencio, su ejemplar vuelve antes de mirar el stock
+        LocalDateTime ahora = horario.ahora();
         Libro libro = libroService.bloquearParaSalida(dto.getIdLibro());
+        if (libro.getStock() == 0) {
+            return entrarALaCola(prestatario, libro, ahora);
+        }
+
+        validarFechaRecojo(dto.getFechaRecojoLimite(), ahora);
         libroService.descontarStock(libro, "reservado"); // stock automatico: al reservar baja 1
 
         Reserva reserva = new Reserva();
@@ -74,13 +84,46 @@ public class ReservaService {
         reserva.setPrestatario(prestatario);
         reserva.setFechaReserva(ahora);
         reserva.setFechaRecojoLimite(dto.getFechaRecojoLimite());
-        reserva.setEstadoReserva("pendiente");
+        reserva.setEstadoReserva(PENDIENTE);
         reserva.setPosicionCola(1);
 
         Reserva guardada = reservaDao.save(reserva);
         log.info("Reserva #{} creada: libro '{}' para usuario {}, recojo hasta {}",
                 guardada.getIdReserva(), libro.getTitulo(), prestatario.getIdUsuario(), dto.getFechaRecojoLimite());
         return ReservaRespuestaDTO.desde(guardada);
+    }
+
+    /** Sin ejemplares: la reserva no aparta nada, queda 'en_espera' con su puesto en la cola y sin fecha de recojo. */
+    // cola de espera (RF04): la fecha de recojo se pone recien cuando le toque un ejemplar (ver ColaEsperaService)
+    private ReservaRespuestaDTO entrarALaCola(Usuario prestatario, Libro libro, LocalDateTime ahora) {
+        Reserva reserva = new Reserva();
+        reserva.setLibro(libro);
+        reserva.setPrestatario(prestatario);
+        reserva.setFechaReserva(ahora);
+        reserva.setFechaRecojoLimite(null);
+        reserva.setEstadoReserva(EN_ESPERA);
+        reserva.setPosicionCola(colaEspera.siguientePosicion(libro.getIdLibro()));
+
+        Reserva guardada = reservaDao.save(reserva);
+        log.info("Reserva #{} en cola de espera: libro '{}' para usuario {}, posición {}",
+                guardada.getIdReserva(), libro.getTitulo(), prestatario.getIdUsuario(), guardada.getPosicionCola());
+        return ReservaRespuestaDTO.desde(guardada);
+    }
+
+    /** La fecha de recojo es obligatoria si hay ejemplar: en el futuro, dentro de 7 días y en horario de atención. */
+    private void validarFechaRecojo(LocalDateTime fechaRecojo, LocalDateTime ahora) {
+        if (fechaRecojo == null) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST, "Elija la fecha y la franja de recojo");
+        }
+        if (!fechaRecojo.isAfter(ahora) || fechaRecojo.isAfter(ahora.plusDays(DIAS_MAXIMOS_ANTICIPACION))) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST,
+                    "El recojo debe ser en el futuro y dentro de los próximos " + DIAS_MAXIMOS_ANTICIPACION + " días");
+        }
+        // horario de atencion: la franja de recojo tiene q terminar a mas tardar al cierre (20:00)
+        if (!horario.esHoraDeRecojo(fechaRecojo.toLocalTime())) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST, "La hora de recojo debe estar dentro del horario de atención ("
+                    + horario.getApertura() + " a " + horario.getCierre() + ")");
+        }
     }
 
     @Transactional
@@ -101,13 +144,21 @@ public class ReservaService {
         return buscar(idReserva).getPrestatario().getIdUsuario();
     }
 
-    /** Cancela una reserva pendiente y devuelve el ejemplar al stock. */
+    /** Cancela una reserva pendiente (devuelve el ejemplar) o sale de la cola de espera. */
     // reserva cancelar: tambien es logica, la reserva pasa a 'cancelada' y el ejemplar vuelve al stock
+    // (o al primero de la cola). si estaba en la cola, los de atras avanzan un puesto (RF16)
     @Transactional
     public void cancelar(Integer idReserva) {
         Reserva reserva = buscar(idReserva);
-        if (!"pendiente".equals(reserva.getEstadoReserva())) {
-            throw new NegocioException(HttpStatus.CONFLICT, "Solo se puede cancelar una reserva pendiente");
+        if (EN_ESPERA.equals(reserva.getEstadoReserva())) {
+            reserva.setEstadoReserva("cancelada");
+            reservaDao.save(reserva);
+            colaEspera.reordenar(reserva.getLibro().getIdLibro()); // no tenia ejemplar: el stock no cambia
+            log.info("Reserva #{} cancelada (salió de la cola de espera)", idReserva);
+            return;
+        }
+        if (!PENDIENTE.equals(reserva.getEstadoReserva())) {
+            throw new NegocioException(HttpStatus.CONFLICT, "Solo se puede cancelar una reserva pendiente o en cola de espera");
         }
         reserva.setEstadoReserva("cancelada");
         reservaDao.save(reserva);
@@ -137,8 +188,8 @@ public class ReservaService {
     @Transactional
     public boolean atenderSiExiste(Integer idPrestatario, Integer idLibro) {
         Optional<Reserva> reserva = reservaDao.findFirstByPrestatarioIdUsuarioAndLibroIdLibroAndEstadoReserva(
-                idPrestatario, idLibro, "pendiente");
-        if (reserva.isEmpty() || reserva.get().getFechaRecojoLimite().isBefore(LocalDateTime.now())) {
+                idPrestatario, idLibro, PENDIENTE);
+        if (reserva.isEmpty() || reserva.get().getFechaRecojoLimite().isBefore(horario.ahora())) {
             return false;
         }
         reserva.get().setEstadoReserva("atendida");
@@ -146,17 +197,18 @@ public class ReservaService {
         return true;
     }
 
-    /** ¿Alguien tiene reservado este libro? (no se amplía un préstamo si hay reservas pendientes, RF05). */
+    /** ¿Alguien tiene reservado o está esperando este libro? (no se amplía un préstamo si hay reservas, RF05). */
+    // ampliacion: si alguien lo reservo o esta en la cola de espera, ampliar lo haria esperar mas
     @Transactional
     public boolean hayReservasPendientes(Integer idLibro) {
         liberarVencidas(); // las que ya vencieron no cuentan
-        return reservaDao.existsByLibroIdLibroAndEstadoReserva(idLibro, "pendiente");
+        return reservaDao.existsByLibroIdLibroAndEstadoReservaIn(idLibro, List.of(PENDIENTE, EN_ESPERA));
     }
 
     /** Las reservas pendientes cuya hora de recojo pasó quedan 'vencida' y liberan su ejemplar. */
     @Transactional
     public void liberarVencidas() {
-        for (Reserva r : reservaDao.findByEstadoReservaAndFechaRecojoLimiteBefore("pendiente", LocalDateTime.now())) {
+        for (Reserva r : reservaDao.findByEstadoReservaAndFechaRecojoLimiteBefore(PENDIENTE, horario.ahora())) {
             r.setEstadoReserva("vencida");
             reservaDao.save(r);
             libroService.reponerStock(r.getLibro().getIdLibro());

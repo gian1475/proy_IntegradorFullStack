@@ -29,14 +29,16 @@ public class LibroService {
     private final AutorDao autorDao;
     private final PrestamoDao prestamoDao;
     private final ReservaDao reservaDao;
+    private final ColaEsperaService colaEspera;
 
     public LibroService(LibroDao libroDao, CategoriaDao categoriaDao, AutorDao autorDao,
-                        PrestamoDao prestamoDao, ReservaDao reservaDao) {
+                        PrestamoDao prestamoDao, ReservaDao reservaDao, ColaEsperaService colaEspera) {
         this.libroDao = libroDao;
         this.categoriaDao = categoriaDao;
         this.autorDao = autorDao;
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
+        this.colaEspera = colaEspera;
     }
 
     // ---------- CONSULTAR ----------
@@ -48,12 +50,13 @@ public class LibroService {
         return aDTO(libroDao.findByEstadoLibroNotOrderByTitulo(BAJA));
     }
 
+    /** RF03: busca por título, autor, categoría o código (ISBN). Cada libro trae su stock y su estado. */
     @Transactional(readOnly = true)
-    public List<LibroDTO> buscarPorTitulo(String texto) {
+    public List<LibroDTO> buscar(String texto) {
         if (texto == null || texto.isBlank()) {
             return listar();
         }
-        return aDTO(sinBajas(libroDao.findByTituloContainingIgnoreCase(texto.trim())));
+        return aDTO(libroDao.buscarEnCatalogo(texto.trim()));
     }
 
     @Transactional(readOnly = true)
@@ -91,6 +94,12 @@ public class LibroService {
     public LibroDTO crear(LibroFormDTO form) {
         // validaciones antes de guardar: campos obligatorios, stock no negativo, año valido (metodo validar)
         validar(form);
+        // estado del libro (RF03): sin ejemplares, el estado depende del movimiento q se llevo el ultimo
+        // (prestamo -> 'prestado', reserva -> 'reservado', daño -> 'mantenimiento'). un libro nuevo no tuvo
+        // ningun movimiento, asi q entra con al menos 1 ejemplar. antes con 0 quedaba 'prestado' sin prestamo
+        if (form.getStock() < 1) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST, "Un libro nuevo debe tener al menos 1 ejemplar");
+        }
         // y q el isbn no este repetido
         if (libroDao.existsByIsbn(form.getIsbn().trim())) {
             throw new NegocioException(HttpStatus.CONFLICT, "Ya existe un libro con ese ISBN");
@@ -98,8 +107,7 @@ public class LibroService {
 
         Libro libro = new Libro();
         copiarDatos(form, libro);
-        // estado del libro: si entra con stock > 0 queda 'disponible', si entra con 0 queda 'prestado'
-        libro.setEstadoLibro(form.getStock() > 0 ? "disponible" : "prestado");
+        libro.setEstadoLibro("disponible"); // estado del libro: siempre entra disponible
         return LibroDTO.desde(libroDao.save(libro));
     }
 
@@ -117,13 +125,26 @@ public class LibroService {
         if (libroDao.existsByIsbnAndIdLibroNot(form.getIsbn().trim(), idLibro)) {
             throw new NegocioException(HttpStatus.CONFLICT, "Ya existe otro libro con ese ISBN");
         }
+        // estado del libro: el stock solo llega a 0 con un prestamo, una reserva o una devolucion dañada.
+        // si el admin lo bajara a 0 a mano, el libro quedaria 'prestado' sin ningun prestamo
+        if (form.getStock() == 0 && libro.getStock() > 0) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST,
+                    "El stock no puede bajar a 0 desde el formulario: los ejemplares salen al prestarlos, reservarlos o devolverlos dañados");
+        }
 
         copiarDatos(form, libro);
 
-        // El estado sigue al stock: sin ejemplares -> 'prestado'; con ejemplares -> 'disponible'
+        // cola de espera: si el admin agrega ejemplares y hay prestatarios esperando, primero se reparten a la cola
+        int repartidos = 0;
+        while (libro.getStock() > 0 && colaEspera.asignarAlSiguiente(idLibro)) {
+            libro.setStock(libro.getStock() - 1);
+            repartidos++;
+        }
+
+        // El estado sigue al stock: con ejemplares vuelve a 'disponible'
         // (también sale de 'mantenimiento' cuando el admin repone el ejemplar reparado)
-        if (libro.getStock() == 0 && "disponible".equals(libro.getEstadoLibro())) {
-            libro.setEstadoLibro("prestado");
+        if (libro.getStock() == 0 && repartidos > 0) {
+            libro.setEstadoLibro("reservado"); // los ejemplares nuevos quedaron apartados para la cola
         } else if (libro.getStock() > 0 && estaSinEjemplares(libro)) {
             libro.setEstadoLibro("disponible");
         }
@@ -150,6 +171,10 @@ public class LibroService {
         // ni si alguien lo tiene reservado (RF14: "con un préstamo o reserva activa")
         if (reservaDao.existsByLibroIdLibroAndEstadoReserva(idLibro, "pendiente")) {
             throw new NegocioException(HttpStatus.CONFLICT, "El libro tiene reservas pendientes");
+        }
+        // ni si hay prestatarios en su cola de espera (RF04)
+        if (reservaDao.existsByLibroIdLibroAndEstadoReserva(idLibro, ColaEsperaService.EN_ESPERA)) {
+            throw new NegocioException(HttpStatus.CONFLICT, "El libro tiene prestatarios en la cola de espera");
         }
         libro.setEstadoLibro(BAJA); // eliminacion logica: aqui cambia el estado
         libroDao.save(libro);
@@ -193,6 +218,17 @@ public class LibroService {
     public void reponerStock(Integer idLibro) {
         Libro libro = libroDao.buscarParaActualizar(idLibro)
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Libro no encontrado"));
+
+        // cola de espera: si alguien espera este libro, el ejemplar es para el. el stock no sube
+        // y el libro queda 'reservado' (no hay ejemplares libres para otros)
+        if (colaEspera.asignarAlSiguiente(idLibro)) {
+            if (libro.getStock() == 0) {
+                libro.setEstadoLibro("reservado");
+            }
+            libroDao.save(libro);
+            return;
+        }
+
         libro.setStock(libro.getStock() + 1);
         if (estaSinEjemplares(libro)) {
             libro.setEstadoLibro("disponible");

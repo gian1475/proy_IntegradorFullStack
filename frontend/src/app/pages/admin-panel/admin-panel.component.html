@@ -9,7 +9,9 @@
       <button [class.active]="pestana() === 'dashboard'" (click)="pestana.set('dashboard')">Dashboard</button>
       <button [class.active]="pestana() === 'libros'" (click)="pestana.set('libros')">Libros</button>
       <button [class.active]="pestana() === 'prestamos'" (click)="pestana.set('prestamos')">Préstamos activos</button>
+      <button [class.active]="pestana() === 'historial'" (click)="pestana.set('historial')">Historial</button>
       <button [class.active]="pestana() === 'reservas'" (click)="pestana.set('reservas')">Reservas</button>
+      <button [class.active]="pestana() === 'encargados'" (click)="pestana.set('encargados')">Encargados</button>
       <button [class.active]="pestana() === 'reportes'" (click)="pestana.set('reportes')">Reportes</button>
       <button [class.active]="pestana() === 'monitoreo'" (click)="pestana.set('monitoreo')">Monitoreo</button>
     </nav>
@@ -18,7 +20,9 @@
       @case ('dashboard') { <app-dashboard-tab /> }
       @case ('libros') { <app-libros-tab /> }
       @case ('prestamos') { <app-prestamos-tab /> }
+      @case ('historial') { <app-historial-prestamos /> }
       @case ('reservas') { <app-reservas-admin-tab /> }
+      @case ('encargados') { <app-encargados-tab /> }
       @case ('reportes') { <app-reportes-tab /> }
       @case ('monitoreo') { <app-monitoreo-tab /> }
     }

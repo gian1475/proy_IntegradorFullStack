@@ -4,16 +4,19 @@ import com.alejandria.biblioteca.dto.prestamo.DevolucionDTO;
 import com.alejandria.biblioteca.dto.prestamo.PrestamoDTO;
 import com.alejandria.biblioteca.dto.prestamo.PrestamoDetalleDTO;
 import com.alejandria.biblioteca.dto.prestamo.RegistroPrestamoDTO;
+import com.alejandria.biblioteca.dto.reporte.ReportePrestamoDTO;
 import com.alejandria.biblioteca.exception.NegocioException;
 import com.alejandria.biblioteca.seguridad.AutorizacionInterceptor;
 import com.alejandria.biblioteca.seguridad.Rol;
 import com.alejandria.biblioteca.seguridad.RolesPermitidos;
 import com.alejandria.biblioteca.seguridad.Sesion;
 import com.alejandria.biblioteca.service.PrestamoService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +60,18 @@ public class PrestamoController {
             throw new NegocioException(HttpStatus.FORBIDDEN, "Solo puede consultar sus propios préstamos");
         }
         return prestamoService.listarPorPrestatario(idPrestatario);
+    }
+
+    /** CONSULTAR: historial con filtros opcionales (RF07). Fechas en formato AAAA-MM-DD. */
+    // historial: GET /api/prestamos/historial?dni=&libro=&desde=&hasta= (encargado y admin).
+    // el prestatario ve su historial en "Mis prestamos" (consulta de una tabla)
+    @GetMapping("/historial")
+    @RolesPermitidos({Rol.ENCARGADO, Rol.ADMINISTRADOR})
+    public List<ReportePrestamoDTO> historial(@RequestParam(required = false) String dni,
+                                              @RequestParam(required = false) String libro,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return prestamoService.historial(dni, libro, desde, hasta);
     }
 
     @GetMapping("/{id}")

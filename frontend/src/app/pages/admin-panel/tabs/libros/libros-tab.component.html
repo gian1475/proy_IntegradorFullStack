@@ -27,7 +27,11 @@
       </div>
       <div class="form-field">
         <label for="stock">Stock (ejemplares disponibles)</label>
-        <input id="stock" name="stock" type="number" min="0" [(ngModel)]="form.stock" />
+        <input id="stock" name="stock" type="number" [min]="idEditando() === null ? 1 : 0" [(ngModel)]="form.stock" />
+        @if (idEditando() === null) {
+          <!-- estado del libro: un libro nuevo entra con al menos 1 ejemplar y queda 'disponible' -->
+          <small style="color: #6b7280;">Un libro nuevo entra con al menos 1 ejemplar.</small>
+        }
         @if (estadoEditando() === 'mantenimiento') {
           <!-- mantenimiento: al reponer el ejemplar reparado (subir el stock) el libro vuelve a 'disponible' -->
           <small style="color: #92400e;">En mantenimiento: súbele el stock cuando el ejemplar esté reparado.</small>
