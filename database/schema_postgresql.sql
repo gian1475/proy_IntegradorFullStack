@@ -1,6 +1,8 @@
 -- =====================================================================
 -- BASE DE DATOS POSTGRESQL: Sistema de Biblioteca (Biblioteca de Alejandría)
--- Basado en docs/modelofisico_postgresql.sql (incluye las migraciones 01, 02 y 03)
+-- Basado en el diseño inicial del Avance 2 (docs/modelofisico_postgresql.sql, retirado el 27/10;
+-- sigue en el historial de git). Incluye las migraciones 01, 02 y 03;
+-- la 04 no hace falta aquí: solo borra llaves que este script nunca creó)
 -- =====================================================================
 
 -- 0. Limpieza previa de tablas en cascada
@@ -204,7 +206,7 @@ CREATE TABLE reserva (
         FOREIGN KEY (id_libro) REFERENCES libro(id_libro)
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
-    -- 'en_espera': cola de espera (sin stock), ver migracion_03_reserva_cola.sql
+    -- 'en_espera': cola de espera (sin stock), ver migraciones/migracion_03_reserva_cola.sql
     CONSTRAINT chk_reserva_estado
         CHECK (estado_reserva IN ('pendiente', 'en_espera', 'atendida', 'cancelada', 'vencida'))
 );
