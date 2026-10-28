@@ -94,6 +94,12 @@ public class LibroService {
     public LibroDTO crear(LibroFormDTO form) {
         // validaciones antes de guardar: campos obligatorios, stock no negativo, año valido (metodo validar)
         validar(form);
+        // estado del libro (RF03): sin ejemplares, el estado depende del movimiento q se llevo el ultimo
+        // (prestamo -> 'prestado', reserva -> 'reservado', daño -> 'mantenimiento'). un libro nuevo no tuvo
+        // ningun movimiento, asi q entra con al menos 1 ejemplar. antes con 0 quedaba 'prestado' sin prestamo
+        if (form.getStock() < 1) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST, "Un libro nuevo debe tener al menos 1 ejemplar");
+        }
         // y q el isbn no este repetido
         if (libroDao.existsByIsbn(form.getIsbn().trim())) {
             throw new NegocioException(HttpStatus.CONFLICT, "Ya existe un libro con ese ISBN");
@@ -101,8 +107,7 @@ public class LibroService {
 
         Libro libro = new Libro();
         copiarDatos(form, libro);
-        // estado del libro: si entra con stock > 0 queda 'disponible', si entra con 0 queda 'prestado'
-        libro.setEstadoLibro(form.getStock() > 0 ? "disponible" : "prestado");
+        libro.setEstadoLibro("disponible"); // estado del libro: siempre entra disponible
         return LibroDTO.desde(libroDao.save(libro));
     }
 
@@ -120,6 +125,12 @@ public class LibroService {
         if (libroDao.existsByIsbnAndIdLibroNot(form.getIsbn().trim(), idLibro)) {
             throw new NegocioException(HttpStatus.CONFLICT, "Ya existe otro libro con ese ISBN");
         }
+        // estado del libro: el stock solo llega a 0 con un prestamo, una reserva o una devolucion dañada.
+        // si el admin lo bajara a 0 a mano, el libro quedaria 'prestado' sin ningun prestamo
+        if (form.getStock() == 0 && libro.getStock() > 0) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST,
+                    "El stock no puede bajar a 0 desde el formulario: los ejemplares salen al prestarlos, reservarlos o devolverlos dañados");
+        }
 
         copiarDatos(form, libro);
 
@@ -130,12 +141,10 @@ public class LibroService {
             repartidos++;
         }
 
-        // El estado sigue al stock: sin ejemplares -> 'prestado'; con ejemplares -> 'disponible'
+        // El estado sigue al stock: con ejemplares vuelve a 'disponible'
         // (también sale de 'mantenimiento' cuando el admin repone el ejemplar reparado)
         if (libro.getStock() == 0 && repartidos > 0) {
             libro.setEstadoLibro("reservado"); // los ejemplares nuevos quedaron apartados para la cola
-        } else if (libro.getStock() == 0 && "disponible".equals(libro.getEstadoLibro())) {
-            libro.setEstadoLibro("prestado");
         } else if (libro.getStock() > 0 && estaSinEjemplares(libro)) {
             libro.setEstadoLibro("disponible");
         }

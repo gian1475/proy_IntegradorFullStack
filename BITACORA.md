@@ -57,6 +57,7 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 27/10 | El admin registra **encargados** desde su panel (turno `mañana` o `tarde`). Actualizar y eliminar usuarios (RF12, RF13) sigue pendiente | RF09. Los demás requisitos de usuarios son del Sprint 4 |
 | 27/10 | Al iniciar sesión, el usuario tiene que estar en **un solo** perfil; si no, 403. Antes, sin perfil entraba como prestatario | "Perfil único", pendiente del informe (3.5) |
 | 27/10 | La contraseña además no puede pasar de **72 bytes** | BCrypt solo usa 72 bytes; 64 caracteres con tildes o ñ podían pasarse |
+| 28/10 | Un libro nuevo entra con **al menos 1 ejemplar** y siempre `disponible`. Al editar, el stock no se puede bajar a 0 a mano | RF03: sin ejemplares, el estado depende del movimiento que se llevó el último (préstamo, reserva o daño). Antes, un libro registrado con stock 0 quedaba `prestado` sin ningún préstamo. No se agregó un estado "agotado" porque la BD y el RF03 solo tienen 4 estados |
 
 ---
 
@@ -665,6 +666,33 @@ En el navegador (Chrome sin ventana, con los 3 perfiles) se recorrieron las mism
 - **Librerías (2.x):** los métodos ahora son `generarExcel`, `generarPdf` y `generarCsv` de `ReporteService` (antes `generarExcelPrestamos`, `generarPdfPrestamos` y `generarCsvPrestamos`) y generan los 8 reportes.
 - **Pantallas (3.5):** nuevas pestañas Historial, Encargados y Reportes del encargado; botón "Unirme a la cola"; estado y stock en el catálogo. Las capturas están en `docs/capturas/` (ver la tabla de abajo).
 - **Pruebas:** 154 del backend y 16 del frontend.
+
+---
+
+## Corrección (28/10): libro nuevo con stock 0 quedaba "prestado" ✅
+
+Lo observó un integrante: en `LibroService.crear`, un libro registrado con stock 0 quedaba con estado `prestado`. ¿Prestado a quién? No había ningún préstamo. Lo mismo pasaba al editar un libro y bajarle el stock a 0.
+
+**Qué dice el informe (RF03):** "Con unidades se muestra Disponible; sin ellas, el estado agregado depende del movimiento que agotó el stock". Es decir, un libro sin ejemplares está `prestado`, `reservado` o en `mantenimiento` **porque algo se llevó el último ejemplar**. Un libro nuevo no tuvo ningún movimiento, así que no puede quedar sin ejemplares.
+
+**Por qué no "agotado":** la BD (`chk_libro_estado`) y el RF03 solo tienen los estados disponible, prestado, reservado y mantenimiento (más `baja`). Agregar otro estado obligaba a cambiar la BD, el diccionario de datos y el RF03.
+
+| Antes | Ahora |
+|---|---|
+| Registrar con stock 0 → `prestado` | Registrar con stock 0 → **400** "Un libro nuevo debe tener al menos 1 ejemplar". Siempre entra `disponible` |
+| Editar un libro `disponible` y bajarle el stock a 0 → `prestado` | → **400**: el stock solo llega a 0 al prestar, reservar o devolver dañado |
+| Editar un libro sin stock (sus ejemplares están prestados) | Igual que antes: se puede editar y sigue `prestado` |
+
+| Archivo | Qué cambió |
+|---|---|
+| [LibroService.java](backend/src/main/java/com/alejandria/biblioteca/service/LibroService.java) | `crear` exige stock ≥ 1 y siempre deja `disponible`; `actualizar` no deja bajar el stock a 0 y ya no pone `prestado` a mano |
+| [libros-tab](frontend/src/app/pages/admin-panel/tabs/libros/) | Al registrar, el stock mínimo es 1 y lo indica debajo del campo |
+
+La importación por CSV usa `crear`, así que una fila con stock 0 ahora sale como error de esa fila.
+
+**Pruebas (primero la prueba, después el arreglo):** 4 nuevas en `LibroServiceTest`. `unLibroNuevoNoSePuedeRegistrarConStock0` y `alEditarNoSeBajaElStockA0SinUnPrestamoReservaODano` fallaron antes del cambio (el sistema aceptaba el 0) y después pasaron. Total: **158 del backend y 16 del frontend**, todas pasan.
+
+**Para el informe:** quitar las frases sobre el "valor técnico prestado con stock 0" (criterio de aceptación del RF03 y el párrafo "Adicionar y actualizar" de 2.1.4): ahora un libro nuevo siempre entra disponible con al menos 1 ejemplar.
 
 ---
 

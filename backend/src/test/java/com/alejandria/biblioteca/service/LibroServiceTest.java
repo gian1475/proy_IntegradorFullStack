@@ -82,6 +82,45 @@ class LibroServiceTest {
         verify(libroDao, never()).save(any());
     }
 
+    // ---------- Estado al registrar y editar (RF03: sin ejemplares, el estado depende del movimiento) ----------
+
+    @Test
+    void unLibroNuevoNoSePuedeRegistrarConStock0() {
+        NegocioException error = assertThrows(NegocioException.class, () -> servicio.crear(formulario(0)));
+        assertEquals("Un libro nuevo debe tener al menos 1 ejemplar", error.getMessage());
+        verify(libroDao, never()).save(any());
+    }
+
+    @Test
+    void unLibroNuevoSiempreEntraDisponible() {
+        when(categoriaDao.findById(4)).thenReturn(Optional.of(new Categoria(4, "Tecnología", null)));
+        when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertEquals("disponible", servicio.crear(formulario(2)).estadoLibro());
+    }
+
+    @Test
+    void alEditarNoSeBajaElStockA0SinUnPrestamoReservaODano() {
+        Libro libro = libro("disponible"); // stock 1
+        when(libroDao.findById(10)).thenReturn(Optional.of(libro));
+
+        NegocioException error = assertThrows(NegocioException.class, () -> servicio.actualizar(10, formulario(0)));
+        assertEquals(400, error.getEstado().value());
+        assertEquals("disponible", libro.getEstadoLibro()); // antes quedaba 'prestado' sin ningun prestamo
+        verify(libroDao, never()).save(any());
+    }
+
+    @Test
+    void unLibroPrestadoSinStockSePuedeEditarSinCambiarSuEstado() {
+        Libro libro = libro("prestado");
+        libro.setStock(0); // sus ejemplares estan prestados
+        when(libroDao.findById(10)).thenReturn(Optional.of(libro));
+        when(categoriaDao.findById(4)).thenReturn(Optional.of(new Categoria(4, "Tecnología", null)));
+        when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertEquals("prestado", servicio.actualizar(10, formulario(0)).estadoLibro());
+    }
+
     // ---------- Cola de espera (RF04) ----------
 
     @Test
