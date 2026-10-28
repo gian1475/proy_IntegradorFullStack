@@ -8,7 +8,7 @@ Sirve para preparar la sustentación: cada integrante debe poder explicar cualqu
 ## Cómo levantar el proyecto
 
 1. **Credenciales de la BD**: crear `backend/.env` (copiar de [backend/.env.example](backend/.env.example)) y completar URL, usuario y contraseña de Neon. Este archivo **no se sube a GitHub**.
-2. **Base de datos**: si la BD de Neon se creó con una versión anterior del script, ejecutar en el SQL Editor de Neon las migraciones que falten, en orden (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`). Para tener los 21 libros de la demo, ejecutar `database/datos_demo.sql`. Todos se pueden ejecutar más de una vez. (En Neon ya están las migraciones 01 y 02 y los libros, al 21/10. **La 03 falta ejecutarla en Neon**: sin ella, reservar un libro sin stock da error.)
+2. **Base de datos**: si la BD de Neon se creó con una versión anterior del script, ejecutar en el SQL Editor de Neon las migraciones que falten (carpeta `database/migraciones/`), en orden (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`, `migracion_04_quitar_fk_hibernate.sql`). Para tener los libros y los movimientos de la demo, ejecutar `database/datos_demo.sql`. Todos se pueden ejecutar más de una vez. (En Neon ya están las migraciones 01 y 02 y los libros, al 21/10, y la 03, la 04 y los movimientos desde el 27/10.)
 3. **Backend** (desde la carpeta `backend/`, porque ahí busca el `.env`):
    ```
    cd backend
@@ -41,7 +41,7 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 21/10 | El límite de recojo de una reserva es el **final del turno** elegido; se puede reservar hasta **7 días** antes | Supuesto. Una reserva no recogida a tiempo pasa a `vencida` |
 | 21/10 | El stock se maneja en **un solo lugar** (`LibroService`); préstamos y reservas lo reutilizan | No repetir código (SOLID) |
 | 21/10 | El `.jar` se llama `biblioteca-alejandria.jar` (`<finalName>` en el `pom.xml`) | Antes salía `demo-0.0.1-SNAPSHOT.jar`, nombre de plantilla |
-| 21/10 | El informe del Avance III y las notas `.txt` de `docs/` no se suben a GitHub | Las notas tienen el chat de la revisión con el profe |
+| 21/10 | El informe del Avance III y las notas `.txt` de `docs/` no se suben a GitHub. **Cambió el 27/10:** el informe (`docs/Avance_III_IntegradorV8_corregido.docx`) sí se puede subir; las notas `.txt` siguen fuera | Las notas tienen el chat de la revisión con el profe |
 | 21/10 | Ampliación, intentos de login y sesión: **manda el informe** (1 h solo sin reservas, 3 intentos, 15 min de inactividad) | Se cambia el código para que coincida con RF05, RF10 y RNF04 |
 | 21/10 | Diccionario de datos: **manda la BD**. Solo se agrega `sancion.monto` | Cambiar la BD a una semana es más riesgoso; el informe se reescribe |
 | 21/10 | CRUD de usuarios (RF09, RF12, RF13): **no entra en el Avance III**, queda opcional para el final | Decisión del equipo. La eliminación física se hace con las reservas canceladas o vencidas (RF17). El informe debe pasar "usuarios" del Sprint 3 al Sprint 4 |
@@ -57,7 +57,7 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 27/10 | El admin registra **encargados** desde su panel (turno `mañana` o `tarde`). Actualizar y eliminar usuarios (RF12, RF13) sigue pendiente | RF09. Los demás requisitos de usuarios son del Sprint 4 |
 | 27/10 | Al iniciar sesión, el usuario tiene que estar en **un solo** perfil; si no, 403. Antes, sin perfil entraba como prestatario | "Perfil único", pendiente del informe (3.5) |
 | 27/10 | La contraseña además no puede pasar de **72 bytes** | BCrypt solo usa 72 bytes; 64 caracteres con tildes o ñ podían pasarse |
-| 28/10 | Un libro nuevo entra con **al menos 1 ejemplar** y siempre `disponible`. Al editar, el stock no se puede bajar a 0 a mano | RF03: sin ejemplares, el estado depende del movimiento que se llevó el último (préstamo, reserva o daño). Antes, un libro registrado con stock 0 quedaba `prestado` sin ningún préstamo. No se agregó un estado "agotado" porque la BD y el RF03 solo tienen 4 estados |
+| 27/10 | Un libro nuevo entra con **al menos 1 ejemplar** y siempre `disponible`. Al editar, el stock no se puede bajar a 0 a mano | RF03: sin ejemplares, el estado depende del movimiento que se llevó el último (préstamo, reserva o daño). Antes, un libro registrado con stock 0 quedaba `prestado` sin ningún préstamo. No se agregó un estado "agotado" porque la BD y el RF03 solo tienen 4 estados |
 
 ---
 
@@ -121,7 +121,7 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 
 ### 3.1 Base de datos y backend de préstamos ✅
 
-**Migración** [database/migracion_01_prestamo.sql](database/migracion_01_prestamo.sql), ejecutada en Neon el 21/10 (también aplicada en [schema_postgresql.sql](database/schema_postgresql.sql)):
+**Migración** [database/migraciones/migracion_01_prestamo.sql](database/migraciones/migracion_01_prestamo.sql), ejecutada en Neon el 21/10 (también aplicada en [schema_postgresql.sql](database/schema_postgresql.sql)):
 - `prestamo.ampliado BOOLEAN NOT NULL DEFAULT FALSE`
 - `prestamo.estado_fisico_devolucion` (`bueno` / `dañado`)
 - `estado_prestamo` acepta además `anulado`
@@ -459,7 +459,7 @@ El sistema guarda **títulos con stock**, no cada ejemplar por separado:
 ## Depuración – parte 5 (21/10): monto de multas, libros reales y dashboard ✅
 
 ### C20 – Columna `sancion.monto` (RF06)
-- [database/migracion_02_sancion_monto.sql](database/migracion_02_sancion_monto.sql): `monto DECIMAL(8,2) NULL` + `CHECK (monto IS NULL OR monto >= 0)`. **Ejecutada en Neon el 21/10** y agregada a [schema_postgresql.sql](database/schema_postgresql.sql).
+- [database/migraciones/migracion_02_sancion_monto.sql](database/migraciones/migracion_02_sancion_monto.sql): `monto DECIMAL(8,2) NULL` + `CHECK (monto IS NULL OR monto >= 0)`. **Ejecutada en Neon el 21/10** y agregada a [schema_postgresql.sql](database/schema_postgresql.sql).
 - Pruebas contra la BD real: una multa guarda su monto (15.50) y un monto negativo es rechazado por la BD. Antes de la migración fallaron con *column "monto" does not exist*.
 
 ### D11 – 21 libros reales con su portada
@@ -569,7 +569,7 @@ Se completaron los RF que estaban a medias: **RF01, RF03, RF04, RF05, RF07, RF08
 
 ### RF04 y RF16 – Cola de espera de reservas
 
-**Migración** [database/migracion_03_reserva_cola.sql](database/migracion_03_reserva_cola.sql): `estado_reserva` acepta además `en_espera`. También está en [schema_postgresql.sql](database/schema_postgresql.sql). **Falta ejecutarla en Neon.**
+**Migración** [database/migraciones/migracion_03_reserva_cola.sql](database/migraciones/migracion_03_reserva_cola.sql): `estado_reserva` acepta además `en_espera`. También está en [schema_postgresql.sql](database/schema_postgresql.sql). **Ejecutada en Neon el 27/10** (ver "Migración 03 en Neon" más abajo).
 
 | Paso | Qué pasa |
 |---|---|
@@ -652,7 +652,7 @@ El CSV escribe un BOM para que Excel lea bien las tildes, pero el `CSVPrinter` e
 | `ValidadorContrasenaTest` (+1) | 64 caracteres con ñ que pasan los 72 bytes |
 | Frontend: `estado-libro.spec.ts` (5), `regla-contrasena.spec.ts` (3) | Nombres del estado y búsqueda; regla de contraseña en bytes |
 
-Las pruebas con BD real se corrieron contra una copia local de PostgreSQL 16 creada con `schema_postgresql.sql`, las 3 migraciones y `datos_demo.sql` (con la BD en hora GMT y Java en hora de Lima, igual que con Neon). **Conviene correrlas también contra Neon después de ejecutar la migración 03.**
+Las pruebas con BD real se corrieron contra una copia local de PostgreSQL 16 creada con `schema_postgresql.sql`, las 3 migraciones y `datos_demo.sql` (con la BD en hora GMT y Java en hora de Lima, igual que con Neon). **Conviene correrlas también contra Neon después de ejecutar la migración 03.** *(Hecho el 27/10: 158 pruebas pasan contra Neon, ver "Migración 03 en Neon".)*
 
 ### Prueba en vivo (27/10, BD local, a las 18:20)
 Por la API, con las mismas peticiones de la web: el admin registra una encargada → 201 y ella entra con rol ENCARGADO · el encargado intenta registrar encargados → 403 · turno "noche" → 400 · contraseña de 64 caracteres y 124 bytes → 400 · búsqueda `978-0307474728` → *Cien Años de Soledad* · recojo a las 21:00 → 400 · reserva con stock → `pendiente` · otra prestataria sin stock → `en_espera`, puesto 1 · entrar dos veces → 409 · el primero cancela → la reserva de la cola pasa a `pendiente` con recojo hasta el 28/10 20:00 y el stock sigue en 0 · el préstamo de las 18:21 queda con hora límite **20:00** · ampliarlo → 409 "ya termina a la hora de cierre" · historial por DNI, libro y fechas → correcto; fechas al revés → 400; el prestatario → 403 · los 8 reportes en los 3 formatos → 200 para el encargado; tipo inválido → 400; el prestatario → 403.
@@ -665,11 +665,13 @@ En el navegador (Chrome sin ventana, con los 3 perfiles) se recorrieron las mism
 - **Diccionario de datos:** `estado_reserva` acepta `en_espera`; `posicion_cola` es el puesto en la cola de espera; `fecha_recojo_limite` es `NULL` mientras la reserva está en la cola; `fecha_devolucion_prevista` ya no dice "validación automática del cierre pendiente".
 - **Librerías (2.x):** los métodos ahora son `generarExcel`, `generarPdf` y `generarCsv` de `ReporteService` (antes `generarExcelPrestamos`, `generarPdfPrestamos` y `generarCsvPrestamos`) y generan los 8 reportes.
 - **Pantallas (3.5):** nuevas pestañas Historial, Encargados y Reportes del encargado; botón "Unirme a la cola"; estado y stock en el catálogo. Las capturas están en `docs/capturas/` (ver la tabla de abajo).
-- **Pruebas:** 154 del backend y 16 del frontend.
+- **Pruebas:** 158 del backend y 16 del frontend (154 con esta sección y 4 más con la corrección del stock 0, abajo).
+
+El detalle de cada cambio del informe (qué dice la V8 y qué debe decir, el Gantt, la Tabla 34, la Tabla 52 y el texto del RF01) está en la **sección 7 de `PLAN_INFORME.md`**.
 
 ---
 
-## Corrección (28/10): libro nuevo con stock 0 quedaba "prestado" ✅
+## Corrección (27/10): libro nuevo con stock 0 quedaba "prestado" ✅
 
 Lo observó un integrante: en `LibroService.crear`, un libro registrado con stock 0 quedaba con estado `prestado`. ¿Prestado a quién? No había ningún préstamo. Lo mismo pasaba al editar un libro y bajarle el stock a 0.
 
@@ -693,6 +695,102 @@ La importación por CSV usa `crear`, así que una fila con stock 0 ahora sale co
 **Pruebas (primero la prueba, después el arreglo):** 4 nuevas en `LibroServiceTest`. `unLibroNuevoNoSePuedeRegistrarConStock0` y `alEditarNoSeBajaElStockA0SinUnPrestamoReservaODano` fallaron antes del cambio (el sistema aceptaba el 0) y después pasaron. Total: **158 del backend y 16 del frontend**, todas pasan.
 
 **Para el informe:** quitar las frases sobre el "valor técnico prestado con stock 0" (criterio de aceptación del RF03 y el párrafo "Adicionar y actualizar" de 2.1.4): ahora un libro nuevo siempre entra disponible con al menos 1 ejemplar.
+
+---
+
+## Migración 03 en Neon (27/10) ✅
+
+Al correr `./mvnw test` contra Neon desde la PC del equipo, pasaron **157 de 158**. Falló `ColaEsperaBdTest`: Neon rechazó la reserva con `en_espera` (`violates check constraint "chk_reserva_estado"`), porque la migración 03 solo se había ejecutado en la BD local de prueba. La prueba se deshizo sola: no dejó datos.
+
+Se ejecutó `database/migraciones/migracion_03_reserva_cola.sql` en Neon (con las credenciales del `backend/.env`, en una transacción):
+
+| | `chk_reserva_estado` en Neon |
+|---|---|
+| Antes | `pendiente`, `atendida`, `cancelada`, `vencida` |
+| Después | `pendiente`, **`en_espera`**, `atendida`, `cancelada`, `vencida` |
+
+La migración solo cambia la restricción: no toca ninguna fila. Después se volvió a correr `./mvnw test` contra Neon: **158 pruebas, todas pasan**.
+
+---
+
+## Datos de la demo (27/10) ✅
+
+Con la base casi vacía, el dashboard, el historial, las reservas y los reportes no mostraban nada. Se agregó la sección 4 de [database/datos_demo.sql](database/datos_demo.sql) ("Movimientos de ejemplo") y **se ejecutó en Neon el 27/10**. Al principio estaba en un archivo aparte (`datos_demo_movimientos.sql`); se unió a `datos_demo.sql` para tener un solo archivo de datos. Se volvió a ejecutar el archivo completo en Neon y no duplicó nada. Las personas son ficticias. Las fechas se calculan desde el día en que se ejecuta (hora de Lima), así que el mes actual y los últimos 7 días tienen datos. Se puede ejecutar varias veces: la segunda vez no hace nada (comprobado).
+
+| Qué | Cuántos | Detalle |
+|---|---|---|
+| Encargados nuevos | 2 | Miguel Torres (mañana) y Rosa Quispe (tarde). Con Carlos son 3 |
+| Prestatarios nuevos | 7 | Lucía, Diego, Valeria, Andrés, Camila, Sebastián y José Luis (`inactivo`: baja lógica). Juan (`alumno@`) también tiene historial |
+| Préstamos | 28 | 24 devueltos (2 ampliados, 1 dañado, 1 con retraso), 2 anulados y 2 sin devolver de hoy (salen **vencidos**, en rojo) |
+| Reservas | 11 | 3 pendientes de recojo para mañana, 2 en la **cola de espera** de *Cien Años de Soledad*, 2 atendidas, 2 canceladas y 2 vencidas |
+| Incidencias y sanciones | 2 | *Cosmos* devuelto dañado → multa de S/ 25.00 (cumplida). *El túnel* con 40 min de retraso → **suspensión activa** de Valeria por 4 días más |
+
+Cómo quedan los libros: *Cosmos* en `mantenimiento` (su único ejemplar volvió dañado), *Rayuela* `prestado`, *Cien Años de Soledad* y *Design Patterns* `reservado`. El stock de cada libro se ajustó igual que lo haría el sistema.
+
+- **Contraseña:** todas las cuentas nuevas usan la **misma contraseña de prueba** que `admin@alejandria.edu.pe` (el script copia su hash; la contraseña no está en el repositorio).
+- **Indicadores del mes:** PDF = 1 retraso de 26 préstamos = **3.8 %** (cumple la meta ≤ 5 %). TIM = 1 daño de 26 = **3.8 %** (no cumple ≤ 1 %).
+- **Para la demo:**
+  - Valeria (`valeria.flores@…`) tiene una sanción activa: prestarle un libro da *"El prestatario tiene una sanción activa"*. Sirve para mostrar esa regla.
+  - Los 2 préstamos vencidos se pueden devolver en vivo: el sistema avisa que se devolvieron con retraso.
+  - Si alguien cancela la reserva pendiente de *Cien Años de Soledad* (la de Sebastián), el ejemplar pasa a Camila, primera de la cola.
+- La cuenta de **Gerardo Guevara** (registrada desde la web) no se tocó.
+- **Pruebas:** después de cargar los datos se volvió a correr `./mvnw test` contra Neon.
+- **D11 cambió:** antes la idea era crear los préstamos y prestatarios en vivo durante la demo. Ahora ya hay datos; igual se pueden crear más en vivo.
+
+---
+
+## Migración 04 (27/10): Neon igual al script ✅
+
+Se comparó Neon con `schema_postgresql.sql` tabla por tabla (columnas, restricciones e índices). Todo coincidía salvo **3 llaves foráneas de más** que no están en ningún script: las creó Hibernate solo, cuando estaba en modo `update` (antes de D7, 21/10).
+
+| Llave que se quitó | Qué hacía | La que queda (del script) |
+|---|---|---|
+| `prestamo.fk8s1j7k9hshgq64d77enp1xrh5` | `id_encargado` → `usuario` | `fk_prestamo_encargado`: → `encargado` |
+| `prestamo.fkmmgblj7y7aqgmmc5jdxqo0a5h` | `id_prestatario` → `usuario` | `fk_prestamo_prestatario`: → `prestatario` |
+| `reserva.fklbed902g8psh7xfx0y84o2l4f` | `id_prestatario` → `usuario` | `fk_reserva_prestatario`: → `prestatario` |
+
+Las quitadas repetían lo que ya controlan las del script, que son más estrictas (apuntan al perfil, no solo al usuario). [database/migraciones/migracion_04_quitar_fk_hibernate.sql](database/migraciones/migracion_04_quitar_fk_hibernate.sql) busca las llaves de `prestamo` y `reserva` que apuntan a `usuario` y las borra, sin depender de sus nombres (en otra base Hibernate les habría puesto otros). No toca ninguna fila.
+
+**Ejecutada en Neon el 27/10** (dos veces: la segunda no hizo nada). Ahora Neon y `schema_postgresql.sql` coinciden. El script no cambia, porque nunca tuvo esas llaves. Después se corrió `./mvnw test` contra Neon.
+
+---
+
+## Carpeta de migraciones (27/10) ✅
+
+Las 4 migraciones se movieron de `database/` a **`database/migraciones/`** (con `git mv`, así git sabe que son los mismos archivos). En `database/` quedan solo los archivos para crear la base: `schema_postgresql.sql` (que ya incluye todos los cambios) y `datos_demo.sql`, más el CSV de ejemplo.
+
+**Para qué sirven las migraciones:** `schema_postgresql.sql` empieza con `DROP TABLE`, así que ejecutarlo en Neon borraría todos los datos. Cada migración aplica a Neon un solo cambio sin borrar nada. Las 4 ya están ejecutadas en Neon; una base nueva no las necesita.
+
+Si el profe pregunta: *"El schema crea la base completa. Las migraciones son los cambios que aplicamos a Neon sin borrar los datos que ya tenía."*
+
+También se borraron `docs/modelofisico.sql` y `docs/modelofisico_postgresql.sql`: eran el diseño inicial del Avance 2 y ya no coincidían con la base real (la que manda es `schema_postgresql.sql`). Siguen en el historial de git.
+
+**README (27/10):** nueva estructura de `database/` y `docs/`, sección "Cuentas y datos de la demo" (sin la contraseña), endpoints revisados contra los controllers (faltaban categorías, autores, `GET /{id}` y que el admin también anula préstamos), Vitest en librerías y la variable `APP_HORARIO_CIERRE` para probar de noche sin cambiar `application.properties`.
+
+---
+
+## Revisión del código contra la documentación (27/10) ✅
+
+Se comparó el código con el README, CLAUDE.md y la bitácora: versiones, permisos de cada endpoint, reglas del negocio, rutas, pruebas y datos de la demo. Casi todo coincidía. Lo que no:
+
+### 🐞 La "hora de Lima" dependía de la PC
+La bitácora y los comentarios `hora de lima` dicen que Java manda la hora de Lima, pero el backend no fijaba ninguna zona: usaba la de la PC (`Clock.systemDefaultZone()`). En la PC del equipo funciona porque está en Perú, pero en un servidor en GMT el horario de 08:00 a 20:00, los vencimientos y las sanciones se correrían 5 horas.
+
+| Archivo | Qué cambió |
+|---|---|
+| [BibliotecaApplication.java](backend/src/main/java/com/alejandria/biblioteca/BibliotecaApplication.java) | `fijarZonaHoraria()`: antes de arrancar Spring pone la zona `America/Lima` para todo el backend (`TimeZone` es de Java, no es una librería nueva). En una PC de Perú no cambia nada |
+| [ZonaHorariaTest.java](backend/src/test/java/com/alejandria/biblioteca/ZonaHorariaTest.java) (nuevo, 2 pruebas) | Con la PC en GMT, después de `fijarZonaHoraria` la zona es Lima; y las 01:00 GMT del 28/10 son las 20:00 del 27/10 en Lima. Al terminar devuelve la zona de la PC para no afectar a las demás pruebas |
+
+**Primero la prueba:** `ZonaHorariaTest` no compilaba antes del cambio (el método no existía) y después pasó. Total: **160 pruebas del backend**, todas pasan contra Neon.
+
+### Permisos que no estaban documentados (no se cambió el código)
+- El **encargado** puede registrar y cancelar reservas a nombre de un prestatario (`POST /api/reservas`, `PUT /api/reservas/{id}/cancelar`; el comentario de `ReservaService` dice "en ventanilla"), pero su panel no tiene botón: solo por la API.
+- El **administrador** puede anular préstamos (`DELETE /api/prestamos/{id}`), pero el botón "Anular" solo está en el panel del encargado.
+
+Se documentaron en el README (perfiles y endpoints) y quedaron como pendiente del informe (I65 en `PLAN_INFORME.md`). Si el equipo decide quitarlos, basta con sacar el rol de `@RolesPermitidos`.
+
+### Detalle menor (no se cambió)
+`DashboardService`, `MonitoreoService` y `PrestatarioService` toman la hora con `LocalDateTime.now()` en vez de `horario.ahora()`. Ahora todos usan la hora de Lima, así que no hay error; solo que las pruebas no pueden fijarles la hora.
 
 ---
 
@@ -724,7 +822,7 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | Sanciones | `sancion activa` |
 | Reservas | `reserva crear`, `reserva cancelar` |
 | Librerías | `guava`, `logback`, `apache poi`, `commons csv`, `openpdf`, `actuator`, `reporte prestamos` |
-| ¿Por qué no usan la hora de la BD? | `hora de lima` |
+| ¿Por qué no usan la hora de la BD? ¿Dónde se fija la hora de Lima? | `hora de lima` (incluye `BibliotecaApplication.fijarZonaHoraria`) |
 | ¿Dónde validan el DNI y el correo? | `validar datos` |
 | ¿Qué pasa si hay un error? | `manejo de errores` |
 | ¿Cuándo se cierra la sesión? | `sesion 15 min` |
@@ -749,12 +847,16 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 
 Lo que falta está separado en dos archivos locales (no se suben a GitHub):
 - [PLAN_CODIGO.md](PLAN_CODIGO.md): errores, reglas, eliminación física, limpieza y sustentación (se trabaja con Claude Code).
-- [PLAN_INFORME.md](PLAN_INFORME.md): correcciones del documento, con el diccionario de datos ya corregido y los datos del código para redactar (se trabaja con Claude normal, junto con el PDF).
+- [PLAN_INFORME.md](PLAN_INFORME.md): correcciones del documento, con el diccionario de datos ya corregido y los datos del código para redactar (se trabaja junto con el informe V8, `docs/Avance_III_IntegradorV8_corregido.docx`).
 
-Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan en la sección 6 de `PLAN_INFORME.md`.
+Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan en la sección 6 de `PLAN_INFORME.md`, y el detalle de lo que hay que reescribir en la sección 7. Los dos planes se actualizaron el 27/10.
 
 - [x] Commit del login (`44597ad`), del CRUD (`263c935`) y de librerías (`f15dd2a`)
 - [x] Prioridad 5: `.jar`, README y comentario de `123456`
+- [x] Commits del 27/10 en la rama `claude/lucid-galileo-7xcs2c`: `bec3b25` (RF que funcionaban en parte) y `a2fb017` (stock 0)
+- [x] Ejecutar `database/migraciones/migracion_03_reserva_cola.sql` en Neon y correr `./mvnw test` contra Neon (27/10: 158 pruebas, todas pasan)
+- [x] Commits del 27/10 (noche): hora de Lima, base de datos y documentación. La rama `claude/lucid-galileo-7xcs2c` pasó a `main` con un commit de unión (`git merge --no-ff`, igual que "Create a merge commit" de GitHub), así que `bec3b25` y `a2fb017` conservan su código
+- [ ] 🔴 Actualizar el informe con la sección 7 de `PLAN_INFORME.md`
 
 ## Capturas para el anexo
 
@@ -785,11 +887,12 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 4 | PDF descargado y abierto | ⬜ |
 | 4 | Pestaña Monitoreo del admin con las métricas | ✅ `admin-monitoreo.png` |
 | 4 | Navegador en `http://localhost:8081/actuator/health` (db: UP) | ⬜ |
-| 4 | Terminal con `./mvnw test` → 90 pruebas, BUILD SUCCESS | ⬜ |
+| 4 | Terminal con `./mvnw test` → 160 pruebas, BUILD SUCCESS | ⬜ |
+| 6 | Código de `BibliotecaApplication.fijarZonaHoraria` y `ZonaHorariaTest` pasando (hora de Lima) | ⬜ |
 | 5 | Dashboard del admin (ya está en `docs/capturas/admin-dashboard.png`) | ✅ |
 | 5 | Alertas del encargado (ya está en `docs/capturas/encargado-alertas-15min.png`) | ✅ |
 | 5 | Catálogo con portadas reales (ya está en `docs/capturas/prestatario-catalogo.png`) | ✅ |
-| 5 | Terminal con `npx ng test --watch=false` → 8 pruebas del frontend | ⬜ |
+| 5 | Terminal con `npx ng test --watch=false` → 16 pruebas del frontend | ⬜ |
 | 5 | Encargado: préstamos activos con una fila amarilla (por vencer) y una roja (vencida) y los avisos arriba | ⬜ |
 | 5 | Encargado: modal de devolución con "Dañado" y el aviso de mantenimiento; admin: el libro en `mantenimiento` | 🟡 el modal: `encargado-devolucion-danado.png` (el libro en mantenimiento: en vivo) |
 | 5 | Prestatario → Mis Préstamos (uno activo y uno devuelto), junto al código de `buscarPorPrestatario` | ✅ `prestatario-mis-prestamos.png` (el código: captura aparte) |
@@ -808,6 +911,9 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 6 | Prestatario: Mis Préstamos con filtros (RF07) | ✅ `prestatario-mis-prestamos-filtros.png` |
 | 6 | Prestatario: catálogo con estado y stock, botón "Unirme a la cola", modal de la cola y "Mis Reservas" con el puesto | ⬜ tómenlas en vivo (en la prueba no cargaron las portadas) |
 | 6 | Un PDF o Excel de los reportes nuevos abierto (por ejemplo, reservas o tiempos) | ⬜ |
+| 6 | Admin: "Registrar libro" con stock 0 y el error "Un libro nuevo debe tener al menos 1 ejemplar" (corrección del stock 0) | ⬜ |
+| 6 | Admin: dashboard, historial, reservas y encargados **con los datos de la demo** (reemplazan a las capturas vacías) | ⬜ |
+| 6 | Encargado: préstamo registrado después de las 17:00 con el aviso "ajustada a la hora de cierre" (RF01) | ⬜ (solo se puede tomar después de las 17:00; `encargado-historial.png` ya muestra un préstamo de las 18:21 con límite 20:00) |
 | 4 | Código: `LimitadorIntentosLogin` (Guava), `ReporteService` (POI y CSV), `logback-spring.xml` | ⬜ |
 | 5 | Terminal con `./mvnw clean package` → BUILD SUCCESS | ⬜ |
 | 5 | Explorador mostrando `backend/target/biblioteca-alejandria.jar` | ⬜ |
