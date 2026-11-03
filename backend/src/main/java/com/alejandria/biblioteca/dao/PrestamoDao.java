@@ -19,6 +19,9 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
     /** ¿El libro tiene préstamos que aún no se devuelven? (para no darlo de baja). */
     boolean existsByLibroIdLibroAndEstadoPrestamoIn(Integer idLibro, List<String> estados);
 
+    /** RF13: ¿el prestatario tiene un libro en sala (préstamo activo o vencido)? Entonces no se le da de baja. */
+    boolean existsByPrestatarioIdUsuarioAndEstadoPrestamoIn(Integer idPrestatario, List<String> estados);
+
     /** Consulta de UNA tabla: historial de préstamos de un prestatario. */
     // consulta una tabla: solo usa la tabla prestamo, filtrado por el prestatario.
     // trae todos los campos (SELECT *): id, prestatario, encargado, libro, fecha de inicio, hora limite,

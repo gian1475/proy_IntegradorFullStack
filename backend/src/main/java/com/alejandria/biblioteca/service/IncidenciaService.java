@@ -104,8 +104,11 @@ public class IncidenciaService {
         // la suspension del usuario corresponde a su sancion: queda 'suspendido' y se cuenta la suspension
         if (SUSPENSION.equals(sancion.getTipoSancion())) {
             Usuario prestatario = prestamo.getPrestatario();
-            prestatario.setEstado("suspendido");
-            usuarioDao.save(prestatario);
+            // RF13: si el admin ya lo dio de baja sigue 'inactivo' (solo el admin lo reactiva)
+            if (!"inactivo".equals(prestatario.getEstado())) {
+                prestatario.setEstado("suspendido");
+                usuarioDao.save(prestatario);
+            }
             usuarioDao.sumarSuspension(prestatario.getIdUsuario());
         }
 

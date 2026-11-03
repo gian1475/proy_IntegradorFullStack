@@ -65,6 +65,20 @@ class SesionServiceTest {
     }
 
     @Test
+    void alDarDeBajaAUnUsuarioSeCierranTodasSusSesiones() {
+        // RF13: si el usuario estaba conectado, su token deja de servir en ese momento
+        Sesion pc = servicio.crear(5, "PRESTATARIO");
+        Sesion celular = servicio.crear(5, "PRESTATARIO");
+        Sesion otro = servicio.crear(6, "PRESTATARIO");
+
+        servicio.cerrarSesionesDe(5);
+
+        assertTrue(servicio.validar(pc.token()).isEmpty());
+        assertTrue(servicio.validar(celular.token()).isEmpty());
+        assertTrue(servicio.validar(otro.token()).isPresent()); // los demás siguen conectados
+    }
+
+    @Test
     void cadaLoginRecibeUnTokenDistinto() {
         assertNotEquals(servicio.crear(1, "PRESTATARIO").token(), servicio.crear(1, "PRESTATARIO").token());
     }

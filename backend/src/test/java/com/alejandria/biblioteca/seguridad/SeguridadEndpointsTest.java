@@ -62,6 +62,30 @@ class SeguridadEndpointsTest {
     }
 
     @Test
+    void soloElAdminEditaYDaDeBajaUsuarios() throws Exception {
+        // RF12 y RF13: actor Administrador
+        mvc.perform(get("/api/usuarios").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/usuarios/2").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/usuarios/2").header("Authorization", token(Rol.PRESTATARIO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/usuarios/2"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void editarUnUsuarioConDniMalEscritoDa400() throws Exception {
+        String json = """
+                {"nombre":"Ana","apellido":"Torres","dni":"71","correo":"ana@alejandria.edu.pe"}
+                """;
+        mvc.perform(put("/api/usuarios/2").header("Authorization", token(Rol.ADMINISTRADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El DNI debe tener 8 dígitos"));
+    }
+
+    @Test
     void unPrestatarioNoPuedeVerLosPrestamosDeOtro() throws Exception {
         // el token es del usuario 1; pide los prestamos del usuario 2
         mvc.perform(get("/api/prestamos/prestatario/2").header("Authorization", token(Rol.PRESTATARIO)))

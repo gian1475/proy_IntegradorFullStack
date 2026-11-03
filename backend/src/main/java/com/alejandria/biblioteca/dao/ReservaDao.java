@@ -21,6 +21,9 @@ public interface ReservaDao extends JpaRepository<Reserva, Integer> {
 
     List<Reserva> findByPrestatarioIdUsuarioOrderByFechaReservaDesc(Integer idUsuario);
 
+    /** RF13: reservas del prestatario en ciertos estados (al darlo de baja se cancelan las pendientes y en cola). */
+    List<Reserva> findByPrestatarioIdUsuarioAndEstadoReservaIn(Integer idUsuario, List<String> estados);
+
     List<Reserva> findAllByOrderByFechaReservaDesc();
 
     /** Reserva pendiente de un prestatario para un libro (para no duplicarla y para atenderla al prestar). */

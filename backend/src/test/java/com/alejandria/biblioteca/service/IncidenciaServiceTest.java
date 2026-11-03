@@ -82,6 +82,18 @@ class IncidenciaServiceTest {
     }
 
     @Test
+    void unaSuspensionNoReactivaAUnPrestatarioDadoDeBaja() {
+        // RF13: dado de baja (inactivo) por el admin; el daño se registra despues de la devolucion
+        valeria.setEstado("inactivo");
+        prestamoDevuelto("dañado");
+
+        servicio.registrar(registro("daño", "suspensión", 3, null));
+
+        assertEquals("inactivo", valeria.getEstado()); // sigue de baja: solo el admin lo reactiva
+        verify(usuarioDao).sumarSuspension(5);         // la suspension igual se cuenta
+    }
+
+    @Test
     void laMultaQuedaPendienteConSuMonto() {
         prestamoDevuelto("dañado");
 

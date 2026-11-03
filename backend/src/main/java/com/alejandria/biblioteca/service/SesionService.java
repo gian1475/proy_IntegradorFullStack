@@ -75,6 +75,11 @@ public class SesionService {
         }
     }
 
+    /** RF13: al dar de baja a un usuario se cierran todas sus sesiones abiertas (su token deja de servir). */
+    public void cerrarSesionesDe(Integer idUsuario) {
+        sesiones.values().removeIf(s -> s.idUsuario().equals(idUsuario));
+    }
+
     /** Cantidad de sesiones activas (no vencidas), para el monitoreo. */
     public long contarActivas() {
         LocalDateTime ahora = LocalDateTime.now(reloj);
