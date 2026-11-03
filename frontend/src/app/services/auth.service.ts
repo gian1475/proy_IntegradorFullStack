@@ -50,10 +50,12 @@ export class AuthService {
     }
   }
 
+  // sesion 15 min (front): el vencimiento se cuenta con el reloj del navegador, igual q en renovarSesion.
+  // no se usa el expiraEn del backend: llega en hora de Lima sin zona y un navegador en otra zona lo leia mal
   private guardarSesion(respuesta: RespuestaLogin): void {
-    localStorage.setItem(CLAVE_SESION, JSON.stringify(respuesta));
     this.sesion = respuesta;
     this.usuarioActual.set(respuesta.usuario);
+    this.renovarSesion(); // expiraEn = ahora + 15 min y lo guarda en localStorage
   }
 
   // proceso login (front): manda correo y contra al backend y si sale bien guarda el token y el usuario

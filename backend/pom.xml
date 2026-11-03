@@ -110,6 +110,15 @@
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
+			<!-- hora de lima: las pruebas corren en hora de Lima, igual que la app (BibliotecaApplication.fijarZonaHoraria).
+			     sin esto, en una PC o un servidor en otra zona las pruebas con LocalDateTime.now() cambian de dia antes -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Duser.timezone=America/Lima</argLine>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

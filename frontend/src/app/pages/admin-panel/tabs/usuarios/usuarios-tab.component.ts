@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActualizarUsuario, RegistroEncargado, UsuarioAdmin, UsuarioService } from '../../../../services/usuario.service';
@@ -18,6 +18,10 @@ import { FiltroPerfil, etiquetaPerfil, filtrarUsuarios } from '../../../../utils
 })
 export class UsuariosTabComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
+  private injector = inject(Injector);
+
+  /** Campo "Nombres" del formulario de edición: al pulsar Editar se pone el cursor ahí (D10). */
+  private campoNombre = viewChild<ElementRef<HTMLInputElement>>('campoNombre');
 
   readonly usuarios = signal<UsuarioAdmin[]>([]);
   readonly cargando = signal(true);
@@ -97,6 +101,9 @@ export class UsuariosTabComponent implements OnInit {
     this.limpiarMensajes();
     this.edicion = { idUsuario: u.idUsuario, perfil: u.perfil, nombre: u.nombre, apellido: u.apellido,
                      dni: u.dni, correo: u.correo, turno: u.turno };
+    // el formulario esta arriba de la tabla: despues de dibujarlo se pone el cursor en "Nombres"
+    // y el navegador baja/sube solo hasta ahi (focus hace el scroll)
+    afterNextRender(() => this.campoNombre()?.nativeElement.focus(), { injector: this.injector });
   }
 
   cancelarEdicion(): void {
@@ -144,7 +151,7 @@ export class UsuariosTabComponent implements OnInit {
     this.limpiarMensajes();
     this.usuarioService.darDeBaja(u.idUsuario).subscribe({
       next: () => {
-        this.mensajeOk.set(`${u.nombre} ${u.apellido} fue dado de baja (estado inactivo).`);
+        this.mensajeOk.set(`Se dio de baja a ${u.nombre} ${u.apellido} (estado inactivo).`);
         this.cargarUsuarios();
       },
       error: (err: HttpErrorResponse) => this.mensajeError.set(mensajeDeError(err))
@@ -156,7 +163,7 @@ export class UsuariosTabComponent implements OnInit {
     this.limpiarMensajes();
     this.usuarioService.reactivar(u.idUsuario).subscribe({
       next: r => {
-        this.mensajeOk.set(`${r.nombre} ${r.apellido} fue reactivado (estado ${r.estado}).`);
+        this.mensajeOk.set(`Se reactivó a ${r.nombre} ${r.apellido} (estado ${r.estado}).`);
         this.cargarUsuarios();
       },
       error: (err: HttpErrorResponse) => this.mensajeError.set(mensajeDeError(err))

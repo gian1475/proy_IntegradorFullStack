@@ -61,7 +61,7 @@ describe('pestaña Usuarios del admin (RF12 y RF13)', () => {
     fixture.detectChanges();
 
     expect(window.confirm).toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('Valeria Flores fue dado de baja');
+    expect(fixture.nativeElement.textContent).toContain('Se dio de baja a Valeria Flores'); // D9: sin género
   });
 
   it('si no confirma, no se da de baja', () => {
@@ -126,5 +126,19 @@ describe('pestaña Usuarios del admin (RF12 y RF13)', () => {
 
     http.expectOne(r => r.method === 'PUT' && r.url === `${API}/7/reactivar`).flush({ ...maria, estado: 'activo' });
     http.expectOne(API).flush([valeria, { ...maria, estado: 'activo' }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Se reactivó a María López');
+  });
+
+  it('al pulsar Editar lleva el cursor al formulario (D10)', async () => {
+    const fixture = abrir();
+    document.body.appendChild(fixture.nativeElement); // focus solo funciona si esta en la pagina
+
+    boton(fixture, 1, 'Editar').click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(document.activeElement?.id).toBe('u-nombre');
+    fixture.nativeElement.remove();
   });
 });

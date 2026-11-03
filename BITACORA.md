@@ -1000,6 +1000,27 @@ El DNI y el correo no pueden ser los de **otro** usuario (409 "El DNI ya se encu
 
 ---
 
+## Cierre del código (03/11)
+
+Lo que faltaba del código según el informe, en bloques (un commit por bloque).
+
+### Bloque 1 – Arreglos de la revisión de RF12 y RF13 ✅
+
+| Duda | Qué se hizo | Archivo |
+|---|---|---|
+| D9 | Los mensajes ya no tienen género: "Se dio de baja a Lucía Ramírez Soto (estado inactivo)" y "Se reactivó a…". Antes decía "fue dado de baja" también para mujeres | [usuarios-tab.component.ts](frontend/src/app/pages/admin-panel/tabs/usuarios/usuarios-tab.component.ts) |
+| D10 | Al pulsar "Editar" el cursor va al campo "Nombres" y la pantalla sube sola hasta el formulario. Se usa `viewChild` + `afterNextRender` de Angular y `focus()` del navegador (no se agregó nada) | ídem y su `.html` (`#campoNombre`) |
+| D15 | 🐞 **Error latente:** el frontend leía `expiraEn` del login, que el backend manda en hora de Lima **sin zona**. Un navegador en otra zona (por ejemplo, en UTC) daba la sesión por vencida apenas se iniciaba. Ahora `guardarSesion` calcula el vencimiento con el reloj del navegador (ahora + 15 min), igual que `renovarSesion`. En Perú no se notaba | [auth.service.ts](frontend/src/app/services/auth.service.ts) |
+| D16 | 🐞 **Prueba frágil:** las pruebas no corrían en hora de Lima (la app la fija en `main`, que las pruebas no ejecutan). `PrestamoDaoTest.lasConsultasDelDashboardCuentanBienEnLaBd` fallaba en una máquina en UTC entre las 00:00 y las 05:00. Ahora el plugin de pruebas de Maven (`maven-surefire-plugin`, que ya venía con Spring Boot) corre con `-Duser.timezone=America/Lima` | [pom.xml](backend/pom.xml) |
+
+**Primero la prueba:**
+- [auth.service.spec.ts](frontend/src/app/services/auth.service.spec.ts) (2, nuevo): con un `expiraEn` que en UTC parece pasado sigue conectado, y se cierra a los 15 min sin actividad (con reloj falso de Vitest). Las dos fallaron antes del arreglo.
+- `usuarios-tab.component.spec.ts` (+1 y 2 ajustadas): el cursor va a "Nombres" al editar; los mensajes nuevos.
+- D16: `PrestamoDaoTest` falló a las 02:37 UTC sin la configuración y pasó con ella, sin pasar la zona a mano.
+- Total: **232 del backend y 41 del frontend**, todas pasan.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.

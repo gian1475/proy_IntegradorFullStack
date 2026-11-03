@@ -19,7 +19,7 @@ Leyenda: ⬜ falta · ✅ hecho · ❓ duda (decídanla ustedes)
   - Cambiar "RF12 y RF13: editar y dar de baja usuarios" por "~~RF12 y RF13~~ (hecho el 03/11 en la rama `claude/happy-ritchie-8835za`, commits `a3ddc17` y `bc08a49`; falta pasarla a `main`)".
   - Corregir la línea del commit `246d4d8`: dice **"sin push"**, pero ya está en `origin/main`.
 - ⬜ **(Opcional) Nota para las sesiones en la nube:**
-  > En la nube: `mvnw` no descarga Maven (usar `mvn`), y el contenedor está en UTC. Correr las pruebas con `TZ=America/Lima mvn test -Duser.timezone=America/Lima` y abrir el navegador de prueba con la zona `America/Lima`.
+  > En la nube: `mvnw` no descarga Maven (usar `mvn`). Desde el 03/11 las pruebas ya corren en hora de Lima solas (`pom.xml`). Neon está bloqueado por la red del entorno (403): las migraciones se corren desde el SQL Editor de Neon o se agrega `*.neon.tech` en Allowed domains.
 
 ## 2. Qué marcar en `PLAN_CODIGO.md`
 
@@ -91,13 +91,21 @@ Las capturas de referencia de la prueba local están en la carpeta temporal de l
 | D6 | Se puede **editar a un usuario `inactivo`** | No sé si tiene sentido editar a alguien dado de baja | Dejarlo: sirve para corregir datos antes de reactivarlo |
 | D7 | Si un prestatario con **multa pendiente** se da de baja, la multa queda como está. Al reactivarlo vuelve a `activo`, pero la multa lo sigue bloqueando | Puede confundir que diga "activo" y no pueda pedir libros | Es lo que dice RF06 (la multa bloquea sin suspender). Solo tenerlo claro en la demo |
 | D8 | **Reactivar no devuelve** las reservas que se cancelaron en la baja | Es lo esperado, pero alguien podría preguntarlo | Dejarlo así |
-| D9 | El mensaje dice "**fue dado de baja**" y "**fue reactivado**", en masculino, también para Lucía o Rosa | Queda raro con nombres femeninos | Cambiarlo a "Se dio de baja a Lucía Ramírez Soto (estado inactivo)" y "Se reactivó a…". Es una línea en `usuarios-tab.component.ts` y su prueba. Díganme y lo hago |
-| D10 | El formulario "Editar" aparece **entre** el registro de encargados y la tabla | Si la tabla es larga, al pulsar "Editar" abajo no se ve el formulario sin subir | Agregar un `scrollIntoView` al abrir la edición, o poner el formulario arriba |
+| D9 | El mensaje dice "**fue dado de baja**" y "**fue reactivado**", en masculino, también para Lucía o Rosa | Queda raro con nombres femeninos | ✅ Arreglado el 03/11 (bloque 1): "Se dio de baja a…" / "Se reactivó a…". |
+| D10 | El formulario "Editar" aparece **entre** el registro de encargados y la tabla | Si la tabla es larga, al pulsar "Editar" abajo no se ve el formulario sin subir | ✅ Arreglado el 03/11 (bloque 1): el cursor va a "Nombres" y la pantalla sube sola. |
 | D11 | RF12 del informe dice "**contacto**": lo tomé como el **correo** | La BD no tiene teléfono | Si "contacto" era teléfono, habría que cambiar la BD (migración nueva). Propongo cambiar la palabra en el informe (ver la sección 3) |
 | D12 | **No hay borrado físico** de usuarios (lo eligieron ustedes) | El informe actual sí lo menciona | Ya está en la sección 3: hay que cambiar la ficha RF13 y 3.5 |
 | D13 | **No toqué la BD** | — | Confirmado: el CHECK ya aceptaba `inactivo`. No hace falta migración |
 | D14 | Las pruebas de BD (`UsuarioBdTest` +3) solo se corrieron en **PostgreSQL 16 local**, no en Neon | Neon debería dar lo mismo (mismo script), pero no está comprobado | Correr `./mvnw test` en la PC contra Neon antes del merge |
-| D15 | **Error latente de zona horaria en el frontend:** `expiraEn` llega en hora de Lima **sin zona**, y un navegador en otra zona horaria toma la sesión como vencida al instante | No pasa en Perú, pero en la nube lo vi (el navegador en UTC no podía entrar) | Anotarlo como mejora opcional (mandar `expiraEn` con zona o comparar en el backend). No lo cambié |
-| D16 | **Prueba frágil:** `PrestamoDaoTest.lasConsultasDelDashboardCuentanBienEnLaBd` falla si la JVM no está en hora de Lima entre las 00:00 y las 05:00 UTC | En la PC de Lima no pasa; en la nube sí | Opcional: que la prueba use `HorarioAtencion.ahora()` o `ZoneId.of("America/Lima")` en vez de `LocalDateTime.now()` |
+| D15 | **Error latente de zona horaria en el frontend:** `expiraEn` llega en hora de Lima **sin zona**, y un navegador en otra zona horaria toma la sesión como vencida al instante | No pasa en Perú, pero en la nube lo vi (el navegador en UTC no podía entrar) | ✅ Arreglado el 03/11 (bloque 1): el vencimiento se calcula con el reloj del navegador. |
+| D16 | **Prueba frágil:** `PrestamoDaoTest.lasConsultasDelDashboardCuentanBienEnLaBd` falla si la JVM no está en hora de Lima entre las 00:00 y las 05:00 UTC | En la PC de Lima no pasa; en la nube sí | ✅ Arreglado el 03/11 (bloque 1): `pom.xml` corre las pruebas con `-Duser.timezone=America/Lima`. |
 | D17 | En la BD **local** de la nube puse una contraseña temporal a las cuentas para probar | Solo afecta a la BD local de la sesión, que se borra. **Neon no se tocó** | Nada que hacer |
 | D18 | Hice **commits y push** en la rama de la sesión | `CLAUDE.md` dice "no hagas commits", pero ustedes lo permitieron para esta sesión | Revisen la rama antes del merge |
+
+## 7. Cierre del código (03/11, tarde)
+
+Plan aprobado: bloque 1 (arreglos D9, D10, D15, D16) → bloque 2 (L3: librerías que ya tienen) → bloque 3 (RF15: editar reservas, Prestatario y Admin) → bloque 4 (TAP e IPI con la migración 05; la auditoría la hace el Admin).
+
+- ✅ Bloque 1 (commit aparte).
+- ⚠️ **Neon desde la nube:** el usuario pasó las credenciales para que corra la migración 05, pero la red del entorno bloquea Neon (HTTPS 403 y el puerto 5432 no pasa). Las credenciales quedaron solo en `backend/.env.neon` (ignorado por git, no se sube). **Cambiar la contraseña de Neon**: quedó escrita en el chat.
+- ⬜ Migración 05 en Neon: correrla desde el SQL Editor (o habilitar `*.neon.tech` y la corro yo).
