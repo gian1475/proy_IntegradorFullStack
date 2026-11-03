@@ -36,7 +36,7 @@ frontend/src/
 └── app/
     ├── pages/          Pantallas: home, login, registro, catálogo y los paneles
     │   ├── admin-panel/       Panel del Administrador; cada pestaña está en tabs/
-    │   │   └── tabs/          dashboard, libros, prestamos, reservas, encargados, reportes, monitoreo
+    │   │   └── tabs/          dashboard, libros, prestamos, reservas, usuarios, reportes, monitoreo
     │   └── encargado-panel/   Panel del Encargado; cada pestaña está en tabs/
     │       └── tabs/          activos, registrar, reservas
     ├── components/     Header, banner, secciones de libros, historial de préstamos y descarga de reportes
@@ -78,7 +78,7 @@ Flujo de una petición: **controller → service → dao → base de datos**.
 
 | Perfil | Pantalla | Puede |
 |---|---|---|
-| Administrador | `/admin` | Dashboard con los indicadores de gestión, gestionar libros (CRUD), ver préstamos activos y el historial, eliminar reservas canceladas o vencidas, registrar encargados, descargar reportes, ver el monitoreo. Por la API (sin botón en su panel) también puede anular préstamos |
+| Administrador | `/admin` | Dashboard con los indicadores de gestión, gestionar libros (CRUD), ver préstamos activos y el historial, eliminar reservas canceladas o vencidas, gestionar usuarios (registrar encargados; editar, dar de baja y reactivar prestatarios y encargados: RF09, RF12 y RF13), descargar reportes, ver el monitoreo. Por la API (sin botón en su panel) también puede anular préstamos |
 | Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas y ver la cola de espera, ver el historial, registrar incidencias con su sanción (advertencia, suspensión o multa) y registrar el pago de las multas (RF06), descargar reportes. Por la API (sin botón en su panel) también puede registrar y cancelar reservas a nombre de un prestatario (ventanilla) |
 | Prestatario | `/catalogo` | Ver el catálogo (stock y estado de cada libro), reservar, entrar a la cola de espera si no hay stock, cancelar sus reservas, ver y filtrar sus préstamos |
 
@@ -119,6 +119,7 @@ Todas usan la misma **contraseña de prueba**, que maneja el equipo: no está en
 - **Devolución con retraso:** los 2 préstamos vencidos de hoy.
 - **Cola de espera:** si se cancela la reserva pendiente de *Cien Años de Soledad*, el ejemplar pasa a Camila, la primera de la cola.
 - **Mantenimiento:** *Cosmos* volvió dañado y era su único ejemplar.
+- **Usuarios (RF12 y RF13):** pestaña **Usuarios** del admin. José Luis ya está `inactivo` (botón "Reactivar"). Si se intenta dar de baja a quien tiene un libro en sala, el sistema lo rechaza; al dar de baja a quien tiene una reserva pendiente (Sebastián, Lucía o Diego), la reserva se cancela y esa persona ya no puede iniciar sesión.
 
 ## Empaquetado (.jar)
 
@@ -137,9 +138,9 @@ cd backend
 ./mvnw test
 ```
 
-205 pruebas del backend: incidencias y sanciones (RF06: las 3 sanciones, qué incidencia corresponde a cada préstamo, pago, cancelación y fin de la suspensión, también contra la BD), zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos con anotaciones (Bean Validation), seguridad de los endpoints (401, 403 y CORS con Spring Security), perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo (con los autores en la misma consulta), cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
+232 pruebas del backend: edición y baja lógica de usuarios (RF12 y RF13: DNI y correo únicos, no se da de baja con un libro en sala, se cancelan sus reservas, se cierra su sesión, reactivar, también contra la BD), incidencias y sanciones (RF06: las 3 sanciones, qué incidencia corresponde a cada préstamo, pago, cancelación y fin de la suspensión, también contra la BD), zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos con anotaciones (Bean Validation), seguridad de los endpoints (401, 403 y CORS con Spring Security), perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo (con los autores en la misma consulta), cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
 
-Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña, "Cargando..." en la pestaña Libros, incidencias que corresponden a cada préstamo), 24 pruebas:
+Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña, "Cargando..." en la pestaña Libros, incidencias que corresponden a cada préstamo, pestaña Usuarios con su filtro, edición y baja), 38 pruebas:
 
 ```
 cd frontend
@@ -162,7 +163,8 @@ npx ng test --watch=false
 | | `DELETE /{id}` (eliminación física) | Administrador |
 | Reportes | `GET /api/reportes/{tipo}/{formato}?desde=&hasta=` (tipo: `prestamos`, `devoluciones`, `reservas`, `incidencias`, `bajas`, `stock`, `indicadores`, `tiempos`; formato: `excel`, `pdf`, `csv`) | Administrador y Encargado |
 | Importar libros | `POST /api/reportes/libros/csv` | Administrador |
-| Encargados | `GET /api/usuarios/encargados`, `POST /api/usuarios/encargados` | Administrador |
+| Usuarios | `GET /api/usuarios/encargados`, `POST /api/usuarios/encargados` (RF09) | Administrador |
+| | `GET /api/usuarios` (prestatarios y encargados), `PUT /{id}` (editar, RF12), `DELETE /{id}` (baja lógica: queda `inactivo`, RF13), `PUT /{id}/reactivar` | Administrador |
 | Incidencias (RF06) | `GET /api/incidencias`, `POST /api/incidencias` (incidencia + sanción), `PUT /sanciones/{id}/pago`, `PUT /sanciones/{id}/cancelar` | Encargado |
 | Monitoreo | `GET /api/monitoreo` | Administrador |
 | Dashboard | `GET /api/dashboard` | Administrador |

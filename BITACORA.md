@@ -66,6 +66,13 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 02/11 | RF06: solo el **encargado** registra incidencias y sanciones; el admin las ve en el reporte | Lo dice el informe (RF06 y CU09: actor Encargado) |
 | 02/11 | RF06: la **advertencia** no bloquea (se registra ya `cumplida`); `tieneSancionActiva` solo cuenta suspensiones y multas | Ficha RF06: "La advertencia es informativa; suspensión y multa pendiente bloquean préstamos y reservas". Antes cualquier sanción activa bloqueaba |
 | 02/11 | RF06: cada incidencia lleva su sanción (en la BD puede no tenerla, pero la pantalla siempre la pide) y no se repite el mismo tipo de incidencia en un préstamo | CU09 "Registrar incidencia **y** sanción" |
+| 03/11 | RF12: el admin edita **nombres, apellidos, DNI, correo** y, si es encargado, el **turno**. No cambia la contraseña ni el estado (el estado cambia con "Dar de baja" / "Reactivar" y con las sanciones de RF06) | Decisión del equipo. Así `suspendido` sigue dependiendo solo de una sanción |
+| 03/11 | RF13: **solo baja lógica** (`inactivo`). No se implementa el borrado físico de usuarios sin préstamos ni reservas que menciona la ficha del RF13 | Decisión del equipo: se ajusta el informe. La única eliminación física sigue siendo la de reservas (RF17) |
+| 03/11 | RF13: un prestatario con un **libro en sala** (préstamo `activo` o `vencido`) no se da de baja hasta que lo devuelva; sus reservas `pendiente` y `en_espera` se **cancelan solas** (el ejemplar vuelve al stock o pasa al siguiente de la cola). Sus sanciones quedan como están | Decisión del equipo. El historial no se toca |
+| 03/11 | RF13: al dar de baja se **cierran sus sesiones abiertas** (su token deja de servir en ese momento) | Antes un inactivo solo quedaba bloqueado en el siguiente login |
+| 03/11 | El admin puede **reactivar** a un usuario dado de baja: vuelve a `activo`, o a `suspendido` si todavía tiene una suspensión activa | Decisión del equipo: corrige bajas hechas por error sin tocar la BD |
+| 03/11 | Al administrador no se le edita ni se le da de baja desde el panel (403) | Así el admin no se puede dejar fuera a sí mismo |
+| 03/11 | La baja del usuario usa `DELETE /api/usuarios/{id}` aunque **no borra la fila** | Mismo patrón que libros (`baja`) y préstamos (`anulado`); además CORS ya permite `DELETE` y `PUT` (no se agregó `PATCH`) |
 
 ---
 
@@ -947,6 +954,52 @@ No se encontró nada más que convenga reemplazar: los reportes ya usan POI, Ope
 
 ---
 
+## RF12 y RF13 (03/11): editar y dar de baja usuarios ✅
+
+El administrador **edita** los datos de un prestatario o un encargado (RF12) y lo **da de baja** con eliminación lógica: el estado pasa a `inactivo` y la fila sigue en la BD con todo su historial (RF13). También lo puede **reactivar**. **No se cambió la BD**: el CHECK de `usuario.estado` ya aceptaba `inactivo`, y el login ya rechazaba a los inactivos ("El usuario se encuentra inactivo").
+
+| Acción | Prestatario | Encargado |
+|---|---|---|
+| Editar (RF12) | Nombres, apellidos, DNI y correo | Lo mismo + el turno (`mañana` o `tarde`) |
+| Dar de baja (RF13) | Se rechaza (409) si tiene un libro en sala. Se cancelan sus reservas pendientes y en cola. Queda `inactivo` | Queda `inactivo`; los préstamos que registró siguen en el historial con su nombre |
+| Después de la baja | No puede iniciar sesión y su sesión abierta se cierra. Aparece en el reporte de bajas lógicas | Igual |
+| Reactivar | `activo`, o `suspendido` si le queda una suspensión activa | `activo` |
+
+El DNI y el correo no pueden ser los de **otro** usuario (409 "El DNI ya se encuentra registrado"); los suyos sí se pueden volver a guardar. Al administrador no se le edita ni se le da de baja (403).
+
+| Archivo | Qué cambió |
+|---|---|
+| [UsuarioService.java](backend/src/main/java/com/alejandria/biblioteca/service/UsuarioService.java) | `listarUsuarios`, `actualizar` (RF12), `darDeBaja` (RF13) y `reactivar`. La validación del turno pasó a `validarTurno` (la usan el registro y la edición) |
+| [UsuarioController.java](backend/src/main/java/com/alejandria/biblioteca/controller/UsuarioController.java) | La clase ahora es `@RequestMapping("/api/usuarios")` (antes `/api/usuarios/encargados`); las rutas de encargados no cambiaron. Nuevas: `GET /api/usuarios`, `PUT /api/usuarios/{id}`, `DELETE /api/usuarios/{id}` (baja lógica) y `PUT /api/usuarios/{id}/reactivar`. Todo sigue con `@RolesAllowed(ADMINISTRADOR)` |
+| [dto/usuario/ActualizarUsuarioDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/usuario/ActualizarUsuarioDTO.java) (nuevo) | Los datos que se pueden editar, con las mismas anotaciones de Bean Validation del registro (sin contraseña) |
+| [dto/usuario/UsuarioAdminDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/usuario/UsuarioAdminDTO.java) (nuevo) | Una fila de la tabla "Usuarios": datos, estado, perfil y turno (sin la contraseña) |
+| [UsuarioDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/UsuarioDao.java) | `listarUsuarios` (usuario LEFT JOIN encargado y prestatario; el admin no sale), `existsByDniAndIdUsuarioNot`, `existsByCorreoAndIdUsuarioNot`, `turnoDe` y `cambiarTurno` |
+| [PrestamoDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/PrestamoDao.java), [ReservaDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/ReservaDao.java) | Consultas derivadas de Spring Data (sin SQL): ¿tiene un préstamo `activo` o `vencido`? y sus reservas en ciertos estados |
+| [SesionService.java](backend/src/main/java/com/alejandria/biblioteca/service/SesionService.java) | `cerrarSesionesDe(idUsuario)`: borra todos los tokens de ese usuario |
+| [IncidenciaService.java](backend/src/main/java/com/alejandria/biblioteca/service/IncidenciaService.java) | Una suspensión ya no cambia a `suspendido` a un usuario `inactivo` (antes lo habría "reactivado" a medias). La suspensión igual se cuenta |
+| [usuarios-tab](frontend/src/app/pages/admin-panel/tabs/usuarios/) (antes `encargados-tab`, se renombró con `git mv`) | La pestaña **"Encargados"** del admin ahora es **"Usuarios"**: mantiene el formulario de registro de encargados y suma la tabla de prestatarios y encargados con filtro por perfil, búsqueda y los botones **Editar**, **Dar de baja** (con confirmación) y **Reactivar** |
+| [utils/filtro-usuarios.ts](frontend/src/app/utils/filtro-usuarios.ts) (nuevo) | El filtro de la tabla (perfil + texto en nombre, DNI o correo, sin importar tildes) |
+| [services/usuario.service.ts](frontend/src/app/services/usuario.service.ts) | `listarUsuarios`, `actualizar`, `darDeBaja` y `reactivar`. Se quitó `listarEncargados` (la tabla nueva ya los muestra; el endpoint del backend sigue) |
+
+**Pruebas (primero la prueba, después el código):** no compilaban hasta que existió el código.
+- [UsuarioGestionServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/UsuarioGestionServiceTest.java) (18, nuevo): editar (datos limpios, turno del encargado, DNI y correo repetidos, admin 403, 404), dar de baja (inactivo y sesión cerrada, rechazo con un libro en sala, reservas canceladas, suspendido, encargado, ya inactivo, admin), reactivar (activo, suspendido, solo inactivos) y la lista.
+- [UsuarioBdTest](backend/src/test/java/com/alejandria/biblioteca/service/UsuarioBdTest.java) (+3, contra la BD, se deshacen): la baja deja la fila con `inactivo`, cancela la reserva pendiente y sale en el reporte de bajas lógicas; el DNI de otro da 409 y el propio sí se guarda; el turno cambia en la tabla `encargado`.
+- `AuthServicePerfilTest` (+1): un usuario dado de baja no puede iniciar sesión (criterio de aceptación de RF13). `SesionServiceTest` (+1): se cierran todas las sesiones del usuario y las de los demás siguen. `IncidenciaServiceTest` (+1): una suspensión no reactiva a un inactivo. `ValidacionDtoTest` (+1): la edición usa las mismas reglas del registro. `SeguridadEndpointsTest` (+2): el encargado y el prestatario reciben 403 y sin token 401; un DNI mal escrito da 400.
+- Frontend: [filtro-usuarios.spec.ts](frontend/src/app/utils/filtro-usuarios.spec.ts) (6) y [usuarios-tab.component.spec.ts](frontend/src/app/pages/admin-panel/tabs/usuarios/usuarios-tab.component.spec.ts) (8: lista, botones según el estado, baja con y sin confirmación, mensaje del backend, edición con `PUT`, DNI inválido, reactivar).
+- Total: **232 del backend y 38 del frontend**, todas pasan.
+
+**Prueba en vivo (03/11, sesión en la nube, PostgreSQL 16 local con `datos_demo.sql`, `.jar` + build del frontend + Chromium):** como admin, en la pestaña Usuarios:
+- Dar de baja a Andrés: "El prestatario tiene un libro prestado. Registre la devolución antes de darlo de baja".
+- Dar de baja a Sebastián: queda `inactivo` y su reserva pendiente pasa a `cancelada`.
+- Poner a Lucía el DNI de Camila: "El DNI ya se encuentra registrado".
+- Cambiar el turno de Rosa: se guardó.
+- Sebastián intenta entrar: "El usuario se encuentra inactivo". Después se lo reactivó.
+- Por la API: el token abierto de Lucía pasó de 200 a 401 al darla de baja, y dar de baja al admin responde 403.
+
+**Notas del entorno de la nube (no son errores del código):** el contenedor está en hora UTC. `PrestamoDaoTest.lasConsultasDelDashboardCuentanBienEnLaBd` falla entre las 00:00 y las 05:00 UTC si la JVM no está en hora de Lima (se corrió con `-Duser.timezone=America/Lima`). Además, un navegador en UTC toma como vencida la sesión, porque `expiraEn` llega en hora de Lima sin zona. En una PC de Lima no pasa ninguna de las dos cosas. El `mvnw` no pudo descargar Maven 3.9.16 y se usó el Maven 3.9.11 instalado.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1000,6 +1053,10 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cómo se validan los datos con anotaciones? | `bean validation`, `validar datos` |
 | ¿Dónde están los getters de las entidades? | `lombok` |
 | ¿Dónde se usa Bootstrap? | `bootstrap` |
+| ¿Dónde se editan los datos de un usuario (RF12)? | `editar usuario` (backend y frontend) |
+| ¿Dónde se da de baja a un usuario (RF13)? ¿Por qué no se borra? | `eliminacion logica`, `baja logica` |
+| ¿Qué pasa con sus préstamos y reservas? ¿Y con su sesión? | `RF13` en `UsuarioService.darDeBaja`, `cerrarSesionesDe` |
+| ¿Dónde se filtra la tabla de usuarios? | `gestion usuarios` |
 
 ---
 
@@ -1088,3 +1145,10 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 7 | Código: un DTO con anotaciones (`RegistroDTO`) y la respuesta 400 "El DNI debe tener 8 dígitos" (Postman, DevTools o el registro) | ⬜ |
 | 7 | Código: una entidad con `@Getter @Setter` (Lombok) | ⬜ |
 | 7 | Terminal con `./mvnw test` → 205 pruebas, BUILD SUCCESS (reemplaza a la de 160) | ⬜ |
+| 9 | RF12/RF13: pestaña **Usuarios** con la tabla (prestatarios y encargados, uno `inactivo` con "Reactivar") — reemplaza a `admin-encargados.png` | ⬜ `admin-usuarios.png` |
+| 9 | RF12: formulario "Editar encargado" con el turno, y el mensaje "El DNI ya se encuentra registrado" al poner el DNI de otro | ⬜ `admin-usuario-editar.png`, `admin-usuario-dni-repetido.png` |
+| 9 | RF13: confirmación de "Dar de baja", el mensaje de éxito con el estado `inactivo` y el rechazo "tiene un libro prestado" | ⬜ `admin-usuario-baja.png`, `admin-usuario-baja-rechazada.png` (cambia datos: en la demo) |
+| 9 | RF13: el usuario dado de baja intenta entrar → "El usuario se encuentra inactivo" | ⬜ `login-usuario-inactivo.png` |
+| 9 | Reporte de bajas lógicas con el usuario `inactivo` | ⬜ |
+| 9 | Código: `UsuarioService.darDeBaja` y `UsuarioController` (`DELETE` que no borra) | ⬜ |
+| 9 | Terminal con `./mvnw test` → 232 pruebas y `npx ng test --watch=false` → 38 pruebas | ⬜ |
