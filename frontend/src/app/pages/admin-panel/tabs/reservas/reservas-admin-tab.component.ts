@@ -1,15 +1,20 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ReservaBackend, ReservaService } from '../../../../services/reserva.service';
 import { mensajeDeError } from '../../../../utils/mensaje-error';
+import { FRANJAS_RECOJO, fechaDelLimite, franjaDelLimite, limiteDeRecojo } from '../../../../utils/franjas-recojo';
 
 type Filtro = 'todas' | 'eliminables';
 
-/** Pestaña "Reservas" del admin: ver todas y eliminar físicamente las canceladas o vencidas (RF17). */
+/**
+ * Pestaña "Reservas" del admin: ver todas, cambiar la fecha y la franja de recojo de una pendiente (RF15)
+ * y eliminar físicamente las canceladas o vencidas (RF17).
+ */
 @Component({
   selector: 'app-reservas-admin-tab',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, FormsModule],
   templateUrl: './reservas-admin-tab.component.html',
 })
 export class ReservasAdminTabComponent implements OnInit {
@@ -24,6 +29,10 @@ export class ReservasAdminTabComponent implements OnInit {
   readonly reservasFiltradas = computed(() =>
     this.filtro() === 'todas' ? this.reservas() : this.reservas().filter(r => this.sePuedeEliminar(r))
   );
+
+  readonly franjas = FRANJAS_RECOJO;
+  /** RF15: reserva cuya fecha se está cambiando (null = ninguna). */
+  readonly edicion = signal<{ idReserva: number; fecha: string; franja: string } | null>(null);
 
   ngOnInit(): void {
     this.cargarReservas();
@@ -40,6 +49,27 @@ export class ReservasAdminTabComponent implements OnInit {
   /** RF17: solo se borran las canceladas o vencidas. */
   sePuedeEliminar(r: ReservaBackend): boolean {
     return r.estadoReserva === 'cancelada' || r.estadoReserva === 'vencida';
+  }
+
+  // reserva actualizar (front, RF15): solo las pendientes. se abre con la fecha y la franja q tiene ahora
+  editarFecha(r: ReservaBackend): void {
+    if (!r.fechaRecojoLimite) return;
+    this.mensajeOk.set('');
+    this.mensajeError.set('');
+    this.edicion.set({ idReserva: r.idReserva, fecha: fechaDelLimite(r.fechaRecojoLimite), franja: franjaDelLimite(r.fechaRecojoLimite) });
+  }
+
+  guardarFecha(): void {
+    const e = this.edicion();
+    if (!e) return;
+    this.reservaService.actualizar(e.idReserva, limiteDeRecojo(e.fecha, e.franja)).subscribe({
+      next: () => {
+        this.edicion.set(null);
+        this.mensajeOk.set(`Reserva #${e.idReserva}: nueva fecha de recojo ${e.fecha.split('-').reverse().join('/')} (${e.franja}).`);
+        this.cargarReservas();
+      },
+      error: err => this.mensajeError.set(mensajeDeError(err))
+    });
   }
 
   // eliminacion fisica (front): boton eliminar, borra la reserva de la bd (no se puede deshacer)

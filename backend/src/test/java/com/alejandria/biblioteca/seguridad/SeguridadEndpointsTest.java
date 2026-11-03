@@ -86,6 +86,22 @@ class SeguridadEndpointsTest {
     }
 
     @Test
+    void elEncargadoNoEditaReservas() throws Exception {
+        // RF15: actor Prestatario y Administrador
+        mvc.perform(put("/api/reservas/1").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"fechaRecojoLimite\":\"2026-10-30T17:30:00\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void editarUnaReservaSinFechaDa400() throws Exception {
+        mvc.perform(put("/api/reservas/1").header("Authorization", token(Rol.ADMINISTRADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("Elija la fecha y la franja de recojo"));
+    }
+
+    @Test
     void unPrestatarioNoPuedeVerLosPrestamosDeOtro() throws Exception {
         // el token es del usuario 1; pide los prestamos del usuario 2
         mvc.perform(get("/api/prestamos/prestatario/2").header("Authorization", token(Rol.PRESTATARIO)))

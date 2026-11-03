@@ -1,5 +1,6 @@
 package com.alejandria.biblioteca.controller;
 
+import com.alejandria.biblioteca.dto.reserva.ActualizarReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaRespuestaDTO;
 import com.alejandria.biblioteca.exception.NegocioException;
@@ -56,6 +57,16 @@ public class ReservaController {
         verificarPropietario(sesion, reservaService.obtenerIdPrestatario(id));
         reservaService.cancelar(id);
         return ResponseEntity.ok(Map.of("mensaje", "Reserva cancelada correctamente"));
+    }
+
+    // reserva actualizar (RF15): PUT /api/reservas/{id} con la nueva fecha y franja de recojo.
+    // actor: prestatario (solo las suyas) y admin. el encargado no (ficha RF15 y CU05)
+    @PutMapping("/{id}")
+    @RolesAllowed({Rol.ADMINISTRADOR, Rol.PRESTATARIO})
+    public ReservaRespuestaDTO actualizarReserva(@PathVariable Integer id, @Valid @RequestBody ActualizarReservaDTO dto,
+                                                 @AuthenticationPrincipal Sesion sesion) {
+        verificarPropietario(sesion, reservaService.obtenerIdPrestatario(id));
+        return reservaService.actualizar(id, dto);
     }
 
     // eliminacion fisica: DELETE /api/reservas/{id}, solo el admin (RF17).

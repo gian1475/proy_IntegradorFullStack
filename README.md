@@ -160,6 +160,7 @@ npx ng test --watch=false
 | Reservas | `GET /api/reservas` | Administrador y Encargado |
 | | `GET /usuario/{id}` | Los 3 perfiles (el prestatario, solo las suyas) |
 | | `POST` (sin stock entra a la cola de espera), `PUT /{id}/cancelar` | Prestatario (solo las suyas) y Encargado |
+| | `PUT /{id}` (cambiar fecha y franja de recojo de una pendiente, RF15) | Prestatario (solo las suyas) y Administrador |
 | | `DELETE /{id}` (eliminación física) | Administrador |
 | Reportes | `GET /api/reportes/{tipo}/{formato}?desde=&hasta=` (tipo: `prestamos`, `devoluciones`, `reservas`, `incidencias`, `bajas`, `stock`, `indicadores`, `tiempos`; formato: `excel`, `pdf`, `csv`) | Administrador y Encargado |
 | Importar libros | `POST /api/reportes/libros/csv` | Administrador |

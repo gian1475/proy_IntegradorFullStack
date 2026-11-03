@@ -11,6 +11,7 @@ import { mensajeDeError } from '../../utils/mensaje-error';
 import { portadaPorIsbn, usarPortadaPorDefecto } from '../../utils/portada';
 import { coincideBusqueda, etiquetaEstado } from '../../utils/estado-libro';
 import { fechaCorta, fechaInput, horaCorta } from '../../utils/fechas';
+import { FRANJAS_RECOJO, fechaDelLimite, franjaDelLimite, limiteDeRecojo } from '../../utils/franjas-recojo';
 
 export interface CatalogBook {
   id: number;
@@ -35,6 +36,8 @@ export interface ReservaActiva {
   coverImage: string;
   fechaRecojo: string;
   horario: string;
+  /** RF15: hasta cuándo puede recogerlo, como lo manda el backend (null si está en la cola). */
+  fechaRecojoLimite: string | null;
   /** RF04: está en la cola de espera (todavía no tiene ejemplar ni fecha de recojo). */
   enCola: boolean;
   posicion: number;
@@ -63,6 +66,13 @@ export class UserCatalogComponent implements OnInit {
   readonly modalReservaRealizada = signal<boolean>(false);
   readonly modalCancelar = signal<ReservaActiva | null>(null);
   readonly modalCanceladaExitosa = signal<boolean>(false);
+  // RF15: modal "Cambiar fecha" de una reserva pendiente
+  readonly modalCambiarFecha = signal<ReservaActiva | null>(null);
+  readonly errorCambioFecha = signal<string>('');
+  readonly fechaCambiada = signal<boolean>(false);
+  fechaNueva = '';
+  franjaNueva = '';
+  readonly franjas = FRANJAS_RECOJO;
   /** Puesto en la cola cuando la reserva entró a la cola de espera (RF04). */
   readonly modalEnCola = signal<number | null>(null);
 
@@ -184,6 +194,7 @@ export class UserCatalogComponent implements OnInit {
               coverImage: portadaPorIsbn(r.isbnLibro),
               fechaRecojo: limite ? fechaCorta(limite) : '',
               horario: limite ? 'hasta las ' + horaCorta(limite) : '',
+              fechaRecojoLimite: r.fechaRecojoLimite,
               enCola: r.estadoReserva === 'en_espera',
               posicion: r.posicionCola
             };
@@ -233,9 +244,8 @@ export class UserCatalogComponent implements OnInit {
     const usuario = this.authService.usuarioActual();
     if (!usuario) return;
 
-    // El límite de recojo es el final del turno elegido. Ej: "08:30 - 11:30" -> 11:30
-    const horaFin = this.horarioSeleccionado.split(' - ')[1];
-    const fechaRecojoLimite = book.stock === 0 ? null : `${this.fechaSeleccionada}T${horaFin}:00`;
+    // El límite de recojo es el final del turno elegido. Ej: "08:30 - 11:30" -> 11:30 (utils/franjas-recojo.ts)
+    const fechaRecojoLimite = book.stock === 0 ? null : limiteDeRecojo(this.fechaSeleccionada, this.horarioSeleccionado);
 
     this.errorReserva.set('');
     this.reservaService.crearReserva(book.id, usuario.idUsuario, fechaRecojoLimite).subscribe({
@@ -293,6 +303,33 @@ export class UserCatalogComponent implements OnInit {
 
   cerrarModalCanceladaExitosa(): void {
     this.modalCanceladaExitosa.set(false);
+  }
+
+  // reserva actualizar (front, RF15): se abre con la fecha y la franja q tiene ahora
+  abrirModalCambiarFecha(item: ReservaActiva): void {
+    if (!item.fechaRecojoLimite) return;
+    this.errorCambioFecha.set('');
+    this.fechaNueva = fechaDelLimite(item.fechaRecojoLimite);
+    this.franjaNueva = franjaDelLimite(item.fechaRecojoLimite);
+    this.modalCambiarFecha.set(item);
+  }
+
+  cerrarModalCambiarFecha(): void {
+    this.modalCambiarFecha.set(null);
+  }
+
+  guardarCambioFecha(): void {
+    const item = this.modalCambiarFecha();
+    if (!item) return;
+    this.reservaService.actualizar(item.idReserva, limiteDeRecojo(this.fechaNueva, this.franjaNueva)).subscribe({
+      next: () => {
+        this.modalCambiarFecha.set(null);
+        this.fechaCambiada.set(true);
+        this.cargarReservas();
+      },
+      // el modal sigue abierto con el mensaje del backend (fecha fuera de los 7 dias, reserva vencida...)
+      error: (err: HttpErrorResponse) => this.errorCambioFecha.set(mensajeDeError(err))
+    });
   }
 
   /** Fecha de hoy en formato AAAA-MM-DD (hora local, para el input type="date"). */

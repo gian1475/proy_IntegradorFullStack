@@ -42,6 +42,11 @@ export class ReservaService {
     return this.http.get<ReservaBackend[]>(this.apiUrl);
   }
 
+  // reserva actualizar (front, RF15): nueva fecha y franja de recojo (el final de la franja, "AAAA-MM-DDTHH:mm:ss")
+  actualizar(idReserva: number, fechaRecojoLimite: string): Observable<ReservaBackend> {
+    return this.http.put<ReservaBackend>(`${this.apiUrl}/${idReserva}`, { fechaRecojoLimite });
+  }
+
   /** Eliminación lógica: la reserva queda 'cancelada' (PUT). */
   cancelar(idReserva: number): Observable<{ mensaje: string }> {
     return this.http.put<{ mensaje: string }>(`${this.apiUrl}/${idReserva}/cancelar`, {});

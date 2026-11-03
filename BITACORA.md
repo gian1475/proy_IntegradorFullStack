@@ -1041,6 +1041,36 @@ En pantalla se ve igual: "06:21 p. m.", "2/11/2026", "Suspensión hasta el 10/11
 
 ---
 
+### Bloque 3 – RF15: editar la fecha y la franja de una reserva ✅
+
+El **Prestatario** (solo sus reservas) y el **Administrador** cambian la fecha y la franja de recojo de una reserva **`pendiente`** que todavía no venció (ficha RF15 y CU05). El encargado no. **No se cambió la BD**: se actualiza `reserva.fecha_recojo_limite`.
+
+| Regla | Cómo |
+|---|---|
+| Solo `pendiente` (criterio de aceptación) | Si está en cola, atendida, cancelada o vencida: 409 "Solo se pueden modificar reservas en estado pendiente" |
+| Antes de vencer | Primero se pasan a `vencida` las que ya vencieron (y su ejemplar vuelve al stock); después se revisa el estado |
+| La nueva fecha | Las mismas reglas que al reservar (se reutiliza `validarFechaRecojo`): en el futuro, dentro de 7 días y en horario de atención |
+| Stock | No cambia: el ejemplar ya estaba apartado |
+
+| Archivo | Qué cambió |
+|---|---|
+| [ReservaService.java](backend/src/main/java/com/alejandria/biblioteca/service/ReservaService.java) | `actualizar(idReserva, dto)` |
+| [ReservaController.java](backend/src/main/java/com/alejandria/biblioteca/controller/ReservaController.java) | `PUT /api/reservas/{id}` con `@RolesAllowed({ADMINISTRADOR, PRESTATARIO})`; el prestatario solo las suyas (`verificarPropietario`, 403) |
+| [dto/reserva/ActualizarReservaDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/reserva/ActualizarReservaDTO.java) (nuevo) | La nueva fecha límite, con `@NotNull` ("Elija la fecha y la franja de recojo") |
+| [utils/franjas-recojo.ts](frontend/src/app/utils/franjas-recojo.ts) (nuevo) | Las 4 franjas en un solo lugar (antes estaban escritas en el HTML del catálogo) y las funciones para pasar de fecha + franja al límite y al revés |
+| [user-catalog](frontend/src/app/pages/user-catalog/) | "Mis Reservas": botón **Cambiar fecha** en las reservas con fecha (no en las de la cola), con un modal de fecha y franja. Si el backend no deja, el mensaje sale en el modal |
+| [reservas-admin-tab](frontend/src/app/pages/admin-panel/tabs/reservas/) | Botón **Cambiar fecha** en las pendientes, con un formulario arriba de la tabla |
+| [services/reserva.service.ts](frontend/src/app/services/reserva.service.ts) | `actualizar(idReserva, fechaRecojoLimite)` |
+| [angular.json](frontend/angular.json) | El aviso de tamaño del paquete inicial pasa de 800 kB a 850 kB (con los datos de `es-PE` del bloque 2 llegaba a 803 kB). El error sigue en 1 MB |
+
+**Primero la prueba:**
+- [ReservaActualizacionTest](backend/src/test/java/com/alejandria/biblioteca/service/ReservaActualizacionTest.java) (8, nuevo): cambia fecha y franja sin tocar el stock; solo pendientes (4 estados); una que ya venció se libera y no se cambia; la nueva fecha sigue las reglas (7 días, horario); 404.
+- `SeguridadEndpointsTest` (+2): el encargado recibe 403; sin fecha da 400 "Elija la fecha y la franja de recojo".
+- Frontend: [franjas-recojo.spec.ts](frontend/src/app/utils/franjas-recojo.spec.ts) (4), [reservas-admin-tab.component.spec.ts](frontend/src/app/pages/admin-panel/tabs/reservas/reservas-admin-tab.component.spec.ts) (3) y [user-catalog.component.spec.ts](frontend/src/app/pages/user-catalog/user-catalog.component.spec.ts) (3).
+- Total: **245 del backend y 55 del frontend**, todas pasan.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1067,7 +1097,7 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cómo se actualiza el stock / estado del libro? | `stock automatico`, `estado del libro` |
 | Regla de las 3 horas | `3 horas` |
 | Sanciones | `sancion activa` |
-| Reservas | `reserva crear`, `reserva cancelar` |
+| Reservas | `reserva crear`, `reserva cancelar`, `reserva actualizar` (RF15) |
 | Librerías | `guava`, `logback`, `apache poi`, `commons csv`, `openpdf`, `actuator`, `reporte prestamos` |
 | ¿Por qué no usan la hora de la BD? ¿Dónde se fija la hora de Lima? | `hora de lima` (incluye `BibliotecaApplication.fijarZonaHoraria`) |
 | ¿Dónde validan el DNI y el correo? | `validar datos` |

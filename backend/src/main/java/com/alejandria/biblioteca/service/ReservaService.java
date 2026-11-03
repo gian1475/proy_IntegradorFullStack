@@ -2,6 +2,7 @@ package com.alejandria.biblioteca.service;
 
 import com.alejandria.biblioteca.dao.ReservaDao;
 import com.alejandria.biblioteca.dao.UsuarioDao;
+import com.alejandria.biblioteca.dto.reserva.ActualizarReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaRespuestaDTO;
 import com.alejandria.biblioteca.entity.Libro;
@@ -160,6 +161,26 @@ public class ReservaService {
         reservaDao.save(reserva);
         libroService.reponerStock(reserva.getLibro().getIdLibro());
         log.info("Reserva #{} cancelada", idReserva);
+    }
+
+    // reserva actualizar (RF15): el prestatario o el admin cambian la fecha y la franja de recojo.
+    // criterio de aceptacion: solo una reserva 'pendiente' (y q no haya vencido: antes se liberan las vencidas).
+    // la nueva fecha sigue las mismas reglas q al reservar (futuro, 7 dias, horario). el stock no cambia:
+    // el ejemplar ya estaba apartado
+    @Transactional
+    public ReservaRespuestaDTO actualizar(Integer idReserva, ActualizarReservaDTO dto) {
+        liberarVencidas(); // si ya vencio, pasa a 'vencida' y ya no se puede cambiar
+        Reserva reserva = buscar(idReserva);
+        if (!PENDIENTE.equals(reserva.getEstadoReserva())) {
+            throw new NegocioException(HttpStatus.CONFLICT, "Solo se pueden modificar reservas en estado pendiente");
+        }
+        validarFechaRecojo(dto.fechaRecojoLimite(), horario.ahora());
+
+        LocalDateTime anterior = reserva.getFechaRecojoLimite();
+        reserva.setFechaRecojoLimite(dto.fechaRecojoLimite());
+        Reserva guardada = reservaDao.save(reserva);
+        log.info("Reserva #{} actualizada: recojo de {} a {}", idReserva, anterior, dto.fechaRecojoLimite());
+        return ReservaRespuestaDTO.desde(guardada);
     }
 
     // eliminacion fisica: aqui SI se borra la fila de la bd (DELETE FROM reserva WHERE id_reserva = ?).
