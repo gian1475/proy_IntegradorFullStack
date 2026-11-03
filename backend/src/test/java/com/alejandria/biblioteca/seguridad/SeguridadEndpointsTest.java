@@ -102,6 +102,23 @@ class SeguridadEndpointsTest {
     }
 
     @Test
+    void laAuditoriaDelInventarioEsSoloDelAdmin() throws Exception {
+        // IPI: la auditoria fisica la registra el administrador
+        mvc.perform(get("/api/auditorias").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/auditorias").header("Authorization", token(Rol.PRESTATARIO)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unConteoFisicoNegativoDa400() throws Exception {
+        mvc.perform(post("/api/auditorias").header("Authorization", token(Rol.ADMINISTRADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"idLibro\":1,\"conteoFisico\":-1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El conteo físico no puede ser negativo"));
+    }
+
+    @Test
     void unPrestatarioNoPuedeVerLosPrestamosDeOtro() throws Exception {
         // el token es del usuario 1; pide los prestamos del usuario 2
         mvc.perform(get("/api/prestamos/prestatario/2").header("Authorization", token(Rol.PRESTATARIO)))

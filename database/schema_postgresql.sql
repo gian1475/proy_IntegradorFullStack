@@ -1,11 +1,12 @@
 -- =====================================================================
 -- BASE DE DATOS POSTGRESQL: Sistema de Biblioteca (Biblioteca de Alejandría)
 -- Basado en el diseño inicial del Avance 2 (docs/modelofisico_postgresql.sql, retirado el 27/10;
--- sigue en el historial de git). Incluye las migraciones 01, 02 y 03;
+-- sigue en el historial de git). Incluye las migraciones 01, 02, 03 y 05;
 -- la 04 no hace falta aquí: solo borra llaves que este script nunca creó)
 -- =====================================================================
 
 -- 0. Limpieza previa de tablas en cascada
+DROP TABLE IF EXISTS auditoria_inventario CASCADE;
 DROP TABLE IF EXISTS sancion CASCADE;
 DROP TABLE IF EXISTS incidencia CASCADE;
 DROP TABLE IF EXISTS prestamo CASCADE;
@@ -123,6 +124,8 @@ CREATE TABLE prestamo (
     fecha_prestamo               TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_devolucion_prevista    TIMESTAMP NOT NULL,
     fecha_devolucion_real        TIMESTAMP NULL,
+    -- TAP (migracion 05): cuando empezo el encargado a registrar el prestamo; fecha_prestamo es la confirmacion
+    inicio_atencion              TIMESTAMP NULL,
     ampliado                     BOOLEAN NOT NULL DEFAULT FALSE,
     estado_fisico_devolucion     VARCHAR(20) NULL,
     estado_prestamo              VARCHAR(20) NOT NULL,
@@ -143,7 +146,9 @@ CREATE TABLE prestamo (
     CONSTRAINT chk_prestamo_estado_fisico
         CHECK (estado_fisico_devolucion IS NULL OR estado_fisico_devolucion IN ('bueno', 'dañado')),
     CONSTRAINT chk_prestamo_fechas 
-        CHECK (fecha_devolucion_real IS NULL OR fecha_devolucion_real >= fecha_prestamo)
+        CHECK (fecha_devolucion_real IS NULL OR fecha_devolucion_real >= fecha_prestamo),
+    CONSTRAINT chk_prestamo_inicio_atencion
+        CHECK (inicio_atencion IS NULL OR inicio_atencion <= fecha_prestamo)
 );
 
 -- 8. Tabla: INCIDENCIA
@@ -211,7 +216,29 @@ CREATE TABLE reserva (
         CHECK (estado_reserva IN ('pendiente', 'en_espera', 'atendida', 'cancelada', 'vencida'))
 );
 
+-- 11. Tabla: AUDITORIA_INVENTARIO (IPI, migracion 05)
+-- conteo fisico de un titulo que registra el administrador y el stock que tenia el sistema en ese momento
+CREATE TABLE auditoria_inventario (
+    id_auditoria        SERIAL PRIMARY KEY,
+    id_libro            INTEGER NOT NULL,
+    id_administrador    INTEGER NOT NULL,
+    fecha_auditoria     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    stock_sistema       INTEGER NOT NULL,
+    conteo_fisico       INTEGER NOT NULL,
+    CONSTRAINT fk_auditoria_libro
+        FOREIGN KEY (id_libro) REFERENCES libro(id_libro)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_auditoria_administrador
+        FOREIGN KEY (id_administrador) REFERENCES administrador(id_usuario)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    CONSTRAINT chk_auditoria_stock CHECK (stock_sistema >= 0),
+    CONSTRAINT chk_auditoria_conteo CHECK (conteo_fisico >= 0)
+);
+
 -- Índices
+CREATE INDEX idx_auditoria_fecha ON auditoria_inventario (fecha_auditoria);
 CREATE INDEX idx_prestamo_fecha ON prestamo (fecha_prestamo);
 CREATE INDEX idx_prestamo_estado ON prestamo (estado_prestamo);
 CREATE INDEX idx_reserva_estado ON reserva (estado_reserva);

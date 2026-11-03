@@ -143,6 +143,18 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
                  + "AND p.fecha_prestamo >= :desde AND p.fecha_prestamo < :hasta", nativeQuery = true)
     long contarPrestamosConIncidenciaEntre(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 
+    /** TAP (1.2.2): promedio en minutos de (confirmación - inicio de la atención). null si ninguno lo tiene. */
+    // indicadores TAP: EXTRACT(EPOCH ...) da los segundos entre las dos horas; / 60 = minutos
+    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (fecha_prestamo - inicio_atencion))) / 60 FROM prestamo "
+                 + "WHERE inicio_atencion IS NOT NULL AND estado_prestamo <> 'anulado' "
+                 + "AND fecha_prestamo >= :desde AND fecha_prestamo < :hasta", nativeQuery = true)
+    Double promedioMinutosAtencionEntre(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    /** TAP: cuántos préstamos del periodo tienen la hora de inicio de la atención (la N de la fórmula). */
+    @Query(value = "SELECT COUNT(*) FROM prestamo WHERE inicio_atencion IS NOT NULL AND estado_prestamo <> 'anulado' "
+                 + "AND fecha_prestamo >= :desde AND fecha_prestamo < :hasta", nativeQuery = true)
+    long contarConInicioAtencionEntre(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
     /** Préstamos del periodo por categoría (JOIN prestamo + libro + categoria). Cada fila: [categoria, cantidad]. */
     @Query(value = "SELECT c.nombre, COUNT(p.id_prestamo) FROM categoria c "
                  + "LEFT JOIN libro l ON l.id_categoria = c.id_categoria "

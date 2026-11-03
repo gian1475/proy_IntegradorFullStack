@@ -14,6 +14,7 @@
         <button class="nav-link" [class.active]="pestana() === 'historial'" (click)="pestana.set('historial')">Historial</button>
         <button class="nav-link" [class.active]="pestana() === 'reservas'" (click)="pestana.set('reservas')">Reservas</button>
         <button class="nav-link" [class.active]="pestana() === 'usuarios'" (click)="pestana.set('usuarios')">Usuarios</button>
+        <button class="nav-link" [class.active]="pestana() === 'auditoria'" (click)="pestana.set('auditoria')">Auditoría</button>
         <button class="nav-link" [class.active]="pestana() === 'reportes'" (click)="pestana.set('reportes')">Reportes</button>
         <button class="nav-link" [class.active]="pestana() === 'monitoreo'" (click)="pestana.set('monitoreo')">Monitoreo</button>
       </nav>
@@ -25,6 +26,7 @@
         @case ('historial') { <app-historial-prestamos /> }
         @case ('reservas') { <app-reservas-admin-tab /> }
         @case ('usuarios') { <app-usuarios-tab /> }
+        @case ('auditoria') { <app-auditoria-tab /> }
         @case ('reportes') { <app-reportes-tab /> }
         @case ('monitoreo') { <app-monitoreo-tab /> }
       }

@@ -8,18 +8,19 @@ import { ReservasAdminTabComponent } from './tabs/reservas/reservas-admin-tab.co
 import { ReportesTabComponent } from './tabs/reportes/reportes-tab.component';
 import { MonitoreoTabComponent } from './tabs/monitoreo/monitoreo-tab.component';
 import { UsuariosTabComponent } from './tabs/usuarios/usuarios-tab.component';
+import { AuditoriaTabComponent } from './tabs/auditoria/auditoria-tab.component';
 import { HistorialPrestamosComponent } from '../../components/historial-prestamos/historial-prestamos.component';
 
 // permisos admin: lo q ve el admin -> dashboard, libros (crud), prestamos activos, historial, reservas (eliminacion fisica),
-// usuarios (registrar encargados RF09, editar RF12 y dar de baja RF13), reportes y monitoreo
-type Pestana = 'dashboard' | 'libros' | 'prestamos' | 'historial' | 'reservas' | 'usuarios' | 'reportes' | 'monitoreo';
+// usuarios (registrar encargados RF09, editar RF12 y dar de baja RF13), auditoria del inventario (IPI), reportes y monitoreo
+type Pestana = 'dashboard' | 'libros' | 'prestamos' | 'historial' | 'reservas' | 'usuarios' | 'auditoria' | 'reportes' | 'monitoreo';
 
 /** Panel del Administrador: solo muestra las pestañas. Cada pestaña es un componente en tabs/. */
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
   imports: [HeaderComponent, DashboardTabComponent, LibrosTabComponent, PrestamosTabComponent, HistorialPrestamosComponent,
-            ReservasAdminTabComponent, UsuariosTabComponent, ReportesTabComponent, MonitoreoTabComponent],
+            ReservasAdminTabComponent, UsuariosTabComponent, AuditoriaTabComponent, ReportesTabComponent, MonitoreoTabComponent],
   templateUrl: './admin-panel.component.html',
 })
 export class AdminPanelComponent {

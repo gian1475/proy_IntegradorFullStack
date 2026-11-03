@@ -59,8 +59,9 @@ export class PrestamoService {
   // ruta crud prestamo (front): aqui estan las llamadas al backend del crud de prestamos
   private apiUrl = 'http://localhost:8080/api/prestamos';
 
-  registrar(dniPrestatario: string, idLibro: number): Observable<Prestamo> {
-    return this.http.post<Prestamo>(this.apiUrl, { dniPrestatario, idLibro });
+  /** segundosAtencion (TAP): cuánto tardó el encargado desde que empezó a llenar el formulario (null si no se sabe). */
+  registrar(dniPrestatario: string, idLibro: number, segundosAtencion: number | null = null): Observable<Prestamo> {
+    return this.http.post<Prestamo>(this.apiUrl, { dniPrestatario, idLibro, segundosAtencion });
   }
 
   listarActivos(): Observable<PrestamoDetalle[]> {

@@ -8,7 +8,8 @@
 <section class="card card-body mb-4">
   <h2 class="h6 fw-bold text-primary mb-3">Registrar préstamo en sala</h2>
   <p class="text-body-secondary small">Horario de atención: de 08:00 a 20:00. La hora límite es de 3 horas y nunca pasa del cierre.</p>
-  <form (ngSubmit)="registrarPrestamo()">
+  <!-- TAP: el primer (input) o (change) de cualquier campo marca el inicio de la atencion -->
+  <form (ngSubmit)="registrarPrestamo()" (input)="marcarInicio()" (change)="marcarInicio()">
     <div class="row g-3 mb-3">
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="dni">DNI del prestatario</label>

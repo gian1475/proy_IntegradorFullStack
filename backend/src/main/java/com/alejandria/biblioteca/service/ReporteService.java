@@ -1,6 +1,7 @@
 package com.alejandria.biblioteca.service;
 
 import com.alejandria.biblioteca.dao.CategoriaDao;
+import com.alejandria.biblioteca.dao.AuditoriaInventarioDao;
 import com.alejandria.biblioteca.dao.LibroDao;
 import com.alejandria.biblioteca.dao.PrestamoDao;
 import com.alejandria.biblioteca.dao.ReservaDao;
@@ -94,16 +95,19 @@ public class ReporteService {
     private final UsuarioDao usuarioDao;
     private final CategoriaDao categoriaDao;
     private final LibroService libroService;
+    private final AuditoriaInventarioDao auditoriaDao;
     private final Validator validator;
 
     public ReporteService(PrestamoDao prestamoDao, ReservaDao reservaDao, LibroDao libroDao, UsuarioDao usuarioDao,
-                          CategoriaDao categoriaDao, LibroService libroService, Validator validator) {
+                          CategoriaDao categoriaDao, LibroService libroService, AuditoriaInventarioDao auditoriaDao,
+                          Validator validator) {
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
         this.libroDao = libroDao;
         this.usuarioDao = usuarioDao;
         this.categoriaDao = categoriaDao;
         this.libroService = libroService;
+        this.auditoriaDao = auditoriaDao;
         this.validator = validator;
     }
 
@@ -250,13 +254,11 @@ public class ReporteService {
 
     // reporte indicadores: los 4 del apartado 1.2.2 calculados con los prestamos del rango. sin datos -> "Sin dato"
     private TablaReporte indicadores(RangoFechas rango) {
-        long prestamos = prestamoDao.contarPrestamosEntre(rango.inicio(), rango.fin());
-        long conRetraso = prestamoDao.contarDevueltosConRetrasoEntre(rango.inicio(), rango.fin());
-        long conIncidencia = prestamoDao.contarPrestamosConIncidenciaEntre(rango.inicio(), rango.fin());
+        IndicadoresGestion.Datos datos = IndicadoresGestion.Datos.leer(prestamoDao, auditoriaDao, rango.inicio(), rango.fin());
 
         String[] columnas = {"Código", "Indicador", "Valor", "Línea base", "Meta", "¿Cumple la meta?", "Detalle"};
         List<String[]> filas = new ArrayList<>();
-        for (IndicadorDTO i : IndicadoresGestion.calcular(prestamos, conRetraso, conIncidencia, "en el periodo")) {
+        for (IndicadorDTO i : IndicadoresGestion.calcular(datos, "en el periodo")) {
             filas.add(new String[] {
                 i.codigo(), i.nombre(),
                 i.valor() == null ? SIN_DATO : i.valor() + " " + i.unidad(),
@@ -266,7 +268,7 @@ public class ReporteService {
             });
         }
         return new TablaReporte("Indicadores de gestión", rango.texto(), columnas, filas,
-                List.of("Préstamos del periodo (sin anulados): " + prestamos + ".",
+                List.of("Préstamos del periodo (sin anulados): " + datos.prestamos() + ".",
                         "Los indicadores sin información suficiente se presentan como \"Sin dato\"."));
     }
 

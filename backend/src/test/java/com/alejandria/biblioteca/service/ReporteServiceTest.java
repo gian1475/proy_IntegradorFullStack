@@ -1,6 +1,7 @@
 package com.alejandria.biblioteca.service;
 
 import com.alejandria.biblioteca.dao.CategoriaDao;
+import com.alejandria.biblioteca.dao.AuditoriaInventarioDao;
 import com.alejandria.biblioteca.dao.LibroDao;
 import com.alejandria.biblioteca.dao.PrestamoDao;
 import com.alejandria.biblioteca.dao.ReservaDao;
@@ -47,12 +48,13 @@ class ReporteServiceTest {
     @Mock private UsuarioDao usuarioDao;
     @Mock private CategoriaDao categoriaDao;
     @Mock private LibroService libroService;
+    @Mock private AuditoriaInventarioDao auditoriaDao;
 
     private ReporteService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new ReporteService(prestamoDao, reservaDao, libroDao, usuarioDao, categoriaDao, libroService,
+        servicio = new ReporteService(prestamoDao, reservaDao, libroDao, usuarioDao, categoriaDao, libroService, auditoriaDao,
                 Validation.buildDefaultValidatorFactory().getValidator());
     }
 

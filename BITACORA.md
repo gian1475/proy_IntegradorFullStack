@@ -1071,6 +1071,49 @@ El **Prestatario** (solo sus reservas) y el **Administrador** cambian la fecha y
 
 ---
 
+### Bloque 4 – Indicadores TAP e IPI con la migración 05 ✅
+
+Hasta ahora el dashboard y el reporte de indicadores mostraban TAP e IPI como **"Sin dato"**. Ahora se calculan con las fórmulas del apartado 1.2.2 del informe. **Cambia la BD**: [migración 05](database/migraciones/migracion_05_tap_ipi.sql), también en `schema_postgresql.sql`. Se puede ejecutar más de una vez.
+
+> ⚠️ **Ejecutar la migración 05 en Neon antes de arrancar el backend nuevo.** Con `ddl-auto=validate`, el backend no arranca si falta la columna o la tabla. Desde la sesión en la nube no se pudo, porque la red del entorno bloquea Neon.
+
+| Indicador | Qué se guarda | Fórmula | Meta |
+|---|---|---|---|
+| **TAP** | `prestamo.inicio_atencion` (columna nueva). El frontend mide los **segundos** desde que el encargado escribe o elige algo en el formulario hasta que confirma, y el backend guarda `inicio = fecha_prestamo − segundos`. Se manda la duración y no la hora para que no importe si el reloj de la PC está desfasado del servidor. Si viene de "Entregar" una reserva, cuenta desde que se abre el formulario. Si no llega, es negativo o pasa de 1 hora, queda vacío y ese préstamo no cuenta; **el préstamo se registra igual** | promedio de (`fecha_prestamo − inicio_atencion`) en minutos, solo de los préstamos del periodo que tienen el dato (sin anulados) | ≤ 2 min |
+| **IPI** | Tabla nueva `auditoria_inventario`: libro, administrador, fecha, `stock_sistema` (lo que decía el sistema en ese momento) y `conteo_fisico` | títulos cuyo **último** conteo del periodo coincide / títulos auditados × 100 (`DISTINCT ON` de PostgreSQL) | ≥ 95 % (meta mínima: `cumpleMetaMinima`) |
+
+La auditoría **no corrige el stock** sola: si el conteo no coincide, el mensaje dice que se corrija en la pestaña Libros. No se audita un libro dado de baja.
+
+| Archivo | Qué cambió |
+|---|---|
+| [migracion_05_tap_ipi.sql](database/migraciones/migracion_05_tap_ipi.sql) (nuevo), [schema_postgresql.sql](database/schema_postgresql.sql) | La columna con su CHECK (`inicio_atencion <= fecha_prestamo`) y la tabla con sus llaves y CHECK (`>= 0`) |
+| [entity/Prestamo.java](backend/src/main/java/com/alejandria/biblioteca/entity/Prestamo.java), [entity/AuditoriaInventario.java](backend/src/main/java/com/alejandria/biblioteca/entity/AuditoriaInventario.java) (nueva) | El campo `inicioAtencion` y la entidad de la auditoría (Lombok) |
+| [dao/AuditoriaInventarioDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/AuditoriaInventarioDao.java) (nuevo), [PrestamoDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/PrestamoDao.java) | Las consultas del IPI (auditados y coincidentes) y del TAP (promedio en minutos y cuántos préstamos lo tienen) |
+| [service/IndicadoresGestion.java](backend/src/main/java/com/alejandria/biblioteca/service/IndicadoresGestion.java) | `record Datos` con todo lo del periodo (`Datos.leer` lo usan el dashboard y el reporte, sin repetir código), TAP e IPI calculados, `cumpleMetaMinima` |
+| [service/AuditoriaService.java](backend/src/main/java/com/alejandria/biblioteca/service/AuditoriaService.java), [controller/AuditoriaController.java](backend/src/main/java/com/alejandria/biblioteca/controller/AuditoriaController.java) (nuevos) | `GET /api/auditorias` (IPI del mes y sus conteos) y `POST /api/auditorias`. Solo el administrador |
+| [dto/auditoria/](backend/src/main/java/com/alejandria/biblioteca/dto/auditoria/) (nuevo), [RegistroPrestamoDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/prestamo/RegistroPrestamoDTO.java) | El conteo con `@PositiveOrZero` ("El conteo físico no puede ser negativo") y `segundosAtencion` (opcional) |
+| [PrestamoService.java](backend/src/main/java/com/alejandria/biblioteca/service/PrestamoService.java), `DashboardService`, `ReporteService` | El inicio de la atención al registrar y los indicadores con `Datos.leer` |
+| [registrar-tab](frontend/src/app/pages/encargado-panel/tabs/registrar/) | `marcarInicio()` con el primer `(input)` o `(change)` del formulario; manda los segundos; el siguiente préstamo cuenta desde cero |
+| [auditoria-tab](frontend/src/app/pages/admin-panel/tabs/auditoria/) (pestaña nueva **Auditoría** del admin), [services/auditoria.service.ts](frontend/src/app/services/auditoria.service.ts) | El IPI del mes, una tabla con todos los títulos (stock del sistema, último conteo del mes, conteo físico y "Registrar") y los conteos del mes |
+
+**Primero la prueba** (no compilaban hasta que existió el código):
+- `IndicadoresGestionTest` (+4): TAP en minutos con meta máxima, IPI con meta mínima, sin datos no inventa valor.
+- `PrestamoServiceTest` (+4): guarda el inicio de la atención (confirmación − 90 s); sin el tiempo el préstamo igual se registra; −5 s y 3601 s no se guardan.
+- [AuditoriaServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/AuditoriaServiceTest.java) (5, nuevo): guarda el stock del sistema y el conteo; si no coincide el stock no cambia; libro de baja (409) y que no existe (404); resumen del mes.
+- [AuditoriaBdTest](backend/src/test/java/com/alejandria/biblioteca/service/AuditoriaBdTest.java) (4, nuevo, contra la BD, enero de 2020, se deshace): el IPI cuenta el último conteo de cada título; conteo negativo rechazado por la BD; el TAP promedia 2 y 4 min = 3; el inicio no puede ser después del préstamo.
+- `DashboardServiceTest` (+1): TAP 1.5 min e IPI 95 % del mes. `SeguridadEndpointsTest` (+2): encargado y prestatario 403 en `/api/auditorias`; conteo −1 da 400.
+- Frontend: [registrar-tab.component.spec.ts](frontend/src/app/pages/encargado-panel/tabs/registrar/registrar-tab.component.spec.ts) (3) y [auditoria-tab.component.spec.ts](frontend/src/app/pages/admin-panel/tabs/auditoria/auditoria-tab.component.spec.ts) (4).
+- Total: **265 del backend y 62 del frontend**, todas pasan. `schema_postgresql.sql` + `datos_demo.sql` se probaron en una BD nueva, y la migración 05 se ejecutó dos veces en la BD local sin error.
+
+**Prueba en vivo (03/11, nube, PostgreSQL local, `.jar` + build + Chromium, cierre de prueba 23:59 por la hora):**
+- El encargado registró un préstamo tardando 4 s: `inicio_atencion` quedó 4 s antes de `fecha_prestamo` y el dashboard mostró TAP 0.1 min, "Cumple la meta".
+- El admin contó dos títulos (uno igual al sistema y otro con 1 de más): IPI 50 % en la pestaña Auditoría y en el dashboard ("No cumple la meta").
+- RF15: el admin cambió la reserva #8 a la franja 14:30 - 17:30, el prestatario la vio así en su modal y la cambió a 17:30 - 20:00 ("Fecha actualizada").
+
+**Para la demo:** los datos de la demo **no** traen TAP ni auditorías (no se inventan valores). Registren un préstamo en vivo y un par de conteos en la pestaña Auditoría, y muestren el dashboard.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1128,6 +1171,9 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Dónde se da de baja a un usuario (RF13)? ¿Por qué no se borra? | `eliminacion logica`, `baja logica` |
 | ¿Qué pasa con sus préstamos y reservas? ¿Y con su sesión? | `RF13` en `UsuarioService.darDeBaja`, `cerrarSesionesDe` |
 | ¿Dónde se filtra la tabla de usuarios? | `gestion usuarios` |
+| ¿Cómo se calcula el TAP? ¿Dónde empieza la atención? | `indicadores TAP` (backend y frontend) |
+| ¿Cómo se calcula el IPI? ¿Dónde se registra el conteo físico? | `indicadores IPI`, `auditoria inventario` |
+| ¿Dónde se edita una reserva (RF15)? | `reserva actualizar` |
 
 ---
 
@@ -1222,4 +1268,9 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 9 | RF13: el usuario dado de baja intenta entrar → "El usuario se encuentra inactivo" | ⬜ `login-usuario-inactivo.png` |
 | 9 | Reporte de bajas lógicas con el usuario `inactivo` | ⬜ |
 | 9 | Código: `UsuarioService.darDeBaja` y `UsuarioController` (`DELETE` que no borra) | ⬜ |
-| 9 | Terminal con `./mvnw test` → 232 pruebas y `npx ng test --watch=false` → 38 pruebas | ⬜ |
+| 9 | Terminal con `./mvnw test` → **265** pruebas y `npx ng test --watch=false` → **62** pruebas (reemplaza a las de 232 y 38) | ⬜ |
+| 10 | RF15: "Mis Reservas" → modal "Cambiar fecha de recojo" y la tarjeta con la nueva fecha; admin → Reservas → "Cambiar fecha" | ⬜ `prestatario-cambiar-fecha.png`, `admin-reserva-cambiar-fecha.png` |
+| 10 | TAP: registrar un préstamo en vivo y el dashboard con el TAP del mes | ⬜ `admin-dashboard-tap-ipi.png` |
+| 10 | IPI: pestaña Auditoría con el IPI del mes, un conteo que coincide y otro que no (mensaje "NO coincide…") | ⬜ `admin-auditoria-ipi.png` |
+| 10 | Neon: SQL Editor con la migración 05 ejecutada (la columna `inicio_atencion` y `auditorias = 0`) | ⬜ |
+| 10 | Código: `IndicadoresGestion.calcular`, `AuditoriaInventarioDao.contarCoincidentesEntre` (DISTINCT ON) y `marcarInicio` del frontend | ⬜ |

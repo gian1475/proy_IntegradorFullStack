@@ -96,6 +96,7 @@ public class PrestamoService {
         prestamo.setEncargado(usuarioDao.getReferenceById(idEncargado));
         prestamo.setLibro(libro);
         prestamo.setFechaPrestamo(ahora);
+        prestamo.setInicioAtencion(inicioDeLaAtencion(dto.segundosAtencion(), ahora));
         // horario de atencion: si las 3 horas pasan de las 20:00, la hora limite queda en las 20:00
         prestamo.setFechaDevolucionPrevista(horario.limitarAlCierre(calcularHoraLimite(ahora)));
         prestamo.setAmpliado(false);
@@ -234,6 +235,19 @@ public class PrestamoService {
     private Prestamo buscar(Integer idPrestamo) {
         return prestamoDao.findById(idPrestamo)
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Préstamo no encontrado"));
+    }
+
+    /** TAP: más de 1 hora llenando un préstamo no es una atención real (se dejó el formulario abierto). */
+    static final int MAXIMO_SEGUNDOS_ATENCION = 3600;
+
+    // indicadores TAP: inicio de la atencion = confirmacion (ahora) - lo q tardo el encargado.
+    // si no llega o es imposible (negativo o mas de 1 hora) se deja vacio: ese prestamo no cuenta para el TAP,
+    // pero el prestamo igual se registra
+    private LocalDateTime inicioDeLaAtencion(Integer segundos, LocalDateTime confirmacion) {
+        if (segundos == null || segundos < 0 || segundos > MAXIMO_SEGUNDOS_ATENCION) {
+            return null;
+        }
+        return confirmacion.minusSeconds(segundos);
     }
 
     /** Un filtro vacío ("" o espacios) es lo mismo que no filtrar. */
