@@ -1,31 +1,34 @@
 package com.alejandria.biblioteca.dto.usuario;
 
-/** Datos que llena el admin para registrar un encargado (RF09). turno: "mañana" o "tarde". */
-public class RegistroEncargadoDTO {
-    private String nombre;
-    private String apellido;
-    private String dni;
-    private String correo;
-    private String contrasena;
-    private String turno;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
-    public RegistroEncargadoDTO() {}
+/**
+ * Datos que llena el admin para registrar un encargado (RF09). Mismas reglas que el registro del prestatario.
+ * turno: "mañana" o "tarde" (lo revisa UsuarioService, que también lo pasa a minúsculas).
+ */
+public record RegistroEncargadoDTO(
+        @NotBlank(message = "El nombre debe tener entre 1 y 50 caracteres")
+        @Size(max = 50, message = "El nombre debe tener entre 1 y 50 caracteres")
+        String nombre,
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+        @NotBlank(message = "El apellido debe tener entre 1 y 50 caracteres")
+        @Size(max = 50, message = "El apellido debe tener entre 1 y 50 caracteres")
+        String apellido,
 
-    public String getApellido() { return apellido; }
-    public void setApellido(String apellido) { this.apellido = apellido; }
+        @NotNull(message = "El DNI debe tener 8 dígitos")
+        @Pattern(regexp = "\\d{8}", message = "El DNI debe tener 8 dígitos")
+        String dni,
 
-    public String getDni() { return dni; }
-    public void setDni(String dni) { this.dni = dni; }
+        @NotNull(message = "El correo no es válido")
+        @Pattern(regexp = "[^@\\s]+@[^@\\s]+\\.[^@\\s]+", message = "El correo no es válido")
+        @Size(max = 100, message = "El correo no puede tener más de 100 caracteres")
+        String correo,
 
-    public String getCorreo() { return correo; }
-    public void setCorreo(String correo) { this.correo = correo; }
+        @NotNull(message = "Ingrese la contraseña")
+        String contrasena,
 
-    public String getContrasena() { return contrasena; }
-    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
-
-    public String getTurno() { return turno; }
-    public void setTurno(String turno) { this.turno = turno; }
-}
+        String turno
+) {}

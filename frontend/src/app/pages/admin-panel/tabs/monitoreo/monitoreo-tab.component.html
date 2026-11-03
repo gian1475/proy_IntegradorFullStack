@@ -1,22 +1,22 @@
 @if (mensajeError()) {
-  <div class="alert error">{{ mensajeError() }}</div>
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
 }
 
-<section class="panel-card">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <h2 style="margin: 0;">Monitoreo del sistema</h2>
-    <button class="btn secondary" (click)="cargarMonitoreo()">Actualizar</button>
+<section class="card card-body mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h6 fw-bold text-primary mb-0">Monitoreo del sistema</h2>
+    <button class="btn btn-outline-secondary btn-sm" (click)="cargarMonitoreo()">Actualizar</button>
   </div>
 
   @if (monitoreo(); as m) {
-    <p class="panel-subtitle">
+    <p class="text-body-secondary small">
       Estado general:
-      <span class="badge" [class.activo]="m.estado === 'UP'" [class.vencido]="m.estado !== 'UP'">{{ m.estado }}</span>
+      <span class="badge" [class.text-bg-success]="m.estado === 'UP'" [class.text-bg-danger]="m.estado !== 'UP'">{{ m.estado }}</span>
       (aplicación y base de datos)
     </p>
 
-    <div class="table-wrapper">
-      <table>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
         <thead>
           <tr><th>Métrica</th><th>Valor</th><th>Qué significa</th></tr>
         </thead>
@@ -35,12 +35,12 @@
         </tbody>
       </table>
     </div>
-    <p class="panel-subtitle" style="margin-top: 1rem;">
+    <p class="text-body-secondary small mt-3 mb-0">
       Detalle completo de Actuator (solo desde esta PC):
       <code>http://localhost:8081/actuator/health</code> ·
       <code>http://localhost:8081/actuator/metrics</code>
     </p>
   } @else if (!mensajeError()) {
-    <div class="empty">Cargando métricas...</div>
+    <div class="text-center text-body-secondary py-4">Cargando métricas...</div>
   }
 </section>

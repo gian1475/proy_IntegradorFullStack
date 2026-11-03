@@ -1,9 +1,16 @@
 package com.alejandria.biblioteca.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "usuario")
+// lombok: @Getter y @Setter crean al compilar el get y el set de cada campo; @NoArgsConstructor, el constructor vacio q pide JPA
+@Getter
+@Setter
+@NoArgsConstructor
 public class Usuario {
 
     @Id
@@ -29,8 +36,6 @@ public class Usuario {
     @Column(name = "estado", nullable = false, length = 20)
     private String estado = "activo";
 
-    public Usuario() {}
-
     public Usuario(Integer idUsuario, String nombre, String apellido, String dni, String correo, String contrasena, String estado) {
         this.idUsuario = idUsuario;
         this.nombre = nombre;
@@ -40,25 +45,4 @@ public class Usuario {
         this.contrasena = contrasena;
         this.estado = estado;
     }
-
-    public Integer getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
-
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
-
-    public String getApellido() { return apellido; }
-    public void setApellido(String apellido) { this.apellido = apellido; }
-
-    public String getDni() { return dni; }
-    public void setDni(String dni) { this.dni = dni; }
-
-    public String getCorreo() { return correo; }
-    public void setCorreo(String correo) { this.correo = correo; }
-
-    public String getContrasena() { return contrasena; }
-    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
-
-    public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
 }

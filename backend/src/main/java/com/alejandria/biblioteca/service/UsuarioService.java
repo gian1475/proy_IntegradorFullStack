@@ -6,7 +6,6 @@ import com.alejandria.biblioteca.dto.usuario.RegistroEncargadoDTO;
 import com.alejandria.biblioteca.entity.Usuario;
 import com.alejandria.biblioteca.exception.NegocioException;
 import com.alejandria.biblioteca.seguridad.ValidadorContrasena;
-import com.alejandria.biblioteca.seguridad.ValidadorUsuario;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -35,16 +34,12 @@ public class UsuarioService {
         this.usuarioDao = usuarioDao;
     }
 
-    /** Valida los datos y guarda la fila en la tabla usuario (activo). El perfil se agrega después. */
+    /**
+     * Guarda la fila en la tabla usuario (activo). El perfil se agrega después.
+     * El formato de los datos ya lo revisaron las anotaciones del DTO (@Valid en el controller).
+     */
     @Transactional
     public Usuario crearCuenta(String nombre, String apellido, String dni, String correo, String contrasena) {
-        if (nombre == null || apellido == null || correo == null || dni == null || contrasena == null) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "Todos los campos obligatorios deben completarse");
-        }
-
-        // validar datos: dni de 8 digitos, correo bien escrito y largos q entren en la bd
-        ValidadorUsuario.validar(nombre, apellido, dni, correo);
-
         // regla contra: el backend vuelve a validar la contraseña aunque el front ya lo hizo
         if (!ValidadorContrasena.esValida(contrasena)) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, ValidadorContrasena.MENSAJE_REGLA);
@@ -74,12 +69,12 @@ public class UsuarioService {
     // primero se guarda en la tabla usuario y despues en la tabla encargado con su turno
     @Transactional
     public EncargadoDTO registrarEncargado(RegistroEncargadoDTO dto) {
-        String turno = dto.getTurno() == null ? "" : dto.getTurno().trim().toLowerCase();
+        String turno = dto.turno() == null ? "" : dto.turno().trim().toLowerCase();
         if (!TURNOS.contains(turno)) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, "El turno debe ser 'mañana' o 'tarde'");
         }
 
-        Usuario guardado = crearCuenta(dto.getNombre(), dto.getApellido(), dto.getDni(), dto.getCorreo(), dto.getContrasena());
+        Usuario guardado = crearCuenta(dto.nombre(), dto.apellido(), dto.dni(), dto.correo(), dto.contrasena());
         usuarioDao.registrarComoEncargado(guardado.getIdUsuario(), turno);
 
         log.info("Nuevo encargado registrado por el admin: {} (turno {})", guardado.getCorreo(), turno);

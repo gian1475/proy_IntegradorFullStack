@@ -1,31 +1,31 @@
 @if (mensajeOk()) {
-  <div class="alert ok">{{ mensajeOk() }}</div>
+  <div class="alert alert-success">{{ mensajeOk() }}</div>
 }
 @if (mensajeError()) {
-  <div class="alert error">{{ mensajeError() }}</div>
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
 }
 
-<section class="panel-card">
-  <h2>Reportes</h2>
-  <div class="form-grid">
-    <div class="form-field">
-      <label for="r-tipo">Reporte</label>
-      <select id="r-tipo" name="tipo" [(ngModel)]="tipo">
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Reportes</h2>
+  <div class="row g-3 mb-3">
+    <div class="col-sm-6 col-lg-4">
+      <label class="form-label" for="r-tipo">Reporte</label>
+      <select class="form-select" id="r-tipo" name="tipo" [(ngModel)]="tipo">
         @for (t of tipos; track t.valor) {
           <option [value]="t.valor">{{ t.nombre }}</option>
         }
       </select>
     </div>
-    <div class="form-field">
-      <label for="r-desde">Desde</label>
-      <input id="r-desde" name="desde" type="date" [(ngModel)]="desde" [disabled]="!tipoElegido.usaFechas" />
+    <div class="col-sm-6 col-lg-4">
+      <label class="form-label" for="r-desde">Desde</label>
+      <input class="form-control" id="r-desde" name="desde" type="date" [(ngModel)]="desde" [disabled]="!tipoElegido.usaFechas" />
     </div>
-    <div class="form-field">
-      <label for="r-hasta">Hasta</label>
-      <input id="r-hasta" name="hasta" type="date" [(ngModel)]="hasta" [disabled]="!tipoElegido.usaFechas" />
+    <div class="col-sm-6 col-lg-4">
+      <label class="form-label" for="r-hasta">Hasta</label>
+      <input class="form-control" id="r-hasta" name="hasta" type="date" [(ngModel)]="hasta" [disabled]="!tipoElegido.usaFechas" />
     </div>
   </div>
-  <p class="panel-subtitle">
+  <p class="text-body-secondary small">
     {{ tipoElegido.descripcion }}
     @if (tipoElegido.usaFechas) {
       Si deja las fechas vacías, incluye todo.
@@ -33,9 +33,9 @@
       Este reporte no depende de las fechas.
     }
   </p>
-  <div class="form-actions">
-    <button class="btn primary" (click)="descargar('excel')" [disabled]="descargando()">Descargar Excel (.xlsx)</button>
-    <button class="btn primary" (click)="descargar('pdf')" [disabled]="descargando()">Descargar PDF</button>
-    <button class="btn secondary" (click)="descargar('csv')" [disabled]="descargando()">Descargar CSV</button>
+  <div class="d-flex flex-wrap gap-2">
+    <button class="btn btn-primary btn-sm" (click)="descargar('excel')" [disabled]="descargando()">Descargar Excel (.xlsx)</button>
+    <button class="btn btn-primary btn-sm" (click)="descargar('pdf')" [disabled]="descargando()">Descargar PDF</button>
+    <button class="btn btn-outline-secondary btn-sm" (click)="descargar('csv')" [disabled]="descargando()">Descargar CSV</button>
   </div>
 </section>

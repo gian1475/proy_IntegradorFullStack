@@ -72,8 +72,9 @@ class PrestamoDaoTest {
         Integer idPrestatario = p.getPrestatario().getIdUsuario();
         Integer idIncidencia = idDe("INSERT INTO incidencia (id_prestamo, tipo_incidencia, descripcion, estado_incidencia) "
                 + "VALUES (" + p.getIdPrestamo() + ", 'retraso', 'prueba', 'pendiente') RETURNING id_incidencia");
+        // suspension: desde RF06 (02/11) la advertencia es informativa y no bloquea, asi q se prueba con una suspension
         em.createNativeQuery("INSERT INTO sancion (id_incidencia, tipo_sancion, fecha_inicio, fecha_fin, estado_sancion) "
-                + "VALUES (:inc, 'advertencia', :inicio, :fin, 'activa')")
+                + "VALUES (:inc, 'suspensión', :inicio, :fin, 'activa')")
                 .setParameter("inc", idIncidencia)
                 .setParameter("inicio", ahora.minusDays(1))
                 .setParameter("fin", ahora.toLocalDate().atStartOfDay()) // termina hoy

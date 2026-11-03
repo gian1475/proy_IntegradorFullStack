@@ -2,6 +2,7 @@ package com.alejandria.biblioteca.dao;
 
 import com.alejandria.biblioteca.entity.Libro;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -22,13 +23,17 @@ public interface LibroDao extends JpaRepository<Libro, Integer> {
          + "  OR LOWER(CONCAT(a.nombre, ' ', a.apellido)) LIKE LOWER(CONCAT('%', :texto, '%')) "
          + "  OR LOWER(c.nombre) LIKE LOWER(CONCAT('%', :texto, '%'))) "
          + "ORDER BY l.titulo")
+    @EntityGraph(attributePaths = {"categoria", "autores"})
     List<Libro> buscarEnCatalogo(@Param("texto") String texto);
 
     @Query("SELECT l FROM Libro l JOIN l.autores a WHERE LOWER(a.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) OR LOWER(a.apellido) LIKE LOWER(CONCAT('%', :apellido, '%'))")
     List<Libro> findByAutorNombreOrApellido(@Param("nombre") String nombre, @Param("apellido") String apellido);
 
     /** Catálogo: todos los libros menos los dados de baja (eliminación lógica). */
-    // crud libro consultar: SELECT de la tabla libro donde el estado no es 'baja', ordenado por titulo
+    // crud libro consultar: SELECT de la tabla libro donde el estado no es 'baja', ordenado por titulo.
+    // @EntityGraph: trae la categoria y los autores en la MISMA consulta (con JOIN). sin esto, hibernate pedia
+    // los autores de cada libro con otra consulta (25 libros = 26 consultas a neon, unos 4 s)
+    @EntityGraph(attributePaths = {"categoria", "autores"})
     List<Libro> findByEstadoLibroNotOrderByTitulo(String estadoLibro);
 
     /** Dashboard: por cada estado, cuántos títulos y cuántos ejemplares disponibles (sin los de baja). Fila: [estado, titulos, stock]. */

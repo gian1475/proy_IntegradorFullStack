@@ -2,8 +2,8 @@ package com.alejandria.biblioteca.controller;
 
 import com.alejandria.biblioteca.dto.reporte.DashboardDTO;
 import com.alejandria.biblioteca.seguridad.Rol;
-import com.alejandria.biblioteca.seguridad.RolesPermitidos;
 import com.alejandria.biblioteca.service.DashboardService;
+import jakarta.annotation.security.RolesAllowed;
 import org.springframework.web.bind.annotation.*;
 
 /** Dashboard del Administrador (patrón Dashboard, indicadores de gestión). */
@@ -19,7 +19,7 @@ public class DashboardController {
 
     // dashboard / permisos admin: GET /api/dashboard, solo el admin
     @GetMapping
-    @RolesPermitidos(Rol.ADMINISTRADOR)
+    @RolesAllowed(Rol.ADMINISTRADOR)
     public DashboardDTO obtener() {
         return dashboardService.obtener();
     }

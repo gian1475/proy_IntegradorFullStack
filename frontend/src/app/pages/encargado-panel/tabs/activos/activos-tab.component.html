@@ -1,30 +1,30 @@
 @if (mensajeOk()) {
-  <div class="alert ok">{{ mensajeOk() }}</div>
+  <div class="alert alert-success">{{ mensajeOk() }}</div>
 }
 @if (mensajeError()) {
-  <div class="alert error">{{ mensajeError() }}</div>
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
 }
 
 <!-- alertas 15 min (RF05): aviso arriba con cuantos estan vencidos o por vencer -->
 @if (cantidadVencidos() > 0) {
-  <div class="alert error">⚠ {{ cantidadVencidos() }} préstamo(s) <strong>vencido(s)</strong>: ya pasaron la hora límite.</div>
+  <div class="alert alert-danger">⚠ {{ cantidadVencidos() }} préstamo(s) <strong>vencido(s)</strong>: ya pasaron la hora límite.</div>
 }
 @if (cantidadPorVencer() > 0) {
-  <div class="alert aviso">⏰ {{ cantidadPorVencer() }} préstamo(s) vence(n) en {{ minutosAviso }} minutos o menos.</div>
+  <div class="alert alert-warning">⏰ {{ cantidadPorVencer() }} préstamo(s) vence(n) en {{ minutosAviso }} minutos o menos.</div>
 }
 
-<section class="panel-card">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <h2 style="margin: 0;">Préstamos activos</h2>
-    <button class="btn secondary" (click)="cargarPrestamos()">Actualizar</button>
+<section class="card card-body mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h6 fw-bold text-primary mb-0">Préstamos activos</h2>
+    <button class="btn btn-outline-secondary btn-sm" (click)="cargarPrestamos()">Actualizar</button>
   </div>
   @if (cargando()) {
-    <div class="empty">Cargando...</div>
+    <div class="text-center text-body-secondary py-4">Cargando...</div>
   } @else if (prestamos().length === 0) {
-    <div class="empty">No hay préstamos activos.</div>
+    <div class="text-center text-body-secondary py-4">No hay préstamos activos.</div>
   } @else {
-    <div class="table-wrapper">
-      <table>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
         <thead>
           <tr>
             <th>#</th>
@@ -39,7 +39,7 @@
         </thead>
         <tbody>
           @for (p of prestamosConAlerta(); track p.idPrestamo) {
-            <tr [class.fila-vencida]="p.alerta.tipo === 'vencido'" [class.fila-por-vencer]="p.alerta.tipo === 'por-vencer'">
+            <tr [class.table-danger]="p.alerta.tipo === 'vencido'" [class.table-warning]="p.alerta.tipo === 'por-vencer'">
               <td>{{ p.idPrestamo }}</td>
               <td>{{ p.nombrePrestatario }}</td>
               <td>{{ p.dniPrestatario }}</td>
@@ -48,15 +48,16 @@
               <td>
                 {{ p.fechaDevolucionPrevista | date: 'dd/MM HH:mm' }}
                 @if (p.ampliado) { <span class="badge">ampliado</span> }
-                <div class="tiempo-restante" [class]="p.alerta.tipo">{{ p.alerta.texto }}</div>
+                <div class="small fw-semibold text-body-secondary" [class.text-warning-emphasis]="p.alerta.tipo === 'por-vencer'"
+                     [class.text-danger]="p.alerta.tipo === 'vencido'">{{ p.alerta.texto }}</div>
               </td>
               <td><span class="badge" [class]="p.alerta.tipo === 'vencido' ? 'vencido' : p.estadoPrestamo">{{ p.alerta.tipo === 'vencido' ? 'vencido' : p.estadoPrestamo }}</span></td>
               <td>
-                <div class="acciones">
-                  <button class="btn secondary" (click)="ampliar(p)"
+                <div class="d-flex flex-wrap gap-1">
+                  <button class="btn btn-outline-secondary btn-sm" (click)="ampliar(p)"
                           [disabled]="p.ampliado || p.estadoPrestamo !== 'activo' || p.alerta.tipo === 'vencido'">Ampliar</button>
-                  <button class="btn primary" (click)="abrirDevolucion(p)">Devolver</button>
-                  <button class="btn danger" (click)="anular(p)">Anular</button>
+                  <button class="btn btn-primary btn-sm" (click)="abrirDevolucion(p)">Devolver</button>
+                  <button class="btn btn-outline-danger btn-sm" (click)="anular(p)">Anular</button>
                 </div>
               </td>
             </tr>
@@ -68,22 +69,33 @@
 </section>
 
 <!-- ===== Modal de devolución ===== -->
+<!-- bootstrap: el modal se muestra con d-block porque Angular decide cuándo aparece (no se usa el JavaScript de bootstrap) -->
 @if (prestamoADevolver(); as p) {
-  <div class="modal-backdrop">
-    <div class="modal-box">
-      <h3>Registrar devolución</h3>
-      <p>"{{ p.tituloLibro }}" – {{ p.nombrePrestatario }}. ¿En qué estado se devuelve el libro?</p>
-      <div class="opciones">
-        <label><input type="radio" name="estadoFisico" value="bueno" [(ngModel)]="estadoFisico" /> Bueno</label>
-        <label><input type="radio" name="estadoFisico" value="dañado" [(ngModel)]="estadoFisico" /> Dañado</label>
-      </div>
-      @if (estadoFisico === 'dañado') {
-        <!-- mantenimiento (RF02): el ejemplar danado no vuelve al stock -->
-        <p class="aviso-mantenimiento">El ejemplar no vuelve al stock: queda en mantenimiento hasta que el administrador lo reponga.</p>
-      }
-      <div class="form-actions">
-        <button class="btn primary" (click)="confirmarDevolucion()">Confirmar</button>
-        <button class="btn secondary" (click)="prestamoADevolver.set(null)">Cancelar</button>
+  <div class="modal d-block fondo-modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title h6 fw-bold">Registrar devolución</h3>
+        </div>
+        <div class="modal-body">
+          <p class="text-body-secondary small">"{{ p.tituloLibro }}" – {{ p.nombrePrestatario }}. ¿En qué estado se devuelve el libro?</p>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" id="fisico-bueno" name="estadoFisico" value="bueno" [(ngModel)]="estadoFisico" />
+            <label class="form-check-label" for="fisico-bueno">Bueno</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" id="fisico-danado" name="estadoFisico" value="dañado" [(ngModel)]="estadoFisico" />
+            <label class="form-check-label" for="fisico-danado">Dañado</label>
+          </div>
+          @if (estadoFisico === 'dañado') {
+            <!-- mantenimiento (RF02): el ejemplar danado no vuelve al stock -->
+            <div class="alert alert-warning small mt-3 mb-0">El ejemplar no vuelve al stock: queda en mantenimiento hasta que el administrador lo reponga.</div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary btn-sm" (click)="prestamoADevolver.set(null)">Cancelar</button>
+          <button class="btn btn-primary btn-sm" (click)="confirmarDevolucion()">Confirmar</button>
+        </div>
       </div>
     </div>
   </div>

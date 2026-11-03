@@ -56,40 +56,36 @@ public class ReservaService {
     // si el libro no tiene stock la reserva entra a la cola de espera (RF04)
     @Transactional
     public ReservaRespuestaDTO crear(ReservaDTO dto) {
-        if (dto.getIdLibro() == null || dto.getIdUsuario() == null) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "Datos incompletos para procesar la reserva");
-        }
-
-        Usuario prestatario = usuarioDao.findById(dto.getIdUsuario())
+        Usuario prestatario = usuarioDao.findById(dto.idUsuario())
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
         prestatarioService.validarHabilitado(prestatario);
 
         if (reservaDao.existsByPrestatarioIdUsuarioAndLibroIdLibroAndEstadoReservaIn(
-                dto.getIdUsuario(), dto.getIdLibro(), List.of(PENDIENTE, EN_ESPERA))) {
+                dto.idUsuario(), dto.idLibro(), List.of(PENDIENTE, EN_ESPERA))) {
             throw new NegocioException(HttpStatus.CONFLICT, "Ya tiene una reserva pendiente o está en la cola de este libro");
         }
 
         liberarVencidas(); // si una reserva vencio, su ejemplar vuelve antes de mirar el stock
         LocalDateTime ahora = horario.ahora();
-        Libro libro = libroService.bloquearParaSalida(dto.getIdLibro());
+        Libro libro = libroService.bloquearParaSalida(dto.idLibro());
         if (libro.getStock() == 0) {
             return entrarALaCola(prestatario, libro, ahora);
         }
 
-        validarFechaRecojo(dto.getFechaRecojoLimite(), ahora);
+        validarFechaRecojo(dto.fechaRecojoLimite(), ahora);
         libroService.descontarStock(libro, "reservado"); // stock automatico: al reservar baja 1
 
         Reserva reserva = new Reserva();
         reserva.setLibro(libro);
         reserva.setPrestatario(prestatario);
         reserva.setFechaReserva(ahora);
-        reserva.setFechaRecojoLimite(dto.getFechaRecojoLimite());
+        reserva.setFechaRecojoLimite(dto.fechaRecojoLimite());
         reserva.setEstadoReserva(PENDIENTE);
         reserva.setPosicionCola(1);
 
         Reserva guardada = reservaDao.save(reserva);
         log.info("Reserva #{} creada: libro '{}' para usuario {}, recojo hasta {}",
-                guardada.getIdReserva(), libro.getTitulo(), prestatario.getIdUsuario(), dto.getFechaRecojoLimite());
+                guardada.getIdReserva(), libro.getTitulo(), prestatario.getIdUsuario(), dto.fechaRecojoLimite());
         return ReservaRespuestaDTO.desde(guardada);
     }
 

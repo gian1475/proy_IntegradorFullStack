@@ -1,16 +1,16 @@
 @if (mensajeError()) {
-  <div class="alert error">{{ mensajeError() }}</div>
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
 }
 
-<section class="panel-card">
-  <h2>Reservas pendientes de recojo</h2>
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Reservas pendientes de recojo</h2>
   @if (cargando()) {
-    <div class="empty">Cargando...</div>
+    <div class="text-center text-body-secondary py-4">Cargando...</div>
   } @else if (reservasPendientes().length === 0) {
-    <div class="empty">No hay reservas pendientes.</div>
+    <div class="text-center text-body-secondary py-4">No hay reservas pendientes.</div>
   } @else {
-    <div class="table-wrapper">
-      <table>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
         <thead>
           <tr>
             <th>#</th>
@@ -27,7 +27,7 @@
               <td>{{ r.nombrePrestatario }}</td>
               <td>{{ r.tituloLibro }}</td>
               <td>{{ r.fechaRecojoLimite | date: 'dd/MM HH:mm' }}</td>
-              <td><button class="btn primary" (click)="entregar.emit(r)">Entregar</button></td>
+              <td><button class="btn btn-primary btn-sm" (click)="entregar.emit(r)">Entregar</button></td>
             </tr>
           }
         </tbody>
@@ -37,13 +37,13 @@
 </section>
 
 @if (enCola().length > 0) {
-  <section class="panel-card">
-    <h2>En cola de espera</h2>
-    <p class="panel-subtitle">
+  <section class="card card-body mb-4">
+    <h2 class="h6 fw-bold text-primary mb-3">En cola de espera</h2>
+    <p class="text-body-secondary small">
       No hay ejemplares de estos libros. Cuando se devuelva uno, pasa solo al primero de la cola y aparece arriba como reserva pendiente.
     </p>
-    <div class="table-wrapper">
-      <table>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
         <thead>
           <tr>
             <th>Libro</th>

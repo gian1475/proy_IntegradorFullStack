@@ -39,10 +39,8 @@ public class AuthService {
     // proceso login: 1) ve si el correo esta bloqueado (guava) 2) busca al usuario por correo
     // 3) compara la contra con bcrypt 4) revisa q no este inactivo 5) detecta su rol y le crea la sesion (token)
     public LoginRespuestaDTO login(LoginDTO loginDTO) {
-        if (loginDTO.getCorreo() == null || loginDTO.getContrasena() == null) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "Datos incompletos");
-        }
-        String correo = loginDTO.getCorreo().trim().toLowerCase();
+        // q no falten el correo ni la contra lo revisa @NotBlank en LoginDTO (bean validation)
+        String correo = loginDTO.correo().trim().toLowerCase();
 
         // guava: si ya fallo 3 veces el correo queda bloqueado 15 min
         if (limitador.estaBloqueado(correo)) {
@@ -54,7 +52,7 @@ public class AuthService {
 
         // bcrypt: matches() compara lo q escribio con el hash guardado en la bd. nunca se compara en texto plano
         Usuario usuario = usuarioDao.findByCorreo(correo).orElse(null);
-        if (usuario == null || !passwordEncoder.matches(loginDTO.getContrasena(), usuario.getContrasena())) {
+        if (usuario == null || !passwordEncoder.matches(loginDTO.contrasena(),usuario.getContrasena())) {
             int intentos = limitador.registrarFallo(correo);
             // logback: el login fallido queda guardado en logs/biblioteca.log (sin la contra)
             log.warn("Login fallido ({}/{}): {}", intentos, LimitadorIntentosLogin.MAX_INTENTOS, correo);
@@ -77,10 +75,11 @@ public class AuthService {
     // datos q se piden: nombre, apellido, dni, correo y contraseña
     @Transactional
     public LoginRespuestaDTO registro(RegistroDTO registroDTO) {
-        // validar datos, regla contra y bcrypt: los hace UsuarioService.crearCuenta (lo mismo q al registrar encargados)
+        // validar datos: los revisan las anotaciones de RegistroDTO (bean validation) antes de llegar aqui.
+        // regla contra y bcrypt: los hace UsuarioService.crearCuenta (lo mismo q al registrar encargados)
         // crear perfil 3: primero se guarda en la tabla usuario y despues en la tabla prestatario
-        Usuario guardado = usuarioService.crearCuenta(registroDTO.getNombre(), registroDTO.getApellido(),
-                registroDTO.getDni(), registroDTO.getCorreo(), registroDTO.getContrasena());
+        Usuario guardado = usuarioService.crearCuenta(registroDTO.nombre(), registroDTO.apellido(),
+                registroDTO.dni(), registroDTO.correo(), registroDTO.contrasena());
         usuarioDao.registrarComoPrestatario(guardado.getIdUsuario());
 
         log.info("Nuevo prestatario registrado: {}", guardado.getCorreo());

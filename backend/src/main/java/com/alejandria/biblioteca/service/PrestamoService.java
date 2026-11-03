@@ -64,15 +64,12 @@ public class PrestamoService {
     // (sale de la sesion), fecha y hora de inicio, hora limite (+3h), ampliado = false y estado 'activo'
     @Transactional
     public PrestamoDTO registrar(RegistroPrestamoDTO dto, Integer idEncargado) {
-        if (dto.getDniPrestatario() == null || dto.getIdLibro() == null) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "Debe indicar el DNI del prestatario y el libro");
-        }
 
         // horario de atencion: fuera de 8:00-20:00 no se presta
         LocalDateTime ahora = horario.ahora();
         horario.validarAbierto(ahora);
 
-        Usuario prestatario = usuarioDao.findByDni(dto.getDniPrestatario().trim())
+        Usuario prestatario = usuarioDao.findByDni(dto.dniPrestatario().trim())
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "No existe un usuario con ese DNI"));
 
         // validaciones del prestamo: q sea prestatario, q este activo y sin sancion activa
@@ -80,7 +77,7 @@ public class PrestamoService {
 
         reservaService.liberarVencidas();
         // y q el libro no este de baja ni en mantenimiento
-        Libro libro = libroService.bloquearParaSalida(dto.getIdLibro());
+        Libro libro = libroService.bloquearParaSalida(dto.idLibro());
 
         // Si el prestatario tenía este libro reservado, el ejemplar ya estaba apartado: no se descuenta otra vez
         boolean veniaDeReserva = reservaService.atenderSiExiste(prestatario.getIdUsuario(), libro.getIdLibro());
@@ -187,10 +184,8 @@ public class PrestamoService {
     // el estado fisico del libro (bueno o dañado) y el estado pasa a 'devuelto'
     @Transactional
     public PrestamoDTO devolver(Integer idPrestamo, DevolucionDTO dto) {
-        String estadoFisico = dto.getEstadoFisico();
-        if (!"bueno".equals(estadoFisico) && !"dañado".equals(estadoFisico)) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "El estado físico debe ser 'bueno' o 'dañado'");
-        }
+        // q sea 'bueno' o 'dañado' lo revisa @Pattern en DevolucionDTO (bean validation)
+        String estadoFisico = dto.estadoFisico();
 
         Prestamo prestamo = buscar(idPrestamo);
         if (!estaEnCurso(prestamo)) {

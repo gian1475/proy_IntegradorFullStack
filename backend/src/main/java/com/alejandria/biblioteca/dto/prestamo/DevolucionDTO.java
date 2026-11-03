@@ -1,11 +1,11 @@
 package com.alejandria.biblioteca.dto.prestamo;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+
 /** Estado físico del libro al devolverlo: "bueno" o "dañado". */
-public class DevolucionDTO {
-    private String estadoFisico;
-
-    public DevolucionDTO() {}
-
-    public String getEstadoFisico() { return estadoFisico; }
-    public void setEstadoFisico(String estadoFisico) { this.estadoFisico = estadoFisico; }
-}
+public record DevolucionDTO(
+        @NotNull(message = "El estado físico debe ser 'bueno' o 'dañado'")
+        @Pattern(regexp = "bueno|dañado", message = "El estado físico debe ser 'bueno' o 'dañado'")
+        String estadoFisico
+) {}

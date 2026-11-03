@@ -1,14 +1,14 @@
 @if (mensajeError()) {
-  <div class="alert error">{{ mensajeError() }}</div>
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
 }
 
-<section class="panel-card">
-  <h2>Préstamos activos</h2>
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Préstamos activos</h2>
   @if (prestamos().length === 0) {
-    <div class="empty">No hay préstamos activos.</div>
+    <div class="text-center text-body-secondary py-4">No hay préstamos activos.</div>
   } @else {
-    <div class="table-wrapper">
-      <table>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
         <thead>
           <tr>
             <th>#</th>

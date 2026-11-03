@@ -28,13 +28,8 @@ class UsuarioBdTest {
 
     @Test
     void elEncargadoQuedaEnLaTablaEncargadoConSuTurno() {
-        RegistroEncargadoDTO dto = new RegistroEncargadoDTO();
-        dto.setNombre("María");
-        dto.setApellido("Prueba");
-        dto.setDni("90000099");
-        dto.setCorreo("maria.prueba@alejandria.edu.pe");
-        dto.setContrasena("Biblioteca#2026");
-        dto.setTurno("tarde");
+        RegistroEncargadoDTO dto = new RegistroEncargadoDTO("María", "Prueba", "90000099",
+                "maria.prueba@alejandria.edu.pe", "Biblioteca#2026", "tarde");
 
         EncargadoDTO nuevo = usuarioService.registrarEncargado(dto);
         em.flush();

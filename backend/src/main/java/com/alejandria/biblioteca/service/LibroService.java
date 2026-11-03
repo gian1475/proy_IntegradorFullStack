@@ -92,16 +92,16 @@ public class LibroService {
     // categoria y autores. se guardan en la tabla libro y los autores en la tabla libro_autor
     @Transactional
     public LibroDTO crear(LibroFormDTO form) {
-        // validaciones antes de guardar: campos obligatorios, stock no negativo, año valido (metodo validar)
-        validar(form);
+        // validaciones antes de guardar: campos obligatorios, stock no negativo y año valido los revisan
+        // las anotaciones de LibroFormDTO (bean validation). aqui quedan las reglas q necesitan la bd
         // estado del libro (RF03): sin ejemplares, el estado depende del movimiento q se llevo el ultimo
         // (prestamo -> 'prestado', reserva -> 'reservado', daño -> 'mantenimiento'). un libro nuevo no tuvo
         // ningun movimiento, asi q entra con al menos 1 ejemplar. antes con 0 quedaba 'prestado' sin prestamo
-        if (form.getStock() < 1) {
+        if (form.stock() < 1) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, "Un libro nuevo debe tener al menos 1 ejemplar");
         }
         // y q el isbn no este repetido
-        if (libroDao.existsByIsbn(form.getIsbn().trim())) {
+        if (libroDao.existsByIsbn(form.isbn().trim())) {
             throw new NegocioException(HttpStatus.CONFLICT, "Ya existe un libro con ese ISBN");
         }
 
@@ -117,17 +117,16 @@ public class LibroService {
     // año, stock, categoria y autores). lo q mas se actualiza es el stock (numero de copias)
     @Transactional
     public LibroDTO actualizar(Integer idLibro, LibroFormDTO form) {
-        validar(form);
         Libro libro = buscar(idLibro);
         if (BAJA.equals(libro.getEstadoLibro())) {
             throw new NegocioException(HttpStatus.CONFLICT, "No se puede editar un libro dado de baja");
         }
-        if (libroDao.existsByIsbnAndIdLibroNot(form.getIsbn().trim(), idLibro)) {
+        if (libroDao.existsByIsbnAndIdLibroNot(form.isbn().trim(), idLibro)) {
             throw new NegocioException(HttpStatus.CONFLICT, "Ya existe otro libro con ese ISBN");
         }
         // estado del libro: el stock solo llega a 0 con un prestamo, una reserva o una devolucion dañada.
         // si el admin lo bajara a 0 a mano, el libro quedaria 'prestado' sin ningun prestamo
-        if (form.getStock() == 0 && libro.getStock() > 0) {
+        if (form.stock() == 0 && libro.getStock() > 0) {
             throw new NegocioException(HttpStatus.BAD_REQUEST,
                     "El stock no puede bajar a 0 desde el formulario: los ejemplares salen al prestarlos, reservarlos o devolverlos dañados");
         }
@@ -263,35 +262,19 @@ public class LibroService {
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Libro no encontrado"));
     }
 
-    // validaciones del libro: q no falte ningun dato obligatorio, stock >= 0 y año entre 1000 y 2100
-    private void validar(LibroFormDTO form) {
-        if (form.getTitulo() == null || form.getTitulo().isBlank()
-                || form.getIsbn() == null || form.getIsbn().isBlank()
-                || form.getEditorial() == null || form.getEditorial().isBlank()
-                || form.getAnioPublicacion() == null || form.getStock() == null || form.getIdCategoria() == null) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "Complete todos los campos obligatorios del libro");
-        }
-        if (form.getStock() < 0) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "El stock no puede ser negativo");
-        }
-        if (form.getAnioPublicacion() < 1000 || form.getAnioPublicacion() > 2100) {
-            throw new NegocioException(HttpStatus.BAD_REQUEST, "El año de publicación no es válido");
-        }
-    }
-
     private void copiarDatos(LibroFormDTO form, Libro libro) {
-        Categoria categoria = categoriaDao.findById(form.getIdCategoria())
+        Categoria categoria = categoriaDao.findById(form.idCategoria())
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Categoría no encontrada"));
 
-        libro.setTitulo(form.getTitulo().trim());
-        libro.setIsbn(form.getIsbn().trim());
-        libro.setAnioPublicacion(form.getAnioPublicacion());
-        libro.setEditorial(form.getEditorial().trim());
-        libro.setStock(form.getStock());
+        libro.setTitulo(form.titulo().trim());
+        libro.setIsbn(form.isbn().trim());
+        libro.setAnioPublicacion(form.anioPublicacion());
+        libro.setEditorial(form.editorial().trim());
+        libro.setStock(form.stock());
         libro.setCategoria(categoria);
 
-        if (form.getIdsAutores() != null) {
-            List<Autor> autores = autorDao.findAllById(form.getIdsAutores());
+        if (form.idsAutores() != null) {
+            List<Autor> autores = autorDao.findAllById(form.idsAutores());
             libro.setAutores(new HashSet<>(autores));
         }
     }

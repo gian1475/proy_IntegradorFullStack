@@ -5,19 +5,20 @@ import { ReservaBackend } from '../../services/reserva.service';
 import { ActivosTabComponent } from './tabs/activos/activos-tab.component';
 import { RegistrarTabComponent } from './tabs/registrar/registrar-tab.component';
 import { ReservasTabComponent } from './tabs/reservas/reservas-tab.component';
+import { IncidenciasTabComponent } from './tabs/incidencias/incidencias-tab.component';
 import { HistorialPrestamosComponent } from '../../components/historial-prestamos/historial-prestamos.component';
 import { ReportesDescargaComponent } from '../../components/reportes-descarga/reportes-descarga.component';
 
 // permisos encargado: lo q ve el encargado -> prestamos activos, registrar prestamo, reservas pendientes,
-// historial (RF07) y reportes (RF08)
-type Pestana = 'activos' | 'registrar' | 'reservas' | 'historial' | 'reportes';
+// incidencias y sanciones (RF06), historial (RF07) y reportes (RF08)
+type Pestana = 'activos' | 'registrar' | 'reservas' | 'incidencias' | 'historial' | 'reportes';
 
 /** Panel del Encargado: solo muestra las pestañas. Cada pestaña es un componente en tabs/. */
 @Component({
   selector: 'app-encargado-panel',
   standalone: true,
   imports: [HeaderComponent, ActivosTabComponent, RegistrarTabComponent, ReservasTabComponent,
-            HistorialPrestamosComponent, ReportesDescargaComponent],
+            IncidenciasTabComponent, HistorialPrestamosComponent, ReportesDescargaComponent],
   templateUrl: './encargado-panel.component.html',
 })
 export class EncargadoPanelComponent {

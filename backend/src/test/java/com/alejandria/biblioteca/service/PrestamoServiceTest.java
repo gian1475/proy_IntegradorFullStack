@@ -78,8 +78,8 @@ class PrestamoServiceTest {
 
         PrestamoDTO resultado = servicio.ampliar(1);
 
-        assertTrue(resultado.getAmpliado());
-        assertEquals(limiteOriginal.plusHours(1), resultado.getFechaDevolucionPrevista()); // RF05: hasta 1 hora
+        assertTrue(resultado.ampliado());
+        assertEquals(limiteOriginal.plusHours(1), resultado.fechaDevolucionPrevista()); // RF05: hasta 1 hora
     }
 
     @Test
@@ -121,7 +121,7 @@ class PrestamoServiceTest {
 
         PrestamoDTO resultado = servicio.registrar(registro(), 2);
 
-        assertEquals(AHORA.withHour(13), resultado.getFechaDevolucionPrevista());
+        assertEquals(AHORA.withHour(13), resultado.fechaDevolucionPrevista());
     }
 
     @Test
@@ -131,7 +131,7 @@ class PrestamoServiceTest {
 
         PrestamoDTO resultado = servicio.registrar(registro(), 2);
 
-        assertEquals(AHORA.withHour(20), resultado.getFechaDevolucionPrevista()); // no pasa del cierre
+        assertEquals(AHORA.withHour(20), resultado.fechaDevolucionPrevista()); // no pasa del cierre
     }
 
     @Test
@@ -153,8 +153,8 @@ class PrestamoServiceTest {
 
         PrestamoDTO resultado = servicio.ampliar(1);
 
-        assertEquals(AHORA.withHour(20), resultado.getFechaDevolucionPrevista()); // media hora, no una
-        assertTrue(resultado.getAmpliado());
+        assertEquals(AHORA.withHour(20), resultado.fechaDevolucionPrevista()); // media hora, no una
+        assertTrue(resultado.ampliado());
     }
 
     @Test
@@ -211,9 +211,9 @@ class PrestamoServiceTest {
 
         PrestamoDTO resultado = servicio.devolver(1, devolucion("bueno"));
 
-        assertEquals("devuelto", resultado.getEstadoPrestamo());
-        assertEquals("bueno", resultado.getEstadoFisicoDevolucion());
-        assertNotNull(resultado.getFechaDevolucionReal());
+        assertEquals("devuelto", resultado.estadoPrestamo());
+        assertEquals("bueno", resultado.estadoFisicoDevolucion());
+        assertNotNull(resultado.fechaDevolucionReal());
         verify(libroService).reponerStock(10);
         verify(libroService, never()).registrarEjemplarDanado(any());
     }
@@ -226,8 +226,8 @@ class PrestamoServiceTest {
 
         PrestamoDTO resultado = servicio.devolver(1, devolucion("dañado"));
 
-        assertEquals("devuelto", resultado.getEstadoPrestamo());
-        assertEquals("dañado", resultado.getEstadoFisicoDevolucion());
+        assertEquals("devuelto", resultado.estadoPrestamo());
+        assertEquals("dañado", resultado.estadoFisicoDevolucion());
         verify(libroService).registrarEjemplarDanado(10);
         verify(libroService, never()).reponerStock(any());
     }
@@ -304,15 +304,10 @@ class PrestamoServiceTest {
     }
 
     private RegistroPrestamoDTO registro() {
-        RegistroPrestamoDTO dto = new RegistroPrestamoDTO();
-        dto.setDniPrestatario("33333333");
-        dto.setIdLibro(10);
-        return dto;
+        return new RegistroPrestamoDTO("33333333", 10);
     }
 
     private DevolucionDTO devolucion(String estadoFisico) {
-        DevolucionDTO dto = new DevolucionDTO();
-        dto.setEstadoFisico(estadoFisico);
-        return dto;
+        return new DevolucionDTO(estadoFisico);
     }
 }

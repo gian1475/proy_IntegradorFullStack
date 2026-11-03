@@ -1,11 +1,19 @@
 package com.alejandria.biblioteca.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "libro")
+// lombok: @Getter y @Setter crean al compilar el get y el set de cada campo; @NoArgsConstructor, el constructor vacio q pide JPA
+@Getter
+@Setter
+@NoArgsConstructor
 public class Libro {
 
     @Id
@@ -43,8 +51,6 @@ public class Libro {
     )
     private Set<Autor> autores = new HashSet<>();
 
-    public Libro() {}
-
     public Libro(Integer idLibro, Categoria categoria, String titulo, String isbn, Integer anioPublicacion, String editorial, Integer stock, String estadoLibro) {
         this.idLibro = idLibro;
         this.categoria = categoria;
@@ -55,31 +61,4 @@ public class Libro {
         this.stock = stock;
         this.estadoLibro = estadoLibro;
     }
-
-    public Integer getIdLibro() { return idLibro; }
-    public void setIdLibro(Integer idLibro) { this.idLibro = idLibro; }
-
-    public Categoria getCategoria() { return categoria; }
-    public void setCategoria(Categoria categoria) { this.categoria = categoria; }
-
-    public String getTitulo() { return titulo; }
-    public void setTitulo(String titulo) { this.titulo = titulo; }
-
-    public String getIsbn() { return isbn; }
-    public void setIsbn(String isbn) { this.isbn = isbn; }
-
-    public Integer getAnioPublicacion() { return anioPublicacion; }
-    public void setAnioPublicacion(Integer anioPublicacion) { this.anioPublicacion = anioPublicacion; }
-
-    public String getEditorial() { return editorial; }
-    public void setEditorial(String editorial) { this.editorial = editorial; }
-
-    public Integer getStock() { return stock; }
-    public void setStock(Integer stock) { this.stock = stock; }
-
-    public String getEstadoLibro() { return estadoLibro; }
-    public void setEstadoLibro(String estadoLibro) { this.estadoLibro = estadoLibro; }
-
-    public Set<Autor> getAutores() { return autores; }
-    public void setAutores(Set<Autor> autores) { this.autores = autores; }
 }

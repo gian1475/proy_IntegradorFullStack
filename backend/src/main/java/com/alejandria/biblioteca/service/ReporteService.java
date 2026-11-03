@@ -23,6 +23,8 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
@@ -58,6 +60,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Reportes y archivos (RF08):
@@ -91,15 +94,17 @@ public class ReporteService {
     private final UsuarioDao usuarioDao;
     private final CategoriaDao categoriaDao;
     private final LibroService libroService;
+    private final Validator validator;
 
     public ReporteService(PrestamoDao prestamoDao, ReservaDao reservaDao, LibroDao libroDao, UsuarioDao usuarioDao,
-                          CategoriaDao categoriaDao, LibroService libroService) {
+                          CategoriaDao categoriaDao, LibroService libroService, Validator validator) {
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
         this.libroDao = libroDao;
         this.usuarioDao = usuarioDao;
         this.categoriaDao = categoriaDao;
         this.libroService = libroService;
+        this.validator = validator;
     }
 
     /** Arma el reporte pedido y lo convierte al formato (excel, pdf o csv). Las fechas son opcionales. */
@@ -460,7 +465,15 @@ public class ReporteService {
             for (CSVRecord registro : parser) {
                 long linea = registro.getRecordNumber() + 1; // +1 por la fila de encabezados
                 try {
-                    libroService.crear(aFormulario(registro));
+                    LibroFormDTO form = aFormulario(registro);
+                    // bean validation: el csv no pasa por el controller (@Valid), asi q las anotaciones
+                    // de LibroFormDTO se revisan aqui con el mismo Validator
+                    Set<ConstraintViolation<LibroFormDTO>> problemas = validator.validate(form);
+                    if (!problemas.isEmpty()) {
+                        errores.add("Fila " + linea + ": " + problemas.iterator().next().getMessage());
+                        continue;
+                    }
+                    libroService.crear(form);
                     creados++;
                 } catch (NegocioException e) {
                     errores.add("Fila " + linea + ": " + e.getMessage());
@@ -486,14 +499,9 @@ public class ReporteService {
                 .orElseThrow(() -> new NegocioException(HttpStatus.BAD_REQUEST, "La categoría '" + nombreCategoria + "' no existe"))
                 .getIdCategoria();
 
-        LibroFormDTO form = new LibroFormDTO();
-        form.setTitulo(registro.get("titulo"));
-        form.setIsbn(registro.get("isbn"));
-        form.setAnioPublicacion(Integer.parseInt(registro.get("anio_publicacion")));
-        form.setEditorial(registro.get("editorial"));
-        form.setStock(Integer.parseInt(registro.get("stock")));
-        form.setIdCategoria(idCategoria);
-        return form;
+        return new LibroFormDTO(registro.get("titulo"), registro.get("isbn"),
+                Integer.parseInt(registro.get("anio_publicacion")), registro.get("editorial"),
+                Integer.parseInt(registro.get("stock")), idCategoria, null);
     }
 
     private String[] valoresDeFila(ReportePrestamoDTO p) {

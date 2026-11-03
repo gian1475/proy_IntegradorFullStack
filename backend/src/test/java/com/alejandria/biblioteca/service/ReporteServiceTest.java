@@ -17,6 +17,7 @@ import com.alejandria.biblioteca.exception.NegocioException;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import jakarta.validation.Validation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,8 @@ class ReporteServiceTest {
 
     @BeforeEach
     void preparar() {
-        servicio = new ReporteService(prestamoDao, reservaDao, libroDao, usuarioDao, categoriaDao, libroService);
+        servicio = new ReporteService(prestamoDao, reservaDao, libroDao, usuarioDao, categoriaDao, libroService,
+                Validation.buildDefaultValidatorFactory().getValidator());
     }
 
     @Test
@@ -243,8 +245,8 @@ class ReporteServiceTest {
 
         ArgumentCaptor<LibroFormDTO> capturado = ArgumentCaptor.forClass(LibroFormDTO.class);
         verify(libroService, times(1)).crear(capturado.capture());
-        assertEquals("Refactoring", capturado.getValue().getTitulo());
-        assertEquals(4, capturado.getValue().getIdCategoria());
+        assertEquals("Refactoring", capturado.getValue().titulo());
+        assertEquals(4, capturado.getValue().idCategoria());
     }
 
     @Test

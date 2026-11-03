@@ -34,7 +34,7 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
     //   de libro: el titulo
     // solo trae los prestamos q siguen en curso (activo o vencido)
     @Query("SELECT new com.alejandria.biblioteca.dto.prestamo.PrestamoDetalleDTO("
-         + "  p.idPrestamo, u.nombre, u.apellido, u.dni, l.titulo, "
+         + "  p.idPrestamo, CONCAT(u.nombre, ' ', u.apellido), u.dni, l.titulo, "
          + "  p.fechaPrestamo, p.fechaDevolucionPrevista, p.ampliado, p.estadoPrestamo) "
          + "FROM Prestamo p "
          + "JOIN p.prestatario u "
@@ -164,14 +164,16 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
            nativeQuery = true)
     int marcarVencidos(@Param("ahora") LocalDateTime ahora);
 
-    /** ¿El prestatario tiene alguna sanción activa? (sancion -> incidencia -> prestamo) */
-    // sancion activa: a alguien con sancion activa no se le presta ni puede reservar.
+    /** ¿El prestatario tiene una suspensión o una multa activa? (sancion -> incidencia -> prestamo) */
+    // sancion activa: a alguien con una suspension vigente o una multa sin pagar no se le presta ni puede reservar.
+    // la advertencia es informativa (RF06): no bloquea.
     // hora de lima: "hoy" lo manda java por lo mismo de arriba (CURRENT_DATE de la bd ya es mañana desde las 19:00)
     @Query(value = "SELECT EXISTS ("
                  + "  SELECT 1 FROM sancion s "
                  + "  JOIN incidencia i ON i.id_incidencia = s.id_incidencia "
                  + "  JOIN prestamo p ON p.id_prestamo = i.id_prestamo "
                  + "  WHERE p.id_prestatario = :idPrestatario "
+                 + "    AND s.tipo_sancion IN ('suspensión', 'multa') "
                  + "    AND s.estado_sancion = 'activa' "
                  + "    AND (s.fecha_fin IS NULL OR s.fecha_fin >= :hoy))",
            nativeQuery = true)

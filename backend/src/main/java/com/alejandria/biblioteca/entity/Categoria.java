@@ -1,9 +1,16 @@
 package com.alejandria.biblioteca.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "categoria")
+// lombok: @Getter y @Setter crean al compilar el get y el set de cada campo; @NoArgsConstructor, el constructor vacio q pide JPA
+@Getter
+@Setter
+@NoArgsConstructor
 public class Categoria {
 
     @Id
@@ -17,20 +24,9 @@ public class Categoria {
     @Column(name = "descripcion", length = 255)
     private String descripcion;
 
-    public Categoria() {}
-
     public Categoria(Integer idCategoria, String nombre, String descripcion) {
         this.idCategoria = idCategoria;
         this.nombre = nombre;
         this.descripcion = descripcion;
     }
-
-    public Integer getIdCategoria() { return idCategoria; }
-    public void setIdCategoria(Integer idCategoria) { this.idCategoria = idCategoria; }
-
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
-
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 }

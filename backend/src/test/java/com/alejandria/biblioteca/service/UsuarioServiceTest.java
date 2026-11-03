@@ -69,8 +69,8 @@ class UsuarioServiceTest {
 
     @Test
     void laContrasenaDebeCumplirLaRegla() {
-        RegistroEncargadoDTO dto = formulario("mañana");
-        dto.setContrasena("123456");
+        RegistroEncargadoDTO dto = new RegistroEncargadoDTO("María", "López", "44444444",
+                "maria.lopez@alejandria.edu.pe", "123456", "mañana");
 
         NegocioException error = assertThrows(NegocioException.class, () -> servicio.registrarEncargado(dto));
         assertEquals(400, error.getEstado().value());
@@ -78,13 +78,7 @@ class UsuarioServiceTest {
     }
 
     private RegistroEncargadoDTO formulario(String turno) {
-        RegistroEncargadoDTO dto = new RegistroEncargadoDTO();
-        dto.setNombre("María");
-        dto.setApellido("López");
-        dto.setDni("44444444");
-        dto.setCorreo(" Maria.Lopez@alejandria.edu.pe ");
-        dto.setContrasena("Biblioteca#2026");
-        dto.setTurno(turno);
-        return dto;
+        return new RegistroEncargadoDTO("María", "López", "44444444", " Maria.Lopez@alejandria.edu.pe ",
+                "Biblioteca#2026", turno);
     }
 }

@@ -1,0 +1,22 @@
+{
+  "properties": [
+    {
+      "name": "app.sesion.inactividad-minutos",
+      "type": "java.lang.Long",
+      "defaultValue": 15,
+      "description": "Minutos sin actividad después de los cuales se cierra la sesión (RNF04). Lo usa SesionService."
+    },
+    {
+      "name": "app.horario.apertura",
+      "type": "java.lang.String",
+      "defaultValue": "08:00",
+      "description": "Hora de apertura de la biblioteca (HH:mm). Antes de esta hora no se registran préstamos. Lo usa HorarioAtencion."
+    },
+    {
+      "name": "app.horario.cierre",
+      "type": "java.lang.String",
+      "defaultValue": "20:00",
+      "description": "Hora de cierre de la biblioteca (HH:mm). La hora límite de un préstamo nunca pasa de esta hora. Lo usa HorarioAtencion."
+    }
+  ]
+}

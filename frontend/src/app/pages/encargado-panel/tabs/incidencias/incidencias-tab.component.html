@@ -1,0 +1,155 @@
+@if (mensajeOk()) {
+  <div class="alert alert-success">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
+}
+
+<!-- registrar incidencia (CU09): el encargado busca el prestamo por DNI y registra la incidencia con su sancion -->
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Registrar incidencia y sanción</h2>
+  <p class="text-body-secondary small">
+    <strong>Retraso:</strong> el préstamo pasó su hora límite. <strong>Daño:</strong> se registra después de la devolución.
+    <strong>Pérdida:</strong> el libro no volvió; el préstamo se cierra y el ejemplar sale del stock.
+  </p>
+  <form (ngSubmit)="registrar()">
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="i-dni">DNI del prestatario</label>
+        <div class="input-group">
+          <input class="form-control" id="i-dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="dni" />
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="buscarPrestamos()">Buscar</button>
+        </div>
+      </div>
+
+      @if (prestamos().length > 0) {
+        <div class="col-sm-6 col-lg-8">
+          <label class="form-label" for="i-prestamo">Préstamo ({{ prestamos().length }})</label>
+          <select class="form-select" id="i-prestamo" name="prestamo"
+                  [ngModel]="idPrestamo()" (ngModelChange)="elegirPrestamo($event)">
+            <option [ngValue]="null">Seleccione el préstamo</option>
+            @for (p of prestamos(); track p.idPrestamo) {
+              <option [ngValue]="p.idPrestamo">
+                #{{ p.idPrestamo }} · {{ p.tituloLibro }} · {{ p.fechaPrestamo | date: 'dd/MM HH:mm' }} · {{ p.estadoPrestamo }}
+              </option>
+            }
+          </select>
+        </div>
+      }
+    </div>
+
+    @if (prestamoElegido()) {
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-lg-4">
+          <label class="form-label" for="i-tipo">Incidencia</label>
+          <select class="form-select" id="i-tipo" name="tipo"
+                  [ngModel]="tipoIncidencia()" (ngModelChange)="tipoIncidencia.set($event)">
+            @for (t of tiposPosibles(); track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-8">
+          <label class="form-label" for="i-descripcion">Descripción (opcional)</label>
+          <input class="form-control" id="i-descripcion" name="descripcion" maxlength="255"
+                 placeholder="Ej. Páginas 40 a 52 mojadas" [(ngModel)]="descripcion" />
+        </div>
+      </div>
+
+      <!-- tipos de sancion: la advertencia es informativa; la suspension y la multa pendiente bloquean prestamos y reservas -->
+      <div class="mb-3">
+        <span class="form-label d-block">Sanción</span>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" id="s-advertencia" name="sancion" value="advertencia"
+                 [ngModel]="tipoSancion()" (ngModelChange)="tipoSancion.set($event)" />
+          <label class="form-check-label" for="s-advertencia">Advertencia</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" id="s-suspension" name="sancion" value="suspensión"
+                 [ngModel]="tipoSancion()" (ngModelChange)="tipoSancion.set($event)" />
+          <label class="form-check-label" for="s-suspension">Suspensión</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" id="s-multa" name="sancion" value="multa"
+                 [ngModel]="tipoSancion()" (ngModelChange)="tipoSancion.set($event)" />
+          <label class="form-check-label" for="s-multa">Multa</label>
+        </div>
+        <div class="form-text">
+          @switch (tipoSancion()) {
+            @case ('advertencia') { Informativa: no bloquea al prestatario. }
+            @case ('suspensión') { No podrá pedir préstamos ni reservar hasta las 20:00 del último día. }
+            @case ('multa') { No podrá pedir préstamos ni reservar hasta que pague. }
+          }
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        @if (tipoSancion() === 'suspensión') {
+          <div class="col-sm-6 col-lg-4">
+            <label class="form-label" for="i-dias">Días de suspensión (1 a 30)</label>
+            <input class="form-control" id="i-dias" name="dias" type="number" min="1" max="30" [(ngModel)]="diasSuspension" />
+          </div>
+        }
+        @if (tipoSancion() === 'multa') {
+          <div class="col-sm-6 col-lg-4">
+            <label class="form-label" for="i-monto">Monto (S/)</label>
+            <input class="form-control" id="i-monto" name="monto" type="number" min="0.01" step="0.01" [(ngModel)]="monto" />
+          </div>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-sm">Registrar incidencia</button>
+    }
+  </form>
+</section>
+
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Incidencias ({{ incidencias().length }})</h2>
+  @if (cargando()) {
+    <div class="text-center text-body-secondary py-4">Cargando...</div>
+  } @else if (incidencias().length === 0) {
+    <div class="text-center text-body-secondary py-4">No hay incidencias registradas.</div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Prestatario</th>
+            <th>Libro</th>
+            <th>Incidencia</th>
+            <th>Sanción</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of incidencias(); track i.idIncidencia) {
+            <tr>
+              <td>{{ i.fechaIncidencia | date: 'dd/MM HH:mm' }}</td>
+              <td>{{ i.prestatario }}<div class="small text-body-secondary">{{ i.dniPrestatario }}</div></td>
+              <td>{{ i.tituloLibro }}<div class="small text-body-secondary">Préstamo #{{ i.idPrestamo }}</div></td>
+              <td>{{ i.tipoIncidencia }}
+                @if (i.descripcion) { <div class="small text-body-secondary">{{ i.descripcion }}</div> }
+              </td>
+              <td>{{ textoSancion(i) }}</td>
+              <td><span class="badge" [class]="i.estadoSancion ?? i.estadoIncidencia">{{ i.estadoSancion ?? i.estadoIncidencia }}</span></td>
+              <td>
+                @if (i.estadoSancion === 'activa') {
+                  <div class="d-flex flex-wrap gap-1">
+                    @if (i.tipoSancion === 'multa') {
+                      <button class="btn btn-primary btn-sm" (click)="registrarPago(i)">Registrar pago</button>
+                    }
+                    <button class="btn btn-outline-danger btn-sm" (click)="cancelarSancion(i)">Cancelar</button>
+                  </div>
+                } @else {
+                  <span class="text-body-secondary">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

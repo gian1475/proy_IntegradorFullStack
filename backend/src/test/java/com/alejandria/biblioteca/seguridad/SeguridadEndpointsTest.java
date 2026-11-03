@@ -1,0 +1,132 @@
+package com.alejandria.biblioteca.seguridad;
+
+import com.alejandria.biblioteca.service.SesionService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+/**
+ * Spring Security de punta a punta: la petición pasa por el filtro del token, por @RolesAllowed
+ * y por el ManejadorErrores, igual que cuando la manda el frontend.
+ */
+@DisplayName("Spring Security: 401 sin sesión, 403 sin permiso y validación de datos")
+@SpringBootTest
+@AutoConfigureMockMvc
+class SeguridadEndpointsTest {
+
+    @Autowired private MockMvc mvc;
+    @Autowired private SesionService sesionService;
+
+    private String token(String rol) {
+        return "Bearer " + sesionService.crear(1, rol).token();
+    }
+
+    @Test
+    void sinTokenUnEndpointProtegidoDa401() throws Exception {
+        mvc.perform(get("/api/prestamos/activos"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.mensaje").value("Sesión no válida o expirada. Inicie sesión nuevamente"));
+    }
+
+    @Test
+    void conUnTokenQueNoExisteDa401() throws Exception {
+        mvc.perform(get("/api/prestamos/activos").header("Authorization", "Bearer token-inventado"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unPrestatarioNoPuedeVerLosPrestamosActivosDa403() throws Exception {
+        mvc.perform(get("/api/prestamos/activos").header("Authorization", token(Rol.PRESTATARIO)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.mensaje").value("No tiene permisos para realizar esta acción"));
+    }
+
+    @Test
+    void elEncargadoSiPuedeVerLosPrestamosActivos() throws Exception {
+        mvc.perform(get("/api/prestamos/activos").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void elRolDelControllerCompletoTambienSeRespeta() throws Exception {
+        // UsuarioController tiene @RolesAllowed(ADMINISTRADOR) en la clase, no en cada método
+        mvc.perform(get("/api/usuarios/encargados").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unPrestatarioNoPuedeVerLosPrestamosDeOtro() throws Exception {
+        // el token es del usuario 1; pide los prestamos del usuario 2
+        mvc.perform(get("/api/prestamos/prestatario/2").header("Authorization", token(Rol.PRESTATARIO)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.mensaje").value("Solo puede consultar sus propios préstamos"));
+    }
+
+    @Test
+    void elCatalogoEsPublico() throws Exception {
+        mvc.perform(get("/api/categorias")).andExpect(status().isOk());
+    }
+
+    @Test
+    void elFrontendPuedeLlamarALaApiCors() throws Exception {
+        mvc.perform(options("/api/prestamos/activos")
+                        .header("Origin", "http://localhost:4200")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:4200"));
+    }
+
+    @Test
+    void otraPaginaNoPuedeLlamarALaApiCors() throws Exception {
+        mvc.perform(options("/api/prestamos/activos")
+                        .header("Origin", "http://pagina-ajena.com")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unRegistroConDniMalEscritoDa400ConElMensajeDeLaAnotacion() throws Exception {
+        String json = """
+                {"nombre":"Juan","apellido":"Pérez","dni":"123","correo":"juan@alejandria.edu.pe","contrasena":"Biblioteca#2026"}
+                """;
+        mvc.perform(post("/api/auth/registro").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El DNI debe tener 8 dígitos"));
+    }
+
+    @Test
+    void lasIncidenciasSonSoloDelEncargado() throws Exception {
+        // RF06 y CU09: actor Encargado (el admin las ve en el reporte de incidencias y sanciones)
+        mvc.perform(get("/api/incidencias").header("Authorization", token(Rol.ADMINISTRADOR)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/incidencias").header("Authorization", token(Rol.PRESTATARIO)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unaIncidenciaConUnTipoInventadoDa400() throws Exception {
+        String json = """
+                {"idPrestamo":1,"tipoIncidencia":"robo","tipoSancion":"advertencia"}
+                """;
+        mvc.perform(post("/api/incidencias").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El tipo de incidencia debe ser retraso, daño o pérdida"));
+    }
+
+    @Test
+    void unPrestamoSinDatosDa400() throws Exception {
+        mvc.perform(post("/api/prestamos").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("Debe indicar el DNI del prestatario y el libro"));
+    }
+}

@@ -1,6 +1,7 @@
 package com.alejandria.biblioteca.dao;
 
 import com.alejandria.biblioteca.entity.Libro;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,24 @@ class LibroDaoTest {
         List<Libro> todos = libroDao.buscarEnCatalogo("");
         assertTrue(todos.stream().noneMatch(l -> "baja".equals(l.getEstadoLibro())));
         assertEquals(todos.size(), todos.stream().map(Libro::getIdLibro).distinct().count()); // un libro con 2 autores sale 1 vez
+    }
+
+    // D15: antes cada libro pedia sus autores con otra consulta (N+1) y la lista tardaba unos 4 s contra Neon
+    @Test
+    void elCatalogoTraeLosAutoresEnLaMismaConsulta() {
+        List<Libro> libros = libroDao.findByEstadoLibroNotOrderByTitulo("baja");
+        assertFalse(libros.isEmpty());
+        assertTrue(libros.stream().allMatch(l -> Hibernate.isInitialized(l.getAutores())),
+                "los autores tienen que venir en la misma consulta, no uno por uno");
+        // con el JOIN, un libro con varios autores (Design Patterns tiene 4) igual sale una sola vez
+        assertEquals(libros.size(), libros.stream().map(Libro::getIdLibro).distinct().count());
+    }
+
+    @Test
+    void laBusquedaTambienTraeLosAutoresEnLaMismaConsulta() {
+        List<Libro> libros = libroDao.buscarEnCatalogo("");
+        assertFalse(libros.isEmpty());
+        assertTrue(libros.stream().allMatch(l -> Hibernate.isInitialized(l.getAutores())));
     }
 
     private List<String> titulos(List<Libro> libros) {

@@ -1,24 +1,29 @@
 <div class="panel-layout">
   <app-header></app-header>
 
-  <main class="panel-main">
-    <h1 class="panel-title">Panel del Encargado</h1>
-    <p class="panel-subtitle">Bienvenido, {{ authService.usuarioActual()?.nombre }}. Préstamos en sala (máximo 3 horas).</p>
+  <!-- bootstrap: todo lo que va dentro de .con-bootstrap usa las clases de bootstrap (ver styles/bootstrap-paneles.less) -->
+  <main class="con-bootstrap">
+    <div class="container panel-main py-4" data-bs-theme="light">
+      <h1 class="h4 fw-bold mb-1">Panel del Encargado</h1>
+      <p class="text-body-secondary mb-4">Bienvenido, {{ authService.usuarioActual()?.nombre }}. Préstamos en sala (máximo 3 horas).</p>
 
-    <nav class="panel-tabs">
-      <button [class.active]="pestana() === 'activos'" (click)="cambiarPestana('activos')">Préstamos activos</button>
-      <button [class.active]="pestana() === 'registrar'" (click)="cambiarPestana('registrar')">Registrar préstamo</button>
-      <button [class.active]="pestana() === 'reservas'" (click)="cambiarPestana('reservas')">Reservas pendientes</button>
-      <button [class.active]="pestana() === 'historial'" (click)="cambiarPestana('historial')">Historial</button>
-      <button [class.active]="pestana() === 'reportes'" (click)="cambiarPestana('reportes')">Reportes</button>
-    </nav>
+      <nav class="nav nav-tabs mb-4">
+        <button class="nav-link" [class.active]="pestana() === 'activos'" (click)="cambiarPestana('activos')">Préstamos activos</button>
+        <button class="nav-link" [class.active]="pestana() === 'registrar'" (click)="cambiarPestana('registrar')">Registrar préstamo</button>
+        <button class="nav-link" [class.active]="pestana() === 'reservas'" (click)="cambiarPestana('reservas')">Reservas pendientes</button>
+        <button class="nav-link" [class.active]="pestana() === 'incidencias'" (click)="cambiarPestana('incidencias')">Incidencias</button>
+        <button class="nav-link" [class.active]="pestana() === 'historial'" (click)="cambiarPestana('historial')">Historial</button>
+        <button class="nav-link" [class.active]="pestana() === 'reportes'" (click)="cambiarPestana('reportes')">Reportes</button>
+      </nav>
 
-    @switch (pestana()) {
-      @case ('activos') { <app-activos-tab /> }
-      @case ('registrar') { <app-registrar-tab [reserva]="reservaAEntregar()" /> }
-      @case ('reservas') { <app-reservas-tab (entregar)="entregar($event)" /> }
-      @case ('historial') { <app-historial-prestamos /> }
-      @case ('reportes') { <app-reportes-descarga /> }
-    }
+      @switch (pestana()) {
+        @case ('activos') { <app-activos-tab /> }
+        @case ('registrar') { <app-registrar-tab [reserva]="reservaAEntregar()" /> }
+        @case ('reservas') { <app-reservas-tab (entregar)="entregar($event)" /> }
+        @case ('incidencias') { <app-incidencias-tab /> }
+        @case ('historial') { <app-historial-prestamos /> }
+        @case ('reportes') { <app-reportes-descarga /> }
+      }
+    </div>
   </main>
 </div>

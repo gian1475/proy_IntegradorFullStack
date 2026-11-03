@@ -1,19 +1,8 @@
 package com.alejandria.biblioteca.dto.auth;
 
-public class LoginDTO {
-    private String correo;
-    private String contrasena;
+import jakarta.validation.constraints.NotBlank;
 
-    public LoginDTO() {}
-
-    public LoginDTO(String correo, String contrasena) {
-        this.correo = correo;
-        this.contrasena = contrasena;
-    }
-
-    public String getCorreo() { return correo; }
-    public void setCorreo(String correo) { this.correo = correo; }
-
-    public String getContrasena() { return contrasena; }
-    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
-}
+public record LoginDTO(
+        @NotBlank(message = "Datos incompletos") String correo,
+        @NotBlank(message = "Datos incompletos") String contrasena
+) {}

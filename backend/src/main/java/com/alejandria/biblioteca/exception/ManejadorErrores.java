@@ -6,7 +6,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -27,6 +32,25 @@ public class ManejadorErrores {
     @ExceptionHandler(NegocioException.class)
     public ResponseEntity<Map<String, String>> manejarNegocio(NegocioException e) {
         return responder(e.getEstado(), e.getMessage());
+    }
+
+    /** Un dato no cumple su anotación del DTO (@NotBlank, @Pattern...): se responde el mensaje de esa anotación. */
+    // bean validation: si un dato no pasa, spring lanza este error antes de entrar al controller
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> manejarDatoInvalido(MethodArgumentNotValidException e) {
+        String mensaje = e.getBindingResult().getAllErrors().getFirst().getDefaultMessage();
+        return responder(HttpStatus.BAD_REQUEST, mensaje);
+    }
+
+    /** @RolesAllowed no dejó pasar: 401 si no hay sesión válida, 403 si hay sesión pero el perfil no tiene permiso. */
+    // autorizacion (backend): spring security lanza este error y aqui se decide si es 401 o 403
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> manejarAccesoDenegado(AccessDeniedException e) {
+        Authentication usuario = SecurityContextHolder.getContext().getAuthentication();
+        if (usuario == null || usuario instanceof AnonymousAuthenticationToken) {
+            return responder(HttpStatus.UNAUTHORIZED, "Sesión no válida o expirada. Inicie sesión nuevamente");
+        }
+        return responder(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta acción");
     }
 
     /** El JSON que mandó el frontend no se puede leer (por ejemplo, una fecha mal escrita). */

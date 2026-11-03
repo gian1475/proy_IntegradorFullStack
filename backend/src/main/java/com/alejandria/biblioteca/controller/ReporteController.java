@@ -3,8 +3,8 @@ package com.alejandria.biblioteca.controller;
 import com.alejandria.biblioteca.dto.reporte.ImportacionResultadoDTO;
 import com.alejandria.biblioteca.exception.NegocioException;
 import com.alejandria.biblioteca.seguridad.Rol;
-import com.alejandria.biblioteca.seguridad.RolesPermitidos;
 import com.alejandria.biblioteca.service.ReporteService;
+import jakarta.annotation.security.RolesAllowed;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,7 +30,7 @@ public class ReporteController {
     // reportes rf08: GET /api/reportes/{tipo}/{formato}?desde=AAAA-MM-DD&hasta=AAAA-MM-DD
     // permisos admin y permisos encargado: los dos pueden descargar reportes (RF08, CU11)
     @GetMapping("/{tipo}/{formato}")
-    @RolesPermitidos({Rol.ADMINISTRADOR, Rol.ENCARGADO})
+    @RolesAllowed({Rol.ADMINISTRADOR, Rol.ENCARGADO})
     public ResponseEntity<byte[]> descargar(@PathVariable String tipo, @PathVariable String formato,
                                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
                                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
@@ -45,7 +45,7 @@ public class ReporteController {
 
     // permisos admin: importar libros desde un csv solo lo hace el admin
     @PostMapping("/libros/csv")
-    @RolesPermitidos(Rol.ADMINISTRADOR)
+    @RolesAllowed(Rol.ADMINISTRADOR)
     public ImportacionResultadoDTO importarLibros(@RequestParam("archivo") MultipartFile archivo) {
         if (archivo.isEmpty()) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, "Seleccione un archivo CSV");

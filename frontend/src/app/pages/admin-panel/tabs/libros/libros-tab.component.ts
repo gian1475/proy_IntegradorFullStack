@@ -19,6 +19,7 @@ export class LibrosTabComponent implements OnInit {
   readonly mensajeError = signal('');
 
   readonly libros = signal<LibroBackend[]>([]);
+  readonly cargando = signal(true);
   readonly categorias = signal<Categoria[]>([]);
   readonly autores = signal<Autor[]>([]);
 
@@ -37,10 +38,18 @@ export class LibrosTabComponent implements OnInit {
   }
 
   // crud libro consultar (front): llena la tabla de libros del admin
+  // mientras llega la respuesta se muestra "Cargando...", no "No hay libros registrados" (D15)
   cargarLibros(): void {
+    this.cargando.set(true);
     this.libroService.getLibros().subscribe({
-      next: data => this.libros.set(data),
-      error: err => this.mostrarError(err)
+      next: data => {
+        this.libros.set(data);
+        this.cargando.set(false);
+      },
+      error: err => {
+        this.mostrarError(err);
+        this.cargando.set(false);
+      }
     });
   }
 

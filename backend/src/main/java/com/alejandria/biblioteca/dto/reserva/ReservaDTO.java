@@ -1,21 +1,15 @@
 package com.alejandria.biblioteca.dto.reserva;
 
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDateTime;
 
-/** Datos para crear una reserva: libro, prestatario y hasta cuándo puede recogerlo. */
-public class ReservaDTO {
-    private Integer idLibro;
-    private Integer idUsuario;
-    private LocalDateTime fechaRecojoLimite;
-
-    public ReservaDTO() {}
-
-    public Integer getIdLibro() { return idLibro; }
-    public void setIdLibro(Integer idLibro) { this.idLibro = idLibro; }
-
-    public Integer getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
-
-    public LocalDateTime getFechaRecojoLimite() { return fechaRecojoLimite; }
-    public void setFechaRecojoLimite(LocalDateTime fechaRecojoLimite) { this.fechaRecojoLimite = fechaRecojoLimite; }
-}
+/**
+ * Datos para crear una reserva: libro, prestatario y hasta cuándo puede recogerlo.
+ * La fecha de recojo no lleva anotación: solo es obligatoria si hay ejemplar (sin stock va a la cola de espera).
+ */
+public record ReservaDTO(
+        @NotNull(message = "Datos incompletos para procesar la reserva") Integer idLibro,
+        @NotNull(message = "Datos incompletos para procesar la reserva") Integer idUsuario,
+        LocalDateTime fechaRecojoLimite
+) {}

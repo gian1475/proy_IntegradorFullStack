@@ -146,11 +146,7 @@ class ReservaColaEsperaTest {
     }
 
     private ReservaDTO reserva(LocalDateTime fechaRecojo) {
-        ReservaDTO dto = new ReservaDTO();
-        dto.setIdLibro(10);
-        dto.setIdUsuario(3);
-        dto.setFechaRecojoLimite(fechaRecojo);
-        return dto;
+        return new ReservaDTO(10, 3, fechaRecojo);
     }
 
     private Reserva reservaGuardada(String estado) {

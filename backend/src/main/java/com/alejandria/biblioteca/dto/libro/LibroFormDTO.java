@@ -1,38 +1,30 @@
 package com.alejandria.biblioteca.dto.libro;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.util.List;
 
 /** Datos que envía el Administrador para crear o actualizar un libro. */
-// datos del libro: estos son los campos q llena el admin en el formulario para registrar o editar
-public class LibroFormDTO {
-    private String titulo;
-    private String isbn;
-    private Integer anioPublicacion;
-    private String editorial;
-    private Integer stock;
-    private Integer idCategoria;
-    private List<Integer> idsAutores;
+// datos del libro: estos son los campos q llena el admin en el formulario para registrar o editar.
+// validaciones del libro: q no falte ningun dato obligatorio, stock >= 0 y año entre 1000 y 2100
+public record LibroFormDTO(
+        @NotBlank(message = "Complete todos los campos obligatorios del libro") String titulo,
+        @NotBlank(message = "Complete todos los campos obligatorios del libro") String isbn,
 
-    public LibroFormDTO() {}
+        @NotNull(message = "Complete todos los campos obligatorios del libro")
+        @Min(value = 1000, message = "El año de publicación no es válido")
+        @Max(value = 2100, message = "El año de publicación no es válido")
+        Integer anioPublicacion,
 
-    public String getTitulo() { return titulo; }
-    public void setTitulo(String titulo) { this.titulo = titulo; }
+        @NotBlank(message = "Complete todos los campos obligatorios del libro") String editorial,
 
-    public String getIsbn() { return isbn; }
-    public void setIsbn(String isbn) { this.isbn = isbn; }
+        @NotNull(message = "Complete todos los campos obligatorios del libro")
+        @Min(value = 0, message = "El stock no puede ser negativo")
+        Integer stock,
 
-    public Integer getAnioPublicacion() { return anioPublicacion; }
-    public void setAnioPublicacion(Integer anioPublicacion) { this.anioPublicacion = anioPublicacion; }
-
-    public String getEditorial() { return editorial; }
-    public void setEditorial(String editorial) { this.editorial = editorial; }
-
-    public Integer getStock() { return stock; }
-    public void setStock(Integer stock) { this.stock = stock; }
-
-    public Integer getIdCategoria() { return idCategoria; }
-    public void setIdCategoria(Integer idCategoria) { this.idCategoria = idCategoria; }
-
-    public List<Integer> getIdsAutores() { return idsAutores; }
-    public void setIdsAutores(List<Integer> idsAutores) { this.idsAutores = idsAutores; }
-}
+        @NotNull(message = "Complete todos los campos obligatorios del libro") Integer idCategoria,
+        List<Integer> idsAutores
+) {}

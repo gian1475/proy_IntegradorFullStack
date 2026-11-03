@@ -7,10 +7,10 @@ Controla los préstamos de libros **en sala** (máximo 3 horas), las devolucione
 
 | Capa | Tecnología |
 |---|---|
-| Backend | Java 21, Spring Boot 4.1.1, Spring Data JPA, Maven |
+| Backend | Java 21, Spring Boot 4.1.2, Spring Data JPA, Bean Validation, Lombok, Maven |
 | Base de datos | PostgreSQL en Neon (nube) |
-| Frontend | Angular 22 (componentes standalone y signals), LESS; Bootstrap 5.3 solo en el dashboard |
-| Seguridad | BCrypt (`spring-security-crypto`) para las contraseñas, token de sesión propio |
+| Frontend | Angular 22 (componentes standalone y signals), LESS; Bootstrap 5.3 en los paneles del administrador y del encargado |
+| Seguridad | Spring Security (filtro del token, `@RolesAllowed` por endpoint, CORS) y BCrypt para las contraseñas; el token de sesión es propio (`SesionService`) |
 
 ## Estructura
 
@@ -79,10 +79,10 @@ Flujo de una petición: **controller → service → dao → base de datos**.
 | Perfil | Pantalla | Puede |
 |---|---|---|
 | Administrador | `/admin` | Dashboard con los indicadores de gestión, gestionar libros (CRUD), ver préstamos activos y el historial, eliminar reservas canceladas o vencidas, registrar encargados, descargar reportes, ver el monitoreo. Por la API (sin botón en su panel) también puede anular préstamos |
-| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas y ver la cola de espera, ver el historial, descargar reportes. Por la API (sin botón en su panel) también puede registrar y cancelar reservas a nombre de un prestatario (ventanilla) |
+| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas y ver la cola de espera, ver el historial, registrar incidencias con su sanción (advertencia, suspensión o multa) y registrar el pago de las multas (RF06), descargar reportes. Por la API (sin botón en su panel) también puede registrar y cancelar reservas a nombre de un prestatario (ventanilla) |
 | Prestatario | `/catalogo` | Ver el catálogo (stock y estado de cada libro), reservar, entrar a la cola de espera si no hay stock, cancelar sus reservas, ver y filtrar sus préstamos |
 
-El backend valida el rol en cada endpoint (`@RolesPermitidos`): sin sesión responde **401** y con un rol no permitido responde **403**.
+El backend valida el rol en cada endpoint con Spring Security (`@RolesAllowed`): sin sesión responde **401** y con un rol no permitido responde **403**.
 
 ## Cómo levantar el proyecto
 
@@ -115,7 +115,7 @@ Todas usan la misma **contraseña de prueba**, que maneja el equipo: no está en
 
 `datos_demo.sql` carga 21 libros reales, 28 préstamos (devueltos, ampliados, uno dañado, uno con retraso, anulados y 2 vencidos de hoy), 11 reservas (2 en la cola de espera de *Cien Años de Soledad*) y 2 sanciones. Las fechas se calculan desde el día en que se ejecuta, así que el dashboard y los reportes del mes tienen datos. Casos para mostrar en vivo:
 
-- **Sanción activa:** a Valeria (`valeria.flores@…`) no se le puede prestar ni reservar.
+- **Sanción activa:** a Valeria (`valeria.flores@…`) no se le puede prestar ni reservar mientras dure su suspensión (4 días desde que se cargan los datos). Cuando termina, el sistema la cierra solo y Valeria vuelve a `activo`. Para mostrar RF06 en vivo: pestaña **Incidencias** del encargado → registrar una suspensión o una multa y después intentar prestarle.
 - **Devolución con retraso:** los 2 préstamos vencidos de hoy.
 - **Cola de espera:** si se cancela la reserva pendiente de *Cien Años de Soledad*, el ejemplar pasa a Camila, la primera de la cola.
 - **Mantenimiento:** *Cosmos* volvió dañado y era su único ejemplar.
@@ -137,9 +137,9 @@ cd backend
 ./mvnw test
 ```
 
-160 pruebas del backend: zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos del usuario, perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo, cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
+205 pruebas del backend: incidencias y sanciones (RF06: las 3 sanciones, qué incidencia corresponde a cada préstamo, pago, cancelación y fin de la suspensión, también contra la BD), zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos con anotaciones (Bean Validation), seguridad de los endpoints (401, 403 y CORS con Spring Security), perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo (con los autores en la misma consulta), cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
 
-Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña), 16 pruebas:
+Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña, "Cargando..." en la pestaña Libros, incidencias que corresponden a cada préstamo), 24 pruebas:
 
 ```
 cd frontend
@@ -163,6 +163,7 @@ npx ng test --watch=false
 | Reportes | `GET /api/reportes/{tipo}/{formato}?desde=&hasta=` (tipo: `prestamos`, `devoluciones`, `reservas`, `incidencias`, `bajas`, `stock`, `indicadores`, `tiempos`; formato: `excel`, `pdf`, `csv`) | Administrador y Encargado |
 | Importar libros | `POST /api/reportes/libros/csv` | Administrador |
 | Encargados | `GET /api/usuarios/encargados`, `POST /api/usuarios/encargados` | Administrador |
+| Incidencias (RF06) | `GET /api/incidencias`, `POST /api/incidencias` (incidencia + sanción), `PUT /sanciones/{id}/pago`, `PUT /sanciones/{id}/cancelar` | Encargado |
 | Monitoreo | `GET /api/monitoreo` | Administrador |
 | Dashboard | `GET /api/dashboard` | Administrador |
 
@@ -173,16 +174,20 @@ Las eliminaciones de libros y préstamos son **lógicas**: el registro no se bor
 | Librería | Uso |
 |---|---|
 | PostgreSQL JDBC + Spring Data JPA | Conexión y consultas a la base de datos |
-| Spring Security Crypto (BCrypt) | Guardar las contraseñas cifradas |
+| Spring Security | Filtro del token, permisos por perfil (`@RolesAllowed`), CORS y BCrypt para guardar las contraseñas cifradas |
+| Bean Validation (Hibernate Validator) | Reglas de los datos con anotaciones en los DTOs (`@NotBlank`, `@Pattern`, `@Size`...) |
+| Lombok | Genera los getters, setters y el constructor vacío de las entidades al compilar |
 | Google Guava | Bloquear el login 15 minutos después de 3 intentos fallidos |
 | Apache POI | Los reportes en Excel |
 | Apache Commons CSV | Exportar los reportes e importar libros en CSV |
 | OpenPDF | Los reportes en PDF |
 | Logback | Registro de logins y préstamos en `backend/logs/biblioteca.log` |
 | Spring Boot Actuator | Monitoreo: estado de la aplicación y de la BD, memoria, CPU, peticiones |
-| Bootstrap 5.3 | Diseño del dashboard del administrador (encerrado en `.dashboard-bootstrap` para no cambiar las otras pantallas) |
+| Bootstrap 5.3 | Diseño de los paneles del administrador y del encargado: tarjetas, tablas, formularios, botones, pestañas y el modal (encerrado en `.con-bootstrap` para no cambiar las otras pantallas) |
 | JUnit 5 + Mockito | Pruebas del backend |
 | Vitest | Pruebas del frontend |
+
+El detalle de cada librería (qué hace, dónde se usa y qué código reemplazó) está en [docs/LIBRERIAS.md](docs/LIBRERIAS.md).
 
 ## Monitoreo
 

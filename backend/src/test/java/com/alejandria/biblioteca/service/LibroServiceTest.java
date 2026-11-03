@@ -205,14 +205,7 @@ class LibroServiceTest {
     }
 
     private LibroFormDTO formulario(int stock) {
-        LibroFormDTO form = new LibroFormDTO();
-        form.setTitulo("Clean Code");
-        form.setIsbn("9780132350884");
-        form.setEditorial("Prentice Hall");
-        form.setAnioPublicacion(2008);
-        form.setStock(stock);
-        form.setIdCategoria(4);
-        return form;
+        return new LibroFormDTO("Clean Code", "9780132350884", 2008, "Prentice Hall", stock, 4, null);
     }
 
     private Libro libro(String estado) {

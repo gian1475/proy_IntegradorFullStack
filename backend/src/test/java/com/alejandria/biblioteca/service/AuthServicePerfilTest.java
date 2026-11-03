@@ -45,7 +45,7 @@ class AuthServicePerfilTest {
         when(usuarioDao.contarPerfiles(5)).thenReturn(1L);
         when(usuarioDao.esEncargado(5)).thenReturn(true);
 
-        assertEquals("ENCARGADO", servicio.login(login()).getUsuario().getRol());
+        assertEquals("ENCARGADO", servicio.login(login()).usuario().rol());
     }
 
     @Test
@@ -64,9 +64,6 @@ class AuthServicePerfilTest {
     }
 
     private LoginDTO login() {
-        LoginDTO dto = new LoginDTO();
-        dto.setCorreo("carlos@alejandria.edu.pe");
-        dto.setContrasena(CONTRASENA);
-        return dto;
+        return new LoginDTO("carlos@alejandria.edu.pe", CONTRASENA);
     }
 }

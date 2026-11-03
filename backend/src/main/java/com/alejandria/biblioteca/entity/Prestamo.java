@@ -1,10 +1,18 @@
 package com.alejandria.biblioteca.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "prestamo")
+// lombok: @Getter y @Setter crean al compilar el get y el set de cada campo; @NoArgsConstructor, el constructor vacio q pide JPA
+@Getter
+@Setter
+@NoArgsConstructor
 public class Prestamo {
 
     @Id
@@ -41,36 +49,4 @@ public class Prestamo {
 
     @Column(name = "estado_prestamo", nullable = false, length = 20)
     private String estadoPrestamo = "activo";
-
-    public Prestamo() {}
-
-    public Integer getIdPrestamo() { return idPrestamo; }
-    public void setIdPrestamo(Integer idPrestamo) { this.idPrestamo = idPrestamo; }
-
-    public Usuario getPrestatario() { return prestatario; }
-    public void setPrestatario(Usuario prestatario) { this.prestatario = prestatario; }
-
-    public Usuario getEncargado() { return encargado; }
-    public void setEncargado(Usuario encargado) { this.encargado = encargado; }
-
-    public Libro getLibro() { return libro; }
-    public void setLibro(Libro libro) { this.libro = libro; }
-
-    public LocalDateTime getFechaPrestamo() { return fechaPrestamo; }
-    public void setFechaPrestamo(LocalDateTime fechaPrestamo) { this.fechaPrestamo = fechaPrestamo; }
-
-    public LocalDateTime getFechaDevolucionPrevista() { return fechaDevolucionPrevista; }
-    public void setFechaDevolucionPrevista(LocalDateTime fechaDevolucionPrevista) { this.fechaDevolucionPrevista = fechaDevolucionPrevista; }
-
-    public LocalDateTime getFechaDevolucionReal() { return fechaDevolucionReal; }
-    public void setFechaDevolucionReal(LocalDateTime fechaDevolucionReal) { this.fechaDevolucionReal = fechaDevolucionReal; }
-
-    public Boolean getAmpliado() { return ampliado; }
-    public void setAmpliado(Boolean ampliado) { this.ampliado = ampliado; }
-
-    public String getEstadoFisicoDevolucion() { return estadoFisicoDevolucion; }
-    public void setEstadoFisicoDevolucion(String estadoFisicoDevolucion) { this.estadoFisicoDevolucion = estadoFisicoDevolucion; }
-
-    public String getEstadoPrestamo() { return estadoPrestamo; }
-    public void setEstadoPrestamo(String estadoPrestamo) { this.estadoPrestamo = estadoPrestamo; }
 }

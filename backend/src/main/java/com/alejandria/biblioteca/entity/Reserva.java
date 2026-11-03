@@ -1,10 +1,18 @@
 package com.alejandria.biblioteca.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reserva")
+// lombok: @Getter y @Setter crean al compilar el get y el set de cada campo; @NoArgsConstructor, el constructor vacio q pide JPA
+@Getter
+@Setter
+@NoArgsConstructor
 public class Reserva {
 
     @Id
@@ -32,8 +40,6 @@ public class Reserva {
     @Column(name = "estado_reserva", nullable = false, length = 20)
     private String estadoReserva = "pendiente";
 
-    public Reserva() {}
-
     public Reserva(Usuario prestatario, Libro libro, LocalDateTime fechaReserva, LocalDateTime fechaRecojoLimite, String estadoReserva) {
         this.prestatario = prestatario;
         this.libro = libro;
@@ -41,25 +47,4 @@ public class Reserva {
         this.fechaRecojoLimite = fechaRecojoLimite;
         this.estadoReserva = estadoReserva;
     }
-
-    public Integer getIdReserva() { return idReserva; }
-    public void setIdReserva(Integer idReserva) { this.idReserva = idReserva; }
-
-    public Usuario getPrestatario() { return prestatario; }
-    public void setPrestatario(Usuario prestatario) { this.prestatario = prestatario; }
-
-    public Libro getLibro() { return libro; }
-    public void setLibro(Libro libro) { this.libro = libro; }
-
-    public LocalDateTime getFechaReserva() { return fechaReserva; }
-    public void setFechaReserva(LocalDateTime fechaReserva) { this.fechaReserva = fechaReserva; }
-
-    public Integer getPosicionCola() { return posicionCola; }
-    public void setPosicionCola(Integer posicionCola) { this.posicionCola = posicionCola; }
-
-    public LocalDateTime getFechaRecojoLimite() { return fechaRecojoLimite; }
-    public void setFechaRecojoLimite(LocalDateTime fechaRecojoLimite) { this.fechaRecojoLimite = fechaRecojoLimite; }
-
-    public String getEstadoReserva() { return estadoReserva; }
-    public void setEstadoReserva(String estadoReserva) { this.estadoReserva = estadoReserva; }
 }

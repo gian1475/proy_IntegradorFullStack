@@ -5,6 +5,7 @@ import com.alejandria.biblioteca.dto.auth.LoginRespuestaDTO;
 import com.alejandria.biblioteca.dto.auth.RegistroDTO;
 import com.alejandria.biblioteca.service.AuthService;
 import com.alejandria.biblioteca.service.SesionService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,12 +23,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginRespuestaDTO> login(@RequestBody LoginDTO loginDTO) {
+    public ResponseEntity<LoginRespuestaDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
         return ResponseEntity.ok(authService.login(loginDTO));
     }
 
     @PostMapping("/registro")
-    public ResponseEntity<LoginRespuestaDTO> registro(@RequestBody RegistroDTO registroDTO) {
+    public ResponseEntity<LoginRespuestaDTO> registro(@Valid @RequestBody RegistroDTO registroDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registro(registroDTO));
     }
 

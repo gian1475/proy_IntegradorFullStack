@@ -1,0 +1,43 @@
+// Bootstrap para los paneles del administrador y del encargado: todas sus reglas quedan dentro de .con-bootstrap,
+// asi no cambia el diseño de las demas pantallas (inicio, login, registro y catalogo, que estan hechas con LESS).
+// Dentro va un elemento con data-bs-theme="light" para que se definan las variables de Bootstrap.
+.con-bootstrap {
+  @import (less) "../../node_modules/bootstrap/dist/css/bootstrap.css";
+}
+
+// Colores del sistema (marrón) en vez del azul de Bootstrap, solo dentro de los paneles
+.con-bootstrap [data-bs-theme=light] {
+  --bs-primary: #854d0e;
+  --bs-primary-rgb: 133, 77, 14;
+  --bs-link-color-rgb: 133, 77, 14;
+  --bs-link-hover-color-rgb: 113, 63, 18;
+  font-family: inherit;
+
+  // los botones de bootstrap traen su color fijo: aqui se cambia el azul por el marrón
+  .btn-primary {
+    --bs-btn-bg: #854d0e;
+    --bs-btn-border-color: #854d0e;
+    --bs-btn-hover-bg: #713f12;
+    --bs-btn-hover-border-color: #713f12;
+    --bs-btn-active-bg: #713f12;
+    --bs-btn-active-border-color: #713f12;
+    --bs-btn-disabled-bg: #854d0e;
+    --bs-btn-disabled-border-color: #854d0e;
+  }
+
+  .form-control:focus,
+  .form-select:focus,
+  .form-check-input:focus {
+    border-color: #854d0e;
+    box-shadow: 0 0 0 0.2rem rgba(133, 77, 14, 0.2);
+  }
+
+  .form-check-input:checked {
+    background-color: #854d0e;
+    border-color: #854d0e;
+  }
+
+  .progress {
+    --bs-progress-bar-bg: #854d0e;
+  }
+}

@@ -1,34 +1,35 @@
 package com.alejandria.biblioteca.dto.auth;
 
-public class RegistroDTO {
-    private String nombre;
-    private String apellido;
-    private String dni;
-    private String correo;
-    private String contrasena;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
-    public RegistroDTO() {}
+/**
+ * Datos del registro de un prestatario. Los límites son los mismos de la tabla usuario,
+ * para que la BD nunca rechace el dato. La contraseña se revisa en ValidadorContrasena.
+ */
+// validar datos: cada anotacion es una regla. si un dato no la cumple, el backend responde 400 con ese mensaje
+public record RegistroDTO(
+        @NotBlank(message = "El nombre debe tener entre 1 y 50 caracteres")
+        @Size(max = 50, message = "El nombre debe tener entre 1 y 50 caracteres")
+        String nombre,
 
-    public RegistroDTO(String nombre, String apellido, String dni, String correo, String contrasena) {
-        this.nombre = nombre;
-        this.apellido = apellido;
-        this.dni = dni;
-        this.correo = correo;
-        this.contrasena = contrasena;
-    }
+        @NotBlank(message = "El apellido debe tener entre 1 y 50 caracteres")
+        @Size(max = 50, message = "El apellido debe tener entre 1 y 50 caracteres")
+        String apellido,
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+        // dni de exactamente 8 numeros (la columna dni es VARCHAR(8))
+        @NotNull(message = "El DNI debe tener 8 dígitos")
+        @Pattern(regexp = "\\d{8}", message = "El DNI debe tener 8 dígitos")
+        String dni,
 
-    public String getApellido() { return apellido; }
-    public void setApellido(String apellido) { this.apellido = apellido; }
+        // algo@algo.algo, sin espacios
+        @NotNull(message = "El correo no es válido")
+        @Pattern(regexp = "[^@\\s]+@[^@\\s]+\\.[^@\\s]+", message = "El correo no es válido")
+        @Size(max = 100, message = "El correo no puede tener más de 100 caracteres")
+        String correo,
 
-    public String getDni() { return dni; }
-    public void setDni(String dni) { this.dni = dni; }
-
-    public String getCorreo() { return correo; }
-    public void setCorreo(String correo) { this.correo = correo; }
-
-    public String getContrasena() { return contrasena; }
-    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
-}
+        @NotNull(message = "Ingrese la contraseña")
+        String contrasena
+) {}

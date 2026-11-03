@@ -63,4 +63,9 @@ public interface UsuarioDao extends JpaRepository<Usuario, Integer> {
     @Modifying
     @Query(value = "INSERT INTO prestatario (id_usuario, tiempos_suspendido) VALUES (:idUsuario, 0) ON CONFLICT DO NOTHING", nativeQuery = true)
     void registrarComoPrestatario(@Param("idUsuario") Integer idUsuario);
+
+    /** RF06: cada suspensión suma 1 a prestatario.tiempos_suspendido (cuántas veces lo suspendieron). */
+    @Modifying
+    @Query(value = "UPDATE prestatario SET tiempos_suspendido = tiempos_suspendido + 1 WHERE id_usuario = :idUsuario", nativeQuery = true)
+    void sumarSuspension(@Param("idUsuario") Integer idUsuario);
 }

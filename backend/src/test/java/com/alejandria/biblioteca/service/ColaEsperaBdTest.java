@@ -65,12 +65,8 @@ class ColaEsperaBdTest {
     }
 
     private ReservaDTO reserva(Integer idUsuario, Integer idLibro, boolean conFecha) {
-        ReservaDTO dto = new ReservaDTO();
-        dto.setIdUsuario(idUsuario);
-        dto.setIdLibro(idLibro);
         // mañana al final de la franja de la mañana: siempre es futuro y dentro del horario
-        dto.setFechaRecojoLimite(conFecha ? LocalDate.now().plusDays(1).atTime(LocalTime.of(11, 30)) : null);
-        return dto;
+        return new ReservaDTO(idLibro, idUsuario, conFecha ? LocalDate.now().plusDays(1).atTime(LocalTime.of(11, 30)) : null);
     }
 
     private Integer prestatario(String dni) {

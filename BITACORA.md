@@ -29,7 +29,7 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 
 | Fecha | Decisión | Motivo |
 |---|---|---|
-| 21/10 | Autenticación con **token propio** (UUID en memoria); el logout lo invalida en el backend. **Cambió el 21/10:** ya no dura 8 h fijas, se cierra tras **15 min sin actividad** (RNF04) | No agrega librerías (sin Spring Security ni JWT) y el equipo lo puede explicar completo |
+| 21/10 | Autenticación con **token propio** (UUID en memoria); el logout lo invalida en el backend. **Cambió el 21/10:** ya no dura 8 h fijas, se cierra tras **15 min sin actividad** (RNF04). **Cambió el 02/11:** el token sigue siendo propio, pero los permisos ahora los aplica **Spring Security** (ver "Limpieza de librerías") | No agrega librerías (sin Spring Security ni JWT) y el equipo lo puede explicar completo |
 | 21/10 | La regla de contraseña se exige al **registrarse**, no al iniciar sesión | Para no bloquear usuarios que ya existían |
 | 21/10 | Contraseña con máximo **64** caracteres | BCrypt solo procesa hasta 72 bytes; con más, falla |
 | 21/10 | Tabla `prestamo`: se mantienen los nombres del **script** (`fecha_prestamo`, `fecha_devolucion_prevista`, `fecha_devolucion_real`) | Decisión del equipo |
@@ -58,6 +58,14 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 27/10 | Al iniciar sesión, el usuario tiene que estar en **un solo** perfil; si no, 403. Antes, sin perfil entraba como prestatario | "Perfil único", pendiente del informe (3.5) |
 | 27/10 | La contraseña además no puede pasar de **72 bytes** | BCrypt solo usa 72 bytes; 64 caracteres con tildes o ñ podían pasarse |
 | 27/10 | Un libro nuevo entra con **al menos 1 ejemplar** y siempre `disponible`. Al editar, el stock no se puede bajar a 0 a mano | RF03: sin ejemplares, el estado depende del movimiento que se llevó el último (préstamo, reserva o daño). Antes, un libro registrado con stock 0 quedaba `prestado` sin ningún préstamo. No se agregó un estado "agotado" porque la BD y el RF03 solo tienen 4 estados |
+| 02/11 | Se cambió código propio por librerías: **Spring Security** (permisos), **Bean Validation** (reglas de los datos), **Lombok** (entidades), **`record`** (DTOs) y **Bootstrap** en los paneles completos | Lo pidió el equipo: menos código y lo estándar. El sistema hace lo mismo (mismos mensajes, mismos 401/403/400). Detalle en [docs/LIBRERIAS.md](docs/LIBRERIAS.md) |
+| 02/11 | La regla de la contraseña sigue en `ValidadorContrasena` (no pasó a una anotación) | También mide los 72 bytes de BCrypt y es lo que el profe pidió ver ("regla contra") |
+| 02/11 | El turno del encargado se sigue validando en `UsuarioService` | Allí también se pasa a minúsculas ("Mañana" → "mañana") |
+| 02/11 | RF06: la **pérdida** se registra sobre un préstamo en curso y lo cierra como **devolución dañada** (el ejemplar no vuelve al stock; si era el último, el libro pasa a `mantenimiento`) | Decisión del equipo. No cambia la BD: el préstamo no tiene un estado "perdido" |
+| 02/11 | RF06: la **suspensión** dura los días que elige el encargado (1 a 30) y termina a las 20:00 del último día | Decisión del equipo |
+| 02/11 | RF06: solo el **encargado** registra incidencias y sanciones; el admin las ve en el reporte | Lo dice el informe (RF06 y CU09: actor Encargado) |
+| 02/11 | RF06: la **advertencia** no bloquea (se registra ya `cumplida`); `tieneSancionActiva` solo cuenta suspensiones y multas | Ficha RF06: "La advertencia es informativa; suspensión y multa pendiente bloquean préstamos y reservas". Antes cualquier sanción activa bloqueaba |
+| 02/11 | RF06: cada incidencia lleva su sanción (en la BD puede no tenerla, pero la pantalla siempre la pide) y no se repite el mismo tipo de incidencia en un préstamo | CU09 "Registrar incidencia **y** sanción" |
 
 ---
 
@@ -82,9 +90,9 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 |---|---|
 | [seguridad/ValidadorContrasena.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/ValidadorContrasena.java) | Regex: 8–64 caracteres, una minúscula, una mayúscula, un número y un símbolo especial |
 | [service/SesionService.java](backend/src/main/java/com/alejandria/biblioteca/service/SesionService.java) | Crea el token (UUID), lo guarda en memoria con usuario, rol y vencimiento; cada petición renueva los 15 min; lo valida y lo invalida (logout) |
-| [seguridad/RolesPermitidos.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/RolesPermitidos.java) | Anotación para marcar qué roles pueden usar un endpoint. Sin anotación, el endpoint es público |
-| [seguridad/AutorizacionInterceptor.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/AutorizacionInterceptor.java) | Se ejecuta antes de cada endpoint: sin token o con token vencido responde **401**; con un rol no permitido responde **403** |
-| [seguridad/WebConfig.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/WebConfig.java) | Registra el interceptor para `/api/**` |
+| ~~seguridad/RolesPermitidos.java~~ (02/11: reemplazado por `@RolesAllowed` de Spring Security) | Anotación para marcar qué roles pueden usar un endpoint. Sin anotación, el endpoint es público |
+| ~~seguridad/AutorizacionInterceptor.java~~ (02/11: reemplazado por `FiltroToken` + Spring Security) | Se ejecuta antes de cada endpoint: sin token o con token vencido responde **401**; con un rol no permitido responde **403** |
+| ~~seguridad/WebConfig.java~~ (02/11: reemplazado por `SeguridadConfig`) | Registra el interceptor para `/api/**` |
 | [seguridad/Rol.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/Rol.java), [Sesion.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/Sesion.java) | Constantes de roles y datos de una sesión |
 | [service/AuthService.java](backend/src/main/java/com/alejandria/biblioteca/service/AuthService.java) | Lógica de login, registro y logout (antes estaba en el controller). Detecta el rol buscando al usuario en `administrador` → `encargado` → si no, `PRESTATARIO`. Rechaza a los usuarios `inactivo` |
 | [controller/AuthController.java](backend/src/main/java/com/alejandria/biblioteca/controller/AuthController.java) | Solo recibe y responde. Nuevo endpoint `POST /api/auth/logout` |
@@ -485,7 +493,7 @@ Es la **primera pestaña** del panel del admin. Patrón Dashboard del informe (2
 | Barras | Libros por estado, préstamos del mes por categoría, préstamos de los últimos 7 días |
 
 - Backend: [DashboardService](backend/src/main/java/com/alejandria/biblioteca/service/DashboardService.java) + [IndicadoresGestion](backend/src/main/java/com/alejandria/biblioteca/service/IndicadoresGestion.java) (las fórmulas) + `GET /api/dashboard` (solo admin). Las fechas del mes las manda Java (hora de Lima).
-- **Bootstrap 5.3.8** (versión fija en `package.json`). Está **encerrado** en [styles/bootstrap-dashboard.less](frontend/src/styles/bootstrap-dashboard.less): todas sus reglas quedan dentro de `.dashboard-bootstrap`, así que **no cambia el diseño de las otras pantallas**, que siguen hechas con LESS. Usa el marrón del sistema en vez del azul de Bootstrap. Se adapta al celular.
+- **Bootstrap 5.3.8** (versión fija en `package.json`). Está **encerrado** en `styles/bootstrap-dashboard.less` (**02/11:** ahora es [styles/bootstrap-paneles.less](frontend/src/styles/bootstrap-paneles.less), con la clase `.con-bootstrap`, y cubre los dos paneles completos): todas sus reglas quedan dentro de `.dashboard-bootstrap`, así que **no cambia el diseño de las otras pantallas**, que siguen hechas con LESS. Usa el marrón del sistema en vez del azul de Bootstrap. Se adapta al celular.
 - Avisos conocidos del build:
   - `"@charset" must be the first rule`: la regla de Bootstrap queda dentro del bloque y el navegador la ignora. Es inofensivo.
   - Se subió el límite de aviso del tamaño inicial de 500 kB a 800 kB en `angular.json`. Comprimido, Bootstrap suma unos 25 kB.
@@ -794,6 +802,151 @@ Se documentaron en el README (perfiles y endpoints) y quedaron como pendiente de
 
 ---
 
+## Limpieza de librerías (02/11) ✅
+
+El equipo preguntó si había código hecho a mano que una librería ya resuelve. Había cinco casos y se cambiaron todos. **El sistema hace lo mismo**: mismos mensajes, mismos códigos (401, 403, 400) y mismas pantallas; solo cambia el diseño de los paneles. La explicación de cada librería para el informe y la sustentación está en [docs/LIBRERIAS.md](docs/LIBRERIAS.md).
+
+### 1. Bean Validation: las reglas de los datos como anotaciones
+| Archivo | Qué cambió |
+|---|---|
+| [pom.xml](backend/pom.xml) | `spring-boot-starter-validation` (Hibernate Validator 9.1.3) |
+| DTOs: [RegistroDTO](backend/src/main/java/com/alejandria/biblioteca/dto/auth/RegistroDTO.java), [RegistroEncargadoDTO](backend/src/main/java/com/alejandria/biblioteca/dto/usuario/RegistroEncargadoDTO.java), [LoginDTO](backend/src/main/java/com/alejandria/biblioteca/dto/auth/LoginDTO.java), [LibroFormDTO](backend/src/main/java/com/alejandria/biblioteca/dto/libro/LibroFormDTO.java), [RegistroPrestamoDTO](backend/src/main/java/com/alejandria/biblioteca/dto/prestamo/RegistroPrestamoDTO.java), [DevolucionDTO](backend/src/main/java/com/alejandria/biblioteca/dto/prestamo/DevolucionDTO.java), [ReservaDTO](backend/src/main/java/com/alejandria/biblioteca/dto/reserva/ReservaDTO.java) | `@NotBlank`, `@NotNull`, `@Size`, `@Pattern`, `@Min`, `@Max`, con los **mismos mensajes** que antes |
+| Controllers (Auth, Libro, Prestamo, Reserva, Usuario) | `@Valid` delante de cada `@RequestBody` |
+| [ManejadorErrores](backend/src/main/java/com/alejandria/biblioteca/exception/ManejadorErrores.java) | `MethodArgumentNotValidException` → **400** con el mensaje de la anotación |
+| `ValidadorUsuario.java` | **Borrado** (sus reglas están ahora en los DTOs) |
+| AuthService, UsuarioService, LibroService, PrestamoService, ReservaService | Se quitaron los `if (x == null) throw ...` y el método `LibroService.validar` |
+| [ReporteService](backend/src/main/java/com/alejandria/biblioteca/service/ReporteService.java) | La importación CSV no pasa por un controller: revisa cada fila con el mismo `Validator` |
+
+Se quedaron en los services las reglas que necesitan la BD o la hora (ISBN repetido, stock 0 al editar, fecha de recojo, sanciones), el turno y la regla de la contraseña.
+
+### 2. `record` en los DTOs y Lombok en las entidades
+- 11 DTOs con getters y setters escritos a mano pasaron a **`record`** (de Java, no es librería): de 325 a 201 líneas. El JSON es el mismo, así que el frontend no cambió. En `PrestamoDao`, el JOIN de préstamos activos ahora junta nombre y apellido con `CONCAT` (el `record` recibe el nombre completo).
+- Las 6 entidades usan **Lombok** (`@Getter @Setter @NoArgsConstructor`): de 373 a 286 líneas. Lombok 1.18.46 trabaja al compilar; en el `pom.xml` está como procesador de anotaciones y **no entra en el `.jar`** (se comprobó: 0 archivos de Lombok dentro). Con Java 26 muestra un aviso de `sun.misc.Unsafe` al compilar: es de Lombok y no afecta.
+
+### 3. Spring Security en lugar del interceptor
+| Archivo | Qué cambió |
+|---|---|
+| [pom.xml](backend/pom.xml) | `spring-boot-starter-security` (Spring Security 7.1.1) en lugar de `spring-security-crypto` (BCrypt sigue igual: viene dentro) |
+| [SeguridadConfig.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/SeguridadConfig.java) (nuevo) | Activa `@RolesAllowed`, pone el filtro del token, CORS solo para `localhost:4200`, sin CSRF, sin sesión de Spring y sin su pantalla de login |
+| [FiltroToken.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/FiltroToken.java) (nuevo) | Lee el `Bearer`, pregunta a `SesionService` (el token sigue siendo nuestro) y le dice a Spring Security el usuario y su perfil (`ROLE_...`) |
+| Controllers | `@RolesPermitidos` → `@RolesAllowed`; `@RequestAttribute(...) Sesion` → `@AuthenticationPrincipal Sesion` |
+| [ManejadorErrores](backend/src/main/java/com/alejandria/biblioteca/exception/ManejadorErrores.java) | `AccessDeniedException` → **401** sin sesión o **403** sin permiso, con los mismos mensajes de antes |
+| [application.properties](backend/src/main/resources/application.properties) | Se apaga el usuario de prueba que crea Spring (`UserDetailsServiceAutoConfiguration`): los usuarios están en la BD |
+| `AutorizacionInterceptor`, `RolesPermitidos`, `WebConfig` | **Borrados** |
+
+Una diferencia pequeña: antes la sesión se renovaba solo al llamar a un endpoint protegido; ahora también al llamar a uno público (el catálogo) con el token. Es más fiel a "15 minutos **sin actividad**".
+
+### 4. Bootstrap en los paneles completos
+- Antes Bootstrap solo se usaba en el dashboard. Ahora **todas las pestañas** del admin y del encargado (y los componentes `historial-prestamos` y `reportes-descarga`) usan sus clases: `card`, `nav-tabs`, `form-control`, `form-select`, `btn-primary`, `table`, `alert`, `modal`. El modal de devolución es el de Bootstrap (lo abre Angular con `d-block`, sin el JavaScript de Bootstrap).
+- [styles/bootstrap-paneles.less](frontend/src/styles/bootstrap-paneles.less) (antes `bootstrap-dashboard.less`): todo Bootstrap queda dentro de `.con-bootstrap` y cambia el azul por el marrón del sistema. **El inicio, el login, el registro y el catálogo no cambian** (se comprobó con una captura del inicio).
+- [styles/panel.less](frontend/src/styles/panel.less): de 337 a 51 líneas. Quedan el fondo de la página, el fondo del modal y los colores de cada estado (`activo`, `vencido`, `en_espera`...), que Bootstrap no conoce.
+
+### 5. El JSON del 401/403 armado a mano
+`AutorizacionInterceptor` escribía `"{\"mensaje\":\"" + mensaje + "\"}"`. Se fue con el interceptor: ahora lo responde el `ManejadorErrores` como todos los errores.
+
+### Pruebas: de 160 a 179 en el backend, todas pasan contra Neon
+- **Primero la prueba:** [SeguridadEndpointsTest](backend/src/test/java/com/alejandria/biblioteca/seguridad/SeguridadEndpointsTest.java) (11, con MockMvc: sin token → 401, token inventado → 401, prestatario → 403, `@RolesAllowed` en la clase, prestatario viendo los préstamos de otro → 403, catálogo público, CORS para el front y rechazo de otra página, DNI mal escrito → 400, préstamo vacío → 400) y [ValidacionDtoTest](backend/src/test/java/com/alejandria/biblioteca/dto/ValidacionDtoTest.java) (22, los mismos casos de `ValidadorUsuarioTest` más libro y devolución). No compilaban antes del cambio. Al primer intento fallaron 2 de CORS (`cors(Customizer.withDefaults())` busca un bean llamado exactamente `corsConfigurationSource`); se arregló pasando la configuración de forma explícita.
+- Se borró `ValidadorUsuarioTest` (14) junto con la clase. Las demás pruebas solo cambiaron `new X()` + setters por el constructor del `record`.
+- Frontend: 16 pruebas, todas pasan. `ng build` compila (el aviso de `@charset` es el mismo de antes).
+
+### Prueba en vivo (02/11)
+- Con el `.jar`: arranca sin el aviso de la contraseña generada de Spring; `GET /api/prestamos/activos` sin token → 401; `GET /api/libros` → 200; login vacío → 400 "Datos incompletos"; login malo → 401; registro con DNI de 2 dígitos → 400 "El DNI debe tener 8 dígitos"; preflight CORS desde `localhost:4200` → 200; `http://localhost:8081/actuator/health` → UP.
+- Paneles: capturas con Chrome sin ventana y el backend apagado (solo para ver el diseño): Libros, Encargados (requisitos de la contraseña en vivo), Reportes, Historial, Registrar préstamo y Préstamos activos.
+- **Con los datos de la demo (02/11, 18:45):** el backend desde el `.jar` contra Neon y el front con `ng serve`. Se entró por la pantalla de login como admin, encargado y prestatario (Juan) y se recorrieron todas las pestañas. Todo carga: tablas con filas, colores de los estados, la fila roja del préstamo vencido con el aviso arriba, el modal de devolución con "Dañado" y su aviso (se canceló: **no se modificó ningún dato**), la cola de espera y el catálogo con portadas. Las capturas reemplazaron a las del diseño anterior en `docs/capturas/` (17 archivos; las viejas siguen en el historial de git).
+- **Observación (no es de este cambio):** `GET /api/libros` tarda unos **4 segundos** contra Neon, porque `LibroDTO.desde` lee los autores de cada libro con una consulta aparte (N+1). Con la pestaña Libros recién abierta se ve "No hay libros registrados" hasta que llega la respuesta. **Se arregló el mismo día:** ver "D15" abajo.
+
+---
+
+## D15 (02/11): la lista de libros tardaba 4 segundos ✅
+
+**El problema (N+1):** `GET /api/libros` traía los 25 libros con una consulta y después Hibernate pedía los autores **de cada libro** con otra consulta (la lista de autores es `LAZY`). Eran 26 viajes a Neon, unos 4 segundos. Mientras tanto, la pestaña Libros del admin decía "No hay libros registrados", y en la demo eso parece un error.
+
+| Archivo | Qué cambió |
+|---|---|
+| [LibroDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/LibroDao.java) | `@EntityGraph(attributePaths = {"categoria", "autores"})` en `findByEstadoLibroNotOrderByTitulo` (la lista) y en `buscarEnCatalogo` (la búsqueda): Spring Data trae libros, categoría y autores en **una sola consulta** con JOIN. No se escribió SQL nuevo |
+| [libros-tab](frontend/src/app/pages/admin-panel/tabs/libros/) | Señal `cargando`: mientras llega la respuesta dice "Cargando...", como las demás pestañas |
+
+**Resultado (medido con el `.jar` contra Neon):** de unos **4 s a 0,2 s**. La respuesta es idéntica (los mismos 7386 bytes y los 25 libros); un libro con varios autores (Design Patterns, 4) sigue saliendo una sola vez.
+
+**Primero la prueba:**
+- [LibroDaoTest](backend/src/test/java/com/alejandria/biblioteca/dao/LibroDaoTest.java): `elCatalogoTraeLosAutoresEnLaMismaConsulta` y `laBusquedaTambienTraeLosAutoresEnLaMismaConsulta` revisan con `Hibernate.isInitialized` que los autores ya vienen cargados (y que ningún libro sale repetido). Fallaron antes del cambio y después pasaron.
+- [libros-tab.component.spec.ts](frontend/src/app/pages/admin-panel/tabs/libros/libros-tab.component.spec.ts) (Vitest, 2): mientras espera dice "Cargando..." y no "No hay libros registrados"; si la lista llega vacía, sí lo dice. La primera falló antes del cambio.
+- Total: **181 del backend y 18 del frontend**, todas pasan.
+
+---
+
+## RF06 (02/11): incidencias y sanciones ✅
+
+El encargado registra una **incidencia** de un préstamo (retraso, daño o pérdida) con su **sanción** (advertencia, suspensión o multa), registra el pago de las multas y puede cancelar una sanción registrada por error. Las tablas `incidencia` y `sancion` ya existían: **no se cambió la BD**.
+
+| Incidencia | Cuándo se puede | Qué hace |
+|---|---|---|
+| Retraso | El préstamo pasó su hora límite (devuelto tarde o todavía fuera) | Solo se registra |
+| Daño | El préstamo ya se devolvió | Solo se registra (el estado físico ya se marcó en la devolución) |
+| Pérdida | El préstamo sigue en curso | Cierra el préstamo como **devolución dañada**: el ejemplar no vuelve al stock |
+
+| Sanción | Estado al registrarla | Bloquea | Cómo termina |
+|---|---|---|---|
+| Advertencia | `cumplida` | No (informativa) | — |
+| Suspensión (1 a 30 días) | `activa`; el usuario pasa a `suspendido` y `tiempos_suspendido` + 1 | Sí | Sola, a las 20:00 del último día: queda `cumplida` y el usuario vuelve a `activo` si no le queda otra suspensión |
+| Multa (con monto) | `activa`, sin fecha de fin | Sí | Botón "Registrar pago": `cumplida` con la fecha del pago |
+
+Cancelar una sanción activa la deja `cancelada` (con la fecha de hoy como fin) y devuelve el servicio igual que al cumplirla. Al cumplirse o cancelarse, la incidencia pasa a `resuelta`.
+
+| Archivo | Qué es |
+|---|---|
+| [entity/Incidencia.java](backend/src/main/java/com/alejandria/biblioteca/entity/Incidencia.java), [entity/Sancion.java](backend/src/main/java/com/alejandria/biblioteca/entity/Sancion.java) (nuevos) | Entidades de las tablas `incidencia` y `sancion` (con Lombok) |
+| [dao/IncidenciaDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/IncidenciaDao.java), [dao/SancionDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/SancionDao.java) (nuevos) | La lista con JOIN (incidencia + préstamo + usuario + libro, LEFT JOIN sanción), las suspensiones terminadas y si le queda una suspensión activa |
+| [service/IncidenciaService.java](backend/src/main/java/com/alejandria/biblioteca/service/IncidenciaService.java) (nuevo) | Las reglas de las dos tablas de arriba |
+| [service/PrestatarioService.java](backend/src/main/java/com/alejandria/biblioteca/service/PrestatarioService.java) | `cerrarSuspensionesTerminadas` y `restablecer`. `validarHabilitado` cierra primero las suspensiones vencidas (antes, un prestatario suspendido se quedaba `suspendido` para siempre) |
+| [dao/PrestamoDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/PrestamoDao.java) | `tieneSancionActiva` ya no cuenta las advertencias |
+| [dao/UsuarioDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/UsuarioDao.java) | `sumarSuspension`: `tiempos_suspendido` + 1 |
+| [controller/IncidenciaController.java](backend/src/main/java/com/alejandria/biblioteca/controller/IncidenciaController.java) (nuevo) | `GET` y `POST /api/incidencias`, `PUT /sanciones/{id}/pago`, `PUT /sanciones/{id}/cancelar`. Solo el encargado (`@RolesAllowed`) |
+| [dto/incidencia/](backend/src/main/java/com/alejandria/biblioteca/dto/incidencia/) (nuevo) | `RegistroIncidenciaDTO` (con Bean Validation: tipos, días 1 a 30, monto > 0 con 2 decimales) e `IncidenciaDTO` |
+| [incidencias-tab](frontend/src/app/pages/encargado-panel/tabs/incidencias/) (nueva pestaña del encargado) | Busca los préstamos por DNI, solo ofrece las incidencias que corresponden, pide la sanción y muestra la tabla con "Registrar pago" y "Cancelar". Antes de una pérdida pide confirmación |
+| [utils/sancion.ts](frontend/src/app/utils/sancion.ts) (nuevo) | `incidenciasPosibles` (las mismas reglas del backend, sin las ya registradas) y `textoSancion` ("Suspensión hasta el 10/11 20:00", "Multa de S/ 25.00 (pendiente de pago)") |
+| [services/incidencia.service.ts](frontend/src/app/services/incidencia.service.ts) (nuevo) | Las llamadas a `/api/incidencias` |
+
+**Pruebas (primero la prueba, después el código):** no compilaban hasta que existió el código.
+- [IncidenciaServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/IncidenciaServiceTest.java) (16): las 3 sanciones, días y monto obligatorios, qué incidencia corresponde a cada préstamo, la pérdida cierra el préstamo, no se repite, pago y cancelación.
+- [PrestatarioServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/PrestatarioServiceTest.java) (3): la suspensión que terminó se cumple y el prestatario vuelve a `activo`; con otra suspensión sigue `suspendido`; antes de validar se cierran las vencidas.
+- [IncidenciaBdTest](backend/src/test/java/com/alejandria/biblioteca/service/IncidenciaBdTest.java) (3, contra Neon, se deshacen): la suspensión bloquea y al cancelarla se recupera el servicio; la advertencia no bloquea y la multa bloquea hasta el pago; la pérdida cierra el préstamo y el último ejemplar pasa a `mantenimiento`.
+- `SeguridadEndpointsTest` (+2): el admin y el prestatario no entran a `/api/incidencias` (403); un tipo inventado da 400.
+- Frontend: [sancion.spec.ts](frontend/src/app/utils/sancion.spec.ts) (6).
+- **Prueba vieja que se ajustó:** `PrestamoDaoTest.unaSancionQueTerminaHoySigueActivaTodoElDia` (B2) usaba una advertencia como sanción que bloquea. Con la regla del informe la advertencia ya no bloquea, así que ahora usa una suspensión (lo que quería probar era la hora, no el tipo).
+- Total: **205 del backend y 24 del frontend**, todas pasan.
+
+**Prueba en vivo (02/11, 20:13, Neon):** como encargado se abrió la pestaña Incidencias y se llenó el formulario **sin enviarlo**. La suspensión de Valeria de los datos de la demo había vencido el 31/10, así que el sistema la cerró ("Sanción #30 cumplida: terminó la suspensión") y Valeria volvió a `activo`. Con el código anterior se habría quedado `suspendido` para siempre. Al buscar su DNI salen sus 3 préstamos devueltos; para *El túnel*, que ya tiene la incidencia por retraso, solo ofrece "daño".
+
+**Para la demo:** ya no hay una sanción activa en los datos. Registren en vivo una suspensión o una multa desde la pestaña Incidencias y después intenten prestarle a esa persona: el sistema responde "El prestatario está suspendido" o "tiene una sanción activa".
+
+---
+
+## Revisión antes del commit (02/11) ✅
+
+**Avisos de "Problems" de VS Code (7, ninguno era un error de compilación):**
+
+| Aviso | Qué se hizo |
+|---|---|
+| `pom.xml`: hay un parche nuevo de Spring Boot (4.1.2) | Se subió de 4.1.1 a **4.1.2** (los parches corrigen errores y fallas de seguridad). Las pruebas se volvieron a correr |
+| `pom.xml`: "Project configuration is not up-to-date" y "build file has been changed" | Es VS Code pidiendo recargar el proyecto porque cambió el `pom.xml`: clic derecho en `pom.xml` → **Reload Projects** (o `Shift+Alt+U`). No es del código |
+| `application.properties`: `app.sesion.inactividad-minutos`, `app.horario.apertura` y `app.horario.cierre` son "unknown property" | Son propiedades nuestras: se declararon en [additional-spring-configuration-metadata.json](backend/src/main/resources/META-INF/additional-spring-configuration-metadata.json) (tipo, valor por defecto y para qué sirven) |
+| `UsuarioController`: todas sus rutas empiezan con `/encargados` | `@RequestMapping("/api/usuarios/encargados")` en la clase; las rutas no cambiaron |
+
+**Nueva regla del equipo (en `CLAUDE.md`):** es preferible importar una librería ya hecha y **segura** que crear el código desde cero.
+
+**Revisión de librerías (otra vez):** lo grande ya está cambiado (ver "Limpieza de librerías"). Quedan tres cosas chicas que se pueden resolver con librerías **que ya están en el proyecto** (no hace falta instalar nada). Están anotadas como L3 en `PLAN_CODIGO.md`:
+
+| Hecho a mano | Se puede cambiar por | Dónde |
+|---|---|---|
+| Fechas armadas con `padStart` y `toLocaleTimeString` (5 lugares) | `formatDate` de `@angular/common` (ya viene con Angular) | `utils/sancion.ts`, `reportes-descarga`, `user-catalog`, `activos-tab`, `registrar-tab` |
+| Sesiones en un `ConcurrentHashMap` con vencimiento a mano | Caché de **Guava** con `expireAfterAccess(15 min)`, como `LimitadorIntentosLogin` | `SesionService` |
+| `texto == null \|\| texto.isBlank() ? null : texto.trim()` (3 lugares) | `StringUtils.hasText` de Spring | `IncidenciaService`, `LibroService`, `PrestamoService` |
+
+No se encontró nada más que convenga reemplazar: los reportes ya usan POI, OpenPDF y Commons CSV; el monitoreo, Actuator y Micrometer; el bloqueo de login, Guava; la seguridad, Spring Security; las validaciones, Bean Validation.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -840,6 +993,13 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Dónde se crea el encargado desde el panel? | `crear perfil 2` |
 | ¿Cómo se evita que un usuario tenga dos perfiles? | `perfil unico` |
 | ¿Por qué la contraseña se mide en bytes? | `criterio 1 en bytes` |
+| ¿Por qué la lista de libros carga rápido? ¿Qué es el problema N+1? | `entitygraph` |
+| ¿Dónde se registran las incidencias y sanciones (RF06)? | `incidencias y sanciones`, `registrar incidencia`, `tipos de incidencia`, `tipos de sancion` |
+| ¿Qué pasa cuando termina una suspensión o se paga una multa? | `fin de la suspension`, `pago de multa` |
+| ¿Dónde está Spring Security? ¿Cómo se lee el token? | `spring security` (`SeguridadConfig`, `FiltroToken`) |
+| ¿Cómo se validan los datos con anotaciones? | `bean validation`, `validar datos` |
+| ¿Dónde están los getters de las entidades? | `lombok` |
+| ¿Dónde se usa Bootstrap? | `bootstrap` |
 
 ---
 
@@ -892,7 +1052,7 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 5 | Dashboard del admin (ya está en `docs/capturas/admin-dashboard.png`) | ✅ |
 | 5 | Alertas del encargado (ya está en `docs/capturas/encargado-alertas-15min.png`) | ✅ |
 | 5 | Catálogo con portadas reales (ya está en `docs/capturas/prestatario-catalogo.png`) | ✅ |
-| 5 | Terminal con `npx ng test --watch=false` → 16 pruebas del frontend | ⬜ |
+| 5 | Terminal con `npx ng test --watch=false` → 24 pruebas del frontend (eran 16 hasta el 02/11) | ⬜ |
 | 5 | Encargado: préstamos activos con una fila amarilla (por vencer) y una roja (vencida) y los avisos arriba | ⬜ |
 | 5 | Encargado: modal de devolución con "Dañado" y el aviso de mantenimiento; admin: el libro en `mantenimiento` | 🟡 el modal: `encargado-devolucion-danado.png` (el libro en mantenimiento: en vivo) |
 | 5 | Prestatario → Mis Préstamos (uno activo y uno devuelto), junto al código de `buscarPorPrestatario` | ✅ `prestatario-mis-prestamos.png` (el código: captura aparte) |
@@ -919,3 +1079,12 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 5 | Explorador mostrando `backend/target/biblioteca-alejandria.jar` | ⬜ |
 | 5 | Terminal con `java -jar target/biblioteca-alejandria.jar` arrancando ("Started BibliotecaApplication") | ⬜ |
 | 5 | README del repositorio en GitHub | ⬜ |
+| 7 | **Rehacer** las capturas de los paneles con Bootstrap y los datos de la demo | ✅ (02/11) `admin-dashboard`, `admin-libros`, `admin-prestamos-activos`, `admin-historial`, `admin-reservas`, `admin-reservas-cola`, `admin-encargados`, `admin-reportes`, `admin-monitoreo`, `encargado-prestamos-activos`, `encargado-devolucion-danado`, `encargado-buscar-libro`, `encargado-reservas-pendientes`, `encargado-cola-espera`, `encargado-historial`, `encargado-reportes`, `prestatario-catalogo` (con portadas) |
+| 8 | RF06: pestaña Incidencias con la lista y el formulario con suspensión y con multa | ✅ (02/11) `encargado-incidencias`, `encargado-incidencia-suspension`, `encargado-incidencia-multa` |
+| 8 | RF06 en vivo: registrar una suspensión → intentar prestarle → mensaje "El prestatario está suspendido"; registrar el pago de una multa | ⬜ (cambia datos: en la demo) |
+| 8 | Código: `IncidenciaService.registrar` y `PrestatarioService.cerrarSuspensionesTerminadas` | ⬜ |
+| 7 | Capturas de paneles que **todavía tienen el diseño anterior**, porque muestran una acción que cambia datos (se toman en vivo en la demo): `admin-libros-editar`, `admin-reserva-eliminada`, `admin-reportes-rf08`, `encargado-registrar-prestamo` (mensaje "Hora límite"), `encargado-prestamo-ampliado`, `encargado-alertas-15min` (fila amarilla: hoy no hay préstamos por vencer) y `admin-dashboard-celular` | ⬜ |
+| 7 | Código: `SeguridadConfig` + `FiltroToken` y un controller con `@RolesAllowed` y `@AuthenticationPrincipal` | ⬜ |
+| 7 | Código: un DTO con anotaciones (`RegistroDTO`) y la respuesta 400 "El DNI debe tener 8 dígitos" (Postman, DevTools o el registro) | ⬜ |
+| 7 | Código: una entidad con `@Getter @Setter` (Lombok) | ⬜ |
+| 7 | Terminal con `./mvnw test` → 205 pruebas, BUILD SUCCESS (reemplaza a la de 160) | ⬜ |
