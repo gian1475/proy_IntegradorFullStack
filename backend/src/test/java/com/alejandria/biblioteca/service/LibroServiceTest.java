@@ -41,6 +41,17 @@ class LibroServiceTest {
     }
 
     @Test
+    void buscarSoloConEspaciosMuestraTodoElCatalogo() {
+        // L3: el texto vacio se revisa con StringUtils.hasText de Spring
+        when(libroDao.findByEstadoLibroNotOrderByTitulo("baja")).thenReturn(java.util.List.of());
+
+        assertTrue(servicio.buscar("   ").isEmpty());
+        assertTrue(servicio.buscar(null).isEmpty());
+
+        verify(libroDao, never()).buscarEnCatalogo(any());
+    }
+
+    @Test
     void darDeBajaCambiaElEstadoYNoBorraLaFila() {
         Libro libro = libro("disponible");
         when(libroDao.findById(10)).thenReturn(Optional.of(libro));

@@ -1021,6 +1021,26 @@ Lo que faltaba del código según el informe, en bloques (un commit por bloque).
 
 ---
 
+### Bloque 2 – L3: tres cosas más con librerías que ya estaban ✅
+
+Detalle en [docs/LIBRERIAS.md](docs/LIBRERIAS.md) ("Limpieza del 03/11"). No se instaló nada.
+
+| Antes | Ahora | Archivo |
+|---|---|---|
+| Sesiones en un `ConcurrentHashMap` con vencimiento a mano | Caché de **Guava** con `expireAfterAccess(15 min)`, igual que `LimitadorIntentosLogin` | [SesionService.java](backend/src/main/java/com/alejandria/biblioteca/service/SesionService.java), [Sesion.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/Sesion.java) |
+| `texto == null \|\| texto.isBlank()` | `StringUtils.hasText` de **Spring** | `LibroService`, `PrestamoService`, `IncidenciaService` |
+| `padStart` y `toLocale...` en 5 lugares | `formatDate` de **Angular** en un solo archivo | [utils/fechas.ts](frontend/src/app/utils/fechas.ts) (nuevo) |
+
+En pantalla se ve igual: "06:21 p. m.", "2/11/2026", "Suspensión hasta el 10/11 20:00".
+
+**Pruebas:**
+- `SesionServiceTest` ahora usa el reloj falso de Guava (`Ticker`), como `LimitadorIntentosLoginTest`, y suma `elMonitoreoSoloCuentaLasSesionesQueNoVencieron` (+1).
+- `LibroServiceTest` (+1): buscar solo con espacios muestra todo el catálogo. `IncidenciaServiceTest` (+1): una descripción solo con espacios se guarda vacía. Se escribieron antes del cambio para asegurar que el comportamiento no cambia.
+- Frontend: [fechas.spec.ts](frontend/src/app/utils/fechas.spec.ts) (4, nuevo).
+- Total: **235 del backend y 45 del frontend**, todas pasan.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.

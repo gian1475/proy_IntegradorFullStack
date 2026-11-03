@@ -107,5 +107,6 @@ Las capturas de referencia de la prueba local están en la carpeta temporal de l
 Plan aprobado: bloque 1 (arreglos D9, D10, D15, D16) → bloque 2 (L3: librerías que ya tienen) → bloque 3 (RF15: editar reservas, Prestatario y Admin) → bloque 4 (TAP e IPI con la migración 05; la auditoría la hace el Admin).
 
 - ✅ Bloque 1 (commit aparte).
+- ✅ Bloque 2: L3 hecho (Guava en `SesionService`, `StringUtils.hasText`, `formatDate` en `utils/fechas.ts`). **En `CLAUDE.md`:** tachar "L3 (opcional)" en Pendientes y en Stack agregar que Guava también maneja las sesiones.
 - ⚠️ **Neon desde la nube:** el usuario pasó las credenciales para que corra la migración 05, pero la red del entorno bloquea Neon (HTTPS 403 y el puerto 5432 no pasa). Las credenciales quedaron solo en `backend/.env.neon` (ignorado por git, no se sube). **Cambiar la contraseña de Neon**: quedó escrita en el chat.
 - ⬜ Migración 05 en Neon: correrla desde el SQL Editor (o habilitar `*.neon.tech` y la corro yo).

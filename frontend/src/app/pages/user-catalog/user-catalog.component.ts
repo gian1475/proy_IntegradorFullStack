@@ -10,6 +10,7 @@ import { Prestamo, PrestamoService } from '../../services/prestamo.service';
 import { mensajeDeError } from '../../utils/mensaje-error';
 import { portadaPorIsbn, usarPortadaPorDefecto } from '../../utils/portada';
 import { coincideBusqueda, etiquetaEstado } from '../../utils/estado-libro';
+import { fechaCorta, fechaInput, horaCorta } from '../../utils/fechas';
 
 export interface CatalogBook {
   id: number;
@@ -181,8 +182,8 @@ export class UserCatalogComponent implements OnInit {
               autor: r.autor,
               categoria: r.categoria,
               coverImage: portadaPorIsbn(r.isbnLibro),
-              fechaRecojo: limite ? limite.toLocaleDateString('es-PE') : '',
-              horario: limite ? 'hasta las ' + limite.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '',
+              fechaRecojo: limite ? fechaCorta(limite) : '',
+              horario: limite ? 'hasta las ' + horaCorta(limite) : '',
               enCola: r.estadoReserva === 'en_espera',
               posicion: r.posicionCola
             };
@@ -296,7 +297,6 @@ export class UserCatalogComponent implements OnInit {
 
   /** Fecha de hoy en formato AAAA-MM-DD (hora local, para el input type="date"). */
   private hoy(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return fechaInput(new Date()); // formatDate de angular (utils/fechas.ts)
   }
 }

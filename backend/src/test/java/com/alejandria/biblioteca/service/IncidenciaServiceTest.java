@@ -82,6 +82,15 @@ class IncidenciaServiceTest {
     }
 
     @Test
+    void unaDescripcionSoloConEspaciosSeGuardaVacia() {
+        prestamoConRetraso();
+
+        IncidenciaDTO r = servicio.registrar(new RegistroIncidenciaDTO(115, "retraso", "   ", "advertencia", null, null));
+
+        assertNull(r.descripcion());
+    }
+
+    @Test
     void unaSuspensionNoReactivaAUnPrestatarioDadoDeBaja() {
         // RF13: dado de baja (inactivo) por el admin; el daño se registra despues de la devolucion
         valeria.setEstado("inactivo");

@@ -17,7 +17,7 @@ Sirve para la sección de librerías del informe (semana 10) y para la sustentac
 | **Spring Security** | 7.1.2 | Backend | Filtro del token, permisos por perfil (`@RolesAllowed`), CORS y BCrypt | `seguridad/SeguridadConfig.java`, `seguridad/FiltroToken.java` |
 | **Bean Validation** (Hibernate Validator) | 9.1.3 | Backend | Reglas de los datos con anotaciones (`@NotBlank`, `@Pattern`...) | `dto/` |
 | **Lombok** | 1.18.46 | Backend | Genera los getters, setters y el constructor vacío de las entidades | `entity/` |
-| **Google Guava** ⭐ | 33.4.8 | Backend | Bloqueo de 15 min después de 3 intentos fallidos de login | `seguridad/LimitadorIntentosLogin.java` |
+| **Google Guava** ⭐ | 33.4.8 | Backend | Bloqueo de 15 min después de 3 intentos fallidos de login; sesiones que vencen a los 15 min sin actividad | `seguridad/LimitadorIntentosLogin.java`, `service/SesionService.java` |
 | **Apache POI** ⭐ | 5.4.1 | Backend | Reportes en Excel (.xlsx) | `service/ReporteService.java` |
 | **Apache Commons CSV** ⭐ | 1.14.0 | Backend | Reportes en CSV e importación de libros desde CSV | `service/ReporteService.java` |
 | OpenPDF | 2.0.3 | Backend | Reportes en PDF | `service/ReporteService.java` |
@@ -49,6 +49,16 @@ Antes teníamos varias cosas escritas a mano que una librería ya resuelve. Se c
 | 5 | El error 401/403 se armaba pegando textos (`"{\"mensaje\":\"" + ...`) | Lo responde el `ManejadorErrores` como todos los demás errores | se borró junto con el interceptor |
 
 En total: backend **−702 / +333** líneas en archivos que ya existían (más 106 de los 2 archivos nuevos de seguridad); frontend **−693 / +401** (las plantillas crecen un poco porque las clases de Bootstrap son más largas, pero desaparece casi todo el LESS de los paneles).
+
+## Limpieza del 03/11 (L3): tres cosas más, con librerías que ya estaban
+
+| Antes (hecho a mano) | Ahora (librería que ya teníamos) | Dónde |
+|---|---|---|
+| Sesiones en un `ConcurrentHashMap` con una fecha de vencimiento por sesión que se revisaba y renovaba a mano | **Caché de Guava** con `expireAfterAccess(15 min)`: cada lectura del token renueva los 15 minutos y Guava borra sola las vencidas | `SesionService` (de 91 a 85 líneas; `Sesion` ya no necesita `estaExpirada` ni `conVencimiento`) |
+| `texto == null \|\| texto.isBlank()` en 3 lugares | **`StringUtils.hasText`** de Spring (`org.springframework.util`) | `LibroService`, `PrestamoService`, `IncidenciaService` |
+| Fechas armadas con `padStart`, `toLocaleTimeString` y `toLocaleDateString` en 5 lugares | **`formatDate`** de `@angular/common`, con los datos del idioma `es-PE` que también trae Angular (`registerLocaleData`). Todo quedó en un solo archivo | [`utils/fechas.ts`](../frontend/src/app/utils/fechas.ts), usado por `sancion.ts`, `reportes-descarga`, `user-catalog`, `activos-tab` y `registrar-tab` |
+
+No se instaló nada nuevo: Guava, Spring y Angular ya estaban en el proyecto.
 
 Lo que **no** se cambió, porque ya usaba una librería o es lógica del negocio: el bloqueo por intentos (Guava), los reportes (POI, OpenPDF, Commons CSV), BCrypt, el monitoreo (Actuator), `ManejadorErrores` (es el patrón normal de Spring), la regla de la contraseña (`ValidadorContrasena`, porque también mide los 72 bytes de BCrypt) y las utilidades del front (`alerta-prestamo`, `estado-libro`, `regla-contrasena`).
 
@@ -141,6 +151,8 @@ Lombok trabaja **al compilar**: el `.class` tiene los métodos como si los hubi�
 
 **Dónde:** [`LimitadorIntentosLogin`](../backend/src/main/java/com/alejandria/biblioteca/seguridad/LimitadorIntentosLogin.java). Usa el `Cache` de Guava, que guarda "correo → intentos fallidos" y **borra la entrada solo** cuando pasan los 15 minutos (`expireAfterWrite`), sin que tengamos que limpiar nada a mano.
 
+**También (desde el 03/11):** [`SesionService`](../backend/src/main/java/com/alejandria/biblioteca/service/SesionService.java) guarda "token → sesión" en otro `Cache` de Guava con `expireAfterAccess`: cada petición lee el token y eso le vuelve a contar los 15 minutos (RNF04). Si pasan 15 minutos sin leerlo, Guava lo borra.
+
 ### Apache POI ⭐, OpenPDF y Apache Commons CSV ⭐
 
 **Para qué:** los 8 reportes del RF08 en Excel, PDF y CSV, y la importación de libros desde CSV.
@@ -195,7 +207,7 @@ Lombok trabaja **al compilar**: el `.class` tiene los métodos como si los hubi�
 
 ### Angular y LESS
 
-**Angular 22** arma las pantallas: componentes standalone, rutas con guards por perfil (`/admin`, `/encargado`, `/catalogo`), un interceptor que agrega el token a cada petición y *signals* para el estado. **LESS** es CSS con variables y anidamiento; se usa en las pantallas que tienen un diseño propio.
+**Angular 22** arma las pantallas: componentes standalone, rutas con guards por perfil (`/admin`, `/encargado`, `/catalogo`), un interceptor que agrega el token a cada petición y *signals* para el estado. Las fechas y horas se muestran con `formatDate` de `@angular/common` (`utils/fechas.ts`). **LESS** es CSS con variables y anidamiento; se usa en las pantallas que tienen un diseño propio.
 
 ---
 

@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -237,7 +238,7 @@ public class PrestamoService {
 
     /** Un filtro vacío ("" o espacios) es lo mismo que no filtrar. */
     private String textoOpcional(String texto) {
-        return texto == null || texto.isBlank() ? null : texto.trim();
+        return StringUtils.hasText(texto) ? texto.trim() : null; // StringUtils de Spring
     }
 
     /** Un préstamo está en curso si el libro aún no se devuelve (activo o vencido). */

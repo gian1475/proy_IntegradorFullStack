@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { PrestamoDetalle, PrestamoService } from '../../../../services/prestamo.service';
 import { mensajeDeError } from '../../../../utils/mensaje-error';
 import { AlertaPrestamo, MINUTOS_AVISO, alertaPrestamo } from '../../../../utils/alerta-prestamo';
+import { horaCorta } from '../../../../utils/fechas';
 
 /** Cada cuánto se recalculan las alertas (el reloj de la pantalla). */
 const SEGUNDOS_RELOJ = 30;
@@ -109,7 +110,7 @@ export class ActivosTabComponent implements OnInit, OnDestroy {
   }
 
   private formatearHora(fecha: string): string {
-    return new Date(fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    return horaCorta(fecha); // formatDate de angular (utils/fechas.ts)
   }
 
   private limpiarMensajes(): void {

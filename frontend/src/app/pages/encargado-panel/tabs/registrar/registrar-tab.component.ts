@@ -6,6 +6,7 @@ import { LibroBackend, LibroService } from '../../../../services/libro.service';
 import { ReservaBackend } from '../../../../services/reserva.service';
 import { mensajeDeError } from '../../../../utils/mensaje-error';
 import { coincideBusqueda, etiquetaEstado } from '../../../../utils/estado-libro';
+import { horaCorta } from '../../../../utils/fechas';
 
 /** Pestaña "Registrar préstamo" del encargado. */
 @Component({
@@ -78,7 +79,7 @@ export class RegistrarTabComponent implements OnInit {
   }
 
   private formatearHora(fecha: string): string {
-    return new Date(fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    return horaCorta(fecha); // formatDate de angular (utils/fechas.ts)
   }
 
   private limpiarMensajes(): void {

@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -93,7 +94,7 @@ public class IncidenciaService {
         Incidencia incidencia = new Incidencia();
         incidencia.setPrestamo(prestamo);
         incidencia.setTipoIncidencia(dto.tipoIncidencia());
-        incidencia.setDescripcion(dto.descripcion() == null || dto.descripcion().isBlank() ? null : dto.descripcion().trim());
+        incidencia.setDescripcion(StringUtils.hasText(dto.descripcion()) ? dto.descripcion().trim() : null);
         incidencia.setFechaIncidencia(ahora);
         incidencia.setEstadoIncidencia("pendiente");
 
