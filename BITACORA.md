@@ -66,6 +66,7 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 02/11 | RF06: solo el **encargado** registra incidencias y sanciones; el admin las ve en el reporte | Lo dice el informe (RF06 y CU09: actor Encargado) |
 | 02/11 | RF06: la **advertencia** no bloquea (se registra ya `cumplida`); `tieneSancionActiva` solo cuenta suspensiones y multas | Ficha RF06: "La advertencia es informativa; suspensión y multa pendiente bloquean préstamos y reservas". Antes cualquier sanción activa bloqueaba |
 | 02/11 | RF06: cada incidencia lleva su sanción (en la BD puede no tenerla, pero la pantalla siempre la pide) y no se repite el mismo tipo de incidencia en un préstamo | CU09 "Registrar incidencia **y** sanción" |
+| 04/11 | B1–B9: el Administrador también cancela reservas; el Encargado reserva en ventanilla con el DNI y cancela; solo el Encargado anula préstamos; el admin restablece contraseñas (no la cambia cada usuario); "Mis Préstamos" muestra los anulados; el sistema se despliega como **un solo `.jar`** con las pantallas adentro | Decisiones del equipo para alinear el código con el informe V8 (análisis del 04/11) |
 | 03/11 | RF12: el admin edita **nombres, apellidos, DNI, correo** y, si es encargado, el **turno**. No cambia la contraseña ni el estado (el estado cambia con "Dar de baja" / "Reactivar" y con las sanciones de RF06) | Decisión del equipo. Así `suspendido` sigue dependiendo solo de una sanción |
 | 03/11 | RF13: **solo baja lógica** (`inactivo`). No se implementa el borrado físico de usuarios sin préstamos ni reservas que menciona la ficha del RF13 | Decisión del equipo: se ajusta el informe. La única eliminación física sigue siendo la de reservas (RF17) |
 | 03/11 | RF13: un prestatario con un **libro en sala** (préstamo `activo` o `vencido`) no se da de baja hasta que lo devuelva; sus reservas `pendiente` y `en_espera` se **cancelan solas** (el ejemplar vuelve al stock o pasa al siguiente de la cola). Sus sanciones quedan como están | Decisión del equipo. El historial no se toca |
@@ -1114,6 +1115,38 @@ La auditoría **no corrige el stock** sola: si el conteo no coincide, el mensaje
 
 ---
 
+## Brechas del informe B1 a B9 (04/11) ✅
+
+El análisis de coherencia del informe V8 con el código (sección 8 de `Pendientes agregar a local.md`) encontró 9 cosas que el informe pide y el código no hacía. Se resolvieron todas, con las decisiones del equipo del 04/11.
+
+| # | Qué pedía el informe | Qué se hizo | Archivos |
+|---|---|---|---|
+| B1 | RF16 y CU05: el **Administrador** también cancela reservas | `PUT /api/reservas/{id}/cancelar` admite `ADMINISTRADOR`; botón **Cancelar** en su pestaña Reservas (pendientes y en cola) | `ReservaController`, `reservas-admin-tab` |
+| B2 | RF04 y RF16: el **Encargado** registra y cancela reservas | `POST /api/reservas/ventanilla`: reserva con el **DNI** del prestatario (mismas reglas; sin stock entra a la cola). En "Reservas pendientes": formulario **Reservar en ventanilla** y botón **Cancelar** en las pendientes y en la cola | `ReservaService.crearEnVentanilla`, `ReservaVentanillaDTO` (nuevo), `reservas-tab` del encargado |
+| B3 | RNF03: el 95 % de las operaciones en ≤ 2 s ("un promedio no basta") | Micrometer cuenta las peticiones de hasta 2 s (`management.metrics.distribution.slo.http.server.requests=2s`, sin librería nueva). `MonitoreoService.porcentajeHasta` calcula el % y la pestaña Monitoreo lo muestra con "Cumple / No cumple RNF03" | `application.properties`, `MonitoreoService`, `MonitoreoDTO`, `monitoreo-tab` |
+| B4 | RNF05: la concurrencia del stock "requiere pruebas" | Prueba nueva: dos transacciones prestan **a la vez** el último ejemplar; solo una presta y el stock queda en 0. Ya lo garantizaba el bloqueo de `LibroDao.buscarParaActualizar` (`SELECT … FOR UPDATE`). **Sin el bloqueo la prueba falla** ("el último ejemplar se prestó dos veces"): se comprobó quitándolo un momento | `ConcurrenciaStockTest` (nuevo) |
+| B5 | Tabla 33 y Anexo F: despliegue en la nube | Queda **listo para desplegar**: un solo `.jar` con las pantallas adentro (la API en la misma dirección, `/api`), URL de la API en `environment` de Angular, CORS y puerto configurables, `FrontendController` para recargar `/admin`, `Dockerfile` y la guía [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md) para Render. **El despliegue lo hace el equipo con su cuenta** (desde la nube no se puede: la red del entorno bloquea esos servicios) | `environments/`, `angular.json`, `SeguridadConfig`, `pom.xml`, `FrontendController` (nuevo), `Dockerfile`, `.dockerignore` |
+| B6 | RNF06: Chrome, Edge y Firefox, en PC y celular | Revisión automática con Chromium (motor de Chrome y de Edge) de las **21 pantallas** de los 3 perfiles en 3 tamaños (escritorio 1366 px, tablet 768 px y celular 390 px): **63 de 63 sin scroll horizontal ni errores de JavaScript**. Capturas en [docs/capturas/rnf06/](docs/capturas/rnf06/). **Firefox no está en la máquina de la sesión: falta probarlo a mano** | `docs/capturas/rnf06/` |
+| B7 | El restablecimiento de contraseña por el admin "aún no estaba implementado" | `PUT /api/usuarios/{id}/contrasena` (solo el admin; no a otro admin): la regla de la contraseña, BCrypt, cierra sus sesiones y **le quita el bloqueo** por intentos fallidos. Botón **Contraseña** en la pestaña Usuarios, con los requisitos en verde/rojo | `UsuarioService.restablecerContrasena`, `RestablecerContrasenaDTO` (nuevo), `usuarios-tab` |
+| B8 | Tabla 35: el Administrador no anula préstamos | `DELETE /api/prestamos/{id}` solo para el **Encargado** (antes también el admin, por la API) | `PrestamoController` |
+| B9 | RF07: el historial muestra **todos** los préstamos | "Mis Préstamos" del prestatario muestra también los **anulados**, con su etiqueta en gris; no cuentan como "en curso" | `user-catalog` |
+
+**Primero la prueba** (en B1, B2, B7, B8, B9, B3 y B5 se vio el rojo antes del código; B4 documenta un comportamiento que ya existía y se comprobó que falla sin el bloqueo):
+- Backend (+20): `SeguridadEndpointsTest` (+4: el admin cancela, ventanilla solo del encargado, solo el encargado anula, solo el admin restablece), `ReservaColaEsperaTest` (+2: ventanilla con DNI y DNI que no existe), `UsuarioGestionServiceTest` (+3: restablecer con BCrypt, cierre de sesión y desbloqueo; la regla; el admin no), [MonitoreoServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/MonitoreoServiceTest.java) (3), [MonitoreoRnf03Test](backend/src/test/java/com/alejandria/biblioteca/seguridad/MonitoreoRnf03Test.java) (1, con las métricas reales), [ConcurrenciaStockTest](backend/src/test/java/com/alejandria/biblioteca/service/ConcurrenciaStockTest.java) (1) y [DespliegueTest](backend/src/test/java/com/alejandria/biblioteca/seguridad/DespliegueTest.java) (6: las 5 rutas de Angular y CORS configurable).
+- Frontend (+11): pestaña Reservas del admin (+1), [reservas-tab del encargado](frontend/src/app/pages/encargado-panel/tabs/reservas/reservas-tab.component.spec.ts) (5, nuevo), pestaña Usuarios (+1), Mis Préstamos (+1) y [monitoreo-tab](frontend/src/app/pages/admin-panel/tabs/monitoreo/monitoreo-tab.component.spec.ts) (3, nuevo).
+- Total: **285 del backend y 73 del frontend**, todas pasan.
+
+**Prueba en vivo (04/11, BD local):**
+- `.jar` único en `localhost:8080`, sin `npm start`: login, recargar `/admin` y Monitoreo con "100 %, Cumple RNF03". Todas las llamadas a la API salieron a la misma dirección.
+- **Imagen Docker** ejecutada con `PORT=8090`: sirve las pantallas y el login responde. En la sesión se construyó usando el caché local de Maven y el `dist` ya compilado, porque la red del entorno corta las descargas de npm y Maven dentro de Docker. En Render se descargan normalmente.
+- Por la API:
+  - el admin canceló una reserva;
+  - el encargado reservó en ventanilla para Juan;
+  - el admin anulando un préstamo recibe 403;
+  - el admin restableció la contraseña de Lucía: entró con la nueva, y con la vieja recibió "Credenciales incorrectas".
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1174,6 +1207,11 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cómo se calcula el TAP? ¿Dónde empieza la atención? | `indicadores TAP` (backend y frontend) |
 | ¿Cómo se calcula el IPI? ¿Dónde se registra el conteo físico? | `indicadores IPI`, `auditoria inventario` |
 | ¿Dónde se edita una reserva (RF15)? | `reserva actualizar` |
+| ¿Dónde reserva el encargado en la ventanilla? ¿Quién cancela? | `reserva ventanilla`, `reserva cancelar` |
+| ¿Cómo se restablece una contraseña olvidada? | `restablecer contra` |
+| ¿Cómo se comprueba el RNF03 (95 % en 2 s)? | `monitoreo RNF03` |
+| ¿Qué pasa si dos encargados prestan el último ejemplar a la vez? | `ConcurrenciaStockTest`, `buscarParaActualizar` |
+| ¿Cómo se despliega? ¿Por qué un solo .jar? | `despliegue` (`FrontendController`, `environment`, `docs/DESPLIEGUE.md`) |
 
 ---
 
@@ -1274,3 +1312,10 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 10 | IPI: pestaña Auditoría con el IPI del mes, un conteo que coincide y otro que no (mensaje "NO coincide…") | ⬜ `admin-auditoria-ipi.png` |
 | 10 | Neon: SQL Editor con la migración 05 ejecutada (la columna `inicio_atencion` y `auditorias = 0`) | ⬜ |
 | 10 | Código: `IndicadoresGestion.calcular`, `AuditoriaInventarioDao.contarCoincidentesEntre` (DISTINCT ON) y `marcarInicio` del frontend | ⬜ |
+| 11 | B1/B2: admin → Reservas con "Cancelar"; encargado → "Reservar en ventanilla" y "Cancelar" en la cola | ⬜ |
+| 11 | B7: Usuarios → "Contraseña" con los requisitos y el mensaje "Contraseña de … restablecida" | ⬜ |
+| 11 | B3: Monitoreo con "Peticiones en 2 s o menos — Cumple RNF03" | ⬜ |
+| 11 | B4: terminal con `ConcurrenciaStockTest` en verde (y opcional: el rojo sin el `@Lock`) | ⬜ |
+| 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Falta Firefox** (tómenla en su PC) | 🟡 |
+| 11 | B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen | ⬜ |
+| 11 | Terminal con `./mvnw test` → **285** y `npx ng test --watch=false` → **73** | ⬜ |

@@ -79,9 +79,9 @@ Flujo de una petición: **controller → service → dao → base de datos**.
 
 | Perfil | Pantalla | Puede |
 |---|---|---|
-| Administrador | `/admin` | Dashboard con los 4 indicadores de gestión (TAP, PDF, IPI y TIM), gestionar libros (CRUD), ver préstamos activos y el historial, cambiar la fecha y la franja de una reserva pendiente (RF15), eliminar reservas canceladas o vencidas, registrar la auditoría física del inventario (IPI), gestionar usuarios (registrar encargados; editar, dar de baja y reactivar prestatarios y encargados: RF09, RF12 y RF13), descargar reportes, ver el monitoreo. Por la API (sin botón en su panel) también puede anular préstamos |
-| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas y ver la cola de espera, ver el historial, registrar incidencias con su sanción (advertencia, suspensión o multa) y registrar el pago de las multas (RF06), descargar reportes. Por la API (sin botón en su panel) también puede registrar y cancelar reservas a nombre de un prestatario (ventanilla) |
-| Prestatario | `/catalogo` | Ver el catálogo (stock y estado de cada libro), reservar, entrar a la cola de espera si no hay stock, cambiar la fecha y la franja de recojo de sus reservas pendientes (RF15), cancelar sus reservas, ver y filtrar sus préstamos |
+| Administrador | `/admin` | Dashboard con los 4 indicadores de gestión (TAP, PDF, IPI y TIM), gestionar libros (CRUD), ver préstamos activos y el historial, cambiar la fecha y la franja de una reserva pendiente (RF15), cancelar reservas (RF16), eliminar reservas canceladas o vencidas, registrar la auditoría física del inventario (IPI), gestionar usuarios (registrar encargados; editar, dar de baja, reactivar y restablecer la contraseña de prestatarios y encargados: RF09, RF12 y RF13), descargar reportes, ver el monitoreo (incluye el % de peticiones en 2 s o menos, RNF03) |
+| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas, reservar en la ventanilla a nombre de un prestatario (con su DNI), cancelar reservas y ver la cola de espera, ver el historial, registrar incidencias con su sanción (advertencia, suspensión o multa) y registrar el pago de las multas (RF06), descargar reportes |
+| Prestatario | `/catalogo` | Ver el catálogo (stock y estado de cada libro), reservar, entrar a la cola de espera si no hay stock, cambiar la fecha y la franja de recojo de sus reservas pendientes (RF15), cancelar sus reservas, ver y filtrar sus préstamos (también los anulados) |
 
 El backend valida el rol en cada endpoint con Spring Security (`@RolesAllowed`): sin sesión responde **401** y con un rol no permitido responde **403**.
 
@@ -132,6 +132,12 @@ java -jar target/biblioteca-alejandria.jar
 
 `clean package` compila, ejecuta las pruebas y genera `target/biblioteca-alejandria.jar`. El `.jar` debe ejecutarse desde `backend/` para que encuentre el `.env` (o con las variables `SPRING_DATASOURCE_*` definidas en el sistema).
 
+**Un solo `.jar` con las pantallas:** si antes se compila el frontend (`cd frontend` y `npx ng build`), el `.jar` también trae las pantallas y todo se abre en `http://localhost:8080`, sin `npm start`.
+
+## Despliegue en la nube
+
+El repositorio trae un `Dockerfile` que arma ese `.jar` único. Los pasos para publicarlo en Render, con las credenciales de Neon en variables de entorno, están en [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md). Antes hay que ejecutar en Neon todas las migraciones (hoy falta la 05).
+
 ## Pruebas
 
 ```
@@ -139,9 +145,9 @@ cd backend
 ./mvnw test
 ```
 
-265 pruebas del backend: indicadores TAP e IPI (fórmulas, auditoría del inventario y consultas contra la BD), edición de reservas (RF15), sesiones con la caché de Guava, edición y baja lógica de usuarios (RF12 y RF13: DNI y correo únicos, no se da de baja con un libro en sala, se cancelan sus reservas, se cierra su sesión, reactivar, también contra la BD), incidencias y sanciones (RF06: las 3 sanciones, qué incidencia corresponde a cada préstamo, pago, cancelación y fin de la suspensión, también contra la BD), zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos con anotaciones (Bean Validation), seguridad de los endpoints (401, 403 y CORS con Spring Security), perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo (con los autores en la misma consulta), cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
+285 pruebas del backend: cancelar y reservar en ventanilla (B1 y B2), restablecer contraseña (B7), % de peticiones en 2 s (RNF03), dos préstamos a la vez del último ejemplar (concurrencia, RNF05), rutas de Angular y CORS configurable (despliegue), indicadores TAP e IPI (fórmulas, auditoría del inventario y consultas contra la BD), edición de reservas (RF15), sesiones con la caché de Guava, edición y baja lógica de usuarios (RF12 y RF13: DNI y correo únicos, no se da de baja con un libro en sala, se cancelan sus reservas, se cierra su sesión, reactivar, también contra la BD), incidencias y sanciones (RF06: las 3 sanciones, qué incidencia corresponde a cada préstamo, pago, cancelación y fin de la suspensión, también contra la BD), zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos con anotaciones (Bean Validation), seguridad de los endpoints (401, 403 y CORS con Spring Security), perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo (con los autores en la misma consulta), cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
 
-Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña, "Cargando..." en la pestaña Libros, incidencias que corresponden a cada préstamo, pestaña Usuarios con su filtro, edición y baja, sesión con el reloj del navegador, formato de fechas, franjas de recojo, cambiar fecha de una reserva, tiempo de atención del préstamo y pestaña Auditoría), 62 pruebas:
+Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña, "Cargando..." en la pestaña Libros, incidencias que corresponden a cada préstamo, pestaña Usuarios con su filtro, edición y baja, sesión con el reloj del navegador, formato de fechas, franjas de recojo, cambiar fecha de una reserva, tiempo de atención del préstamo y pestaña Auditoría, reservas en ventanilla y cancelar, restablecer contraseña, monitoreo RNF03 y préstamos anulados), 73 pruebas:
 
 ```
 cd frontend
@@ -156,17 +162,20 @@ npx ng test --watch=false
 | Libros | `GET /api/libros`, `GET /{id}`, `GET /buscar?q=` (título, autor, categoría o ISBN), `GET /autor/{nombre}` (públicos); `POST`, `PUT /{id}`, `DELETE /{id}` | Administrador |
 | Categorías y autores | `GET /api/categorias`, `GET /api/autores` (listas para los formularios) | Público |
 | Préstamos | `POST /api/prestamos`, `PUT /{id}/ampliar`, `PUT /{id}/devolucion` | Encargado |
-| | `GET /activos`, `GET /{id}`, `GET /historial?dni=&libro=&desde=&hasta=`, `DELETE /{id}` (anular) | Encargado y Administrador |
+| | `GET /activos`, `GET /{id}`, `GET /historial?dni=&libro=&desde=&hasta=` | Encargado y Administrador |
+| | `DELETE /{id}` (anular: queda `anulado`) | Encargado |
 | | `GET /prestatario/{id}` | Los 3 perfiles (el prestatario, solo los suyos) |
 | Reservas | `GET /api/reservas` | Administrador y Encargado |
 | | `GET /usuario/{id}` | Los 3 perfiles (el prestatario, solo las suyas) |
-| | `POST` (sin stock entra a la cola de espera), `PUT /{id}/cancelar` | Prestatario (solo las suyas) y Encargado |
+| | `POST` (sin stock entra a la cola de espera) | Prestatario (solo las suyas) y Encargado |
+| | `POST /ventanilla` (el encargado reserva con el DNI del prestatario) | Encargado |
+| | `PUT /{id}/cancelar` | Los 3 perfiles (el prestatario, solo las suyas) |
 | | `PUT /{id}` (cambiar fecha y franja de recojo de una pendiente, RF15) | Prestatario (solo las suyas) y Administrador |
 | | `DELETE /{id}` (eliminación física) | Administrador |
 | Reportes | `GET /api/reportes/{tipo}/{formato}?desde=&hasta=` (tipo: `prestamos`, `devoluciones`, `reservas`, `incidencias`, `bajas`, `stock`, `indicadores`, `tiempos`; formato: `excel`, `pdf`, `csv`) | Administrador y Encargado |
 | Importar libros | `POST /api/reportes/libros/csv` | Administrador |
 | Usuarios | `GET /api/usuarios/encargados`, `POST /api/usuarios/encargados` (RF09) | Administrador |
-| | `GET /api/usuarios` (prestatarios y encargados), `PUT /{id}` (editar, RF12), `DELETE /{id}` (baja lógica: queda `inactivo`, RF13), `PUT /{id}/reactivar` | Administrador |
+| | `GET /api/usuarios` (prestatarios y encargados), `PUT /{id}` (editar, RF12), `DELETE /{id}` (baja lógica: queda `inactivo`, RF13), `PUT /{id}/reactivar`, `PUT /{id}/contrasena` (restablecer) | Administrador |
 | Auditoría (IPI) | `GET /api/auditorias` (IPI del mes y sus conteos), `POST /api/auditorias` (conteo físico de un título) | Administrador |
 | Incidencias (RF06) | `GET /api/incidencias`, `POST /api/incidencias` (incidencia + sanción), `PUT /sanciones/{id}/pago`, `PUT /sanciones/{id}/cancelar` | Encargado |
 | Monitoreo | `GET /api/monitoreo` | Administrador |

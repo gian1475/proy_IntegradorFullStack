@@ -148,26 +148,28 @@ Comparé `docs/Avance_III_IntegradorV8_corregido.docx` **párrafo por párrafo**
 - 🟠 **Desactualizado:** el informe dice "pendiente", "entrega final" o "Sprint 4", y ya está hecho.
 - 🟡 **Falta:** algo nuevo del código que el informe no menciona.
 
-**Resumen:** 9 brechas del código (8.1), unas 75 frases por cambiar (8.2), 7 tablas por rehacer (8.3) y unas 20 figuras por rehacer o agregar (8.4). Lo más grave para la nota de **coherencia**:
+**Resumen:** 9 brechas del código (8.1, ✅ resueltas el 04/11), unas 75 frases por cambiar (8.2), 7 tablas por rehacer (8.3) y unas 20 figuras por rehacer o agregar (8.4). Lo más grave para la nota de **coherencia**:
 1. La **seguridad** está descrita como era antes del 02/11 ("interceptor propio", `@RolesPermitidos`, "solo Spring Security Crypto"). Hoy es Spring Security completo. Está en 2.1.4.4, 2.1.4.6, 2.1.5.2 y la Tabla 36, y la Figura 35 muestra una clase que ya no existe.
 2. El informe dice en **más de 30 lugares** que algo está "pendiente para la entrega final". Hoy está todo hecho: RF06, RF09 (encargados), RF12, RF13, RF15, cola de espera, 8 reportes, horario 08:00–20:00, 72 bytes, perfil único, TAP e IPI.
 3. **Paquete equivocado:** 2.1.4.1 dice `com.backend.demo`; el real es `com.alejandria.biblioteca`.
 4. **Pruebas:** dice 90 del backend y 8 del frontend; hoy son **265 y 62**.
-5. **Brecha B1:** el informe dice que el Administrador cancela reservas, pero el código no se lo permite.
+5. ~~Brecha B1~~: ✅ resuelta el 04/11, igual que B2 a B9 (ver 8.1).
 
-### 8.1 ⚙️ Brechas del código (decidir: programar o cambiar el informe)
+### 8.1 ⚙️ Brechas del código: ✅ todas resueltas el 04/11
 
-| # | Qué dice el informe | Qué hace el código | Propuesta |
-|---|---|---|---|
-| B1 | RF16 (Tabla 18) y CU05 (Tabla 28): "los tres perfiles pueden cancelar" reservas | `PUT /api/reservas/{id}/cancelar` solo admite Encargado y Prestatario: el Administrador recibe **403**. Tampoco hay botón en su pestaña Reservas | **Programarlo** (es chico): agregar `ADMINISTRADOR` al `@RolesAllowed`, un botón "Cancelar" en las pendientes y en cola de la pestaña Reservas del admin, y sus pruebas. Alternativa: quitar al Administrador de RF16 y de CU05 |
-| B2 | RF04 y RF16: el **Encargado** registra y cancela reservas | Solo **por la API** (no tiene botones). `CLAUDE.md` lo dice así ("solo por la API, ventanilla") | Programar "Cancelar" en su pestaña "Reservas pendientes" (y, si quieren, "Reservar a nombre de…"). Si no, escribir en las fichas que el Encargado lo hace solo por la API; no lo recomiendo, porque en la sustentación se muestran pantallas |
-| B3 | RNF03 (Tabla 23): "al menos el 95 % de las operaciones en ≤ 2 s; **un promedio inferior a 2 s, por sí solo, no acredita** este criterio" | La pestaña Monitoreo solo muestra el tiempo **promedio** | Programarlo **sin librerías nuevas**: Micrometer (ya está) cuenta cuántas peticiones tardan ≤ 2 s con `management.metrics.distribution.slo.http.server.requests=2s`, y `MonitoreoService` muestra el %. Así RNF03 tiene evidencia |
-| B4 | RNF05 y 2.1.6: evitar que dos préstamos a la vez descuadren el stock "requiere pruebas específicas" | **Ya bloquea** la fila del libro (`@Lock(PESSIMISTIC_WRITE)` en `LibroDao.buscarParaActualizar`, es decir un `SELECT … FOR UPDATE`), pero no hay una prueba con dos préstamos simultáneos | Programar una prueba con dos hilos contra la BD. En el informe, nombrar el bloqueo |
-| B5 | Tabla 33 (bloque 4: "despliegue y aceptación final"), Anexo F («La publicación del sistema en un servidor en la nube forma parte del Sprint 4 (paquete 1.6.1 de la EDT)») y RNF01 (99 % de disponibilidad) | **No hay despliegue** en la nube: se ejecuta el `.jar` en una PC | Decidir: desplegar (Neon ya está en la nube; faltan el backend y el frontend en un servicio gratuito), o escribir que se ejecuta en local y que RNF01 se verificará al implantarlo |
-| B6 | RNF06 (Tabla 26): Chrome, Edge y Firefox, en PC y celular | No hay evidencia (solo Chrome y una captura de celular del dashboard) | No es código: abrir las pantallas principales en los 3 navegadores y en un celular y sacar capturas |
-| B7 | 3.5, texto de la Figura 79: «el restablecimiento desde un módulo de administración aún no está implementado». Encuesta, pregunta 15: «…al registrarse **o actualizar sus credenciales**» | Nadie puede cambiar una contraseña desde el sistema (RF12 lo excluye por la decisión del 03/11) | Decidir: (a) dejarlo así, cambiar "aún no está implementado" por "no se contempla en el alcance" y quitar "o actualizar sus credenciales" de la pregunta 15; o (b) programar "restablecer contraseña" para el admin, con la regla de la contraseña |
-| B8 | Tabla 35 (permisos): el Administrador **no** anula préstamos | El admin **sí** puede anular por la API (`DELETE /api/prestamos/{id}` admite Encargado y Administrador), aunque no tiene botón | Decidir: quitar `ADMINISTRADOR` de ese endpoint, o agregarlo a la Tabla 35 ("solo por la API") |
-| B9 | RF07 (Tabla 9), criterio: «El historial muestra **todos** los préstamos» | El historial del encargado y del admin sí muestra todos. Pero en "Mis Préstamos" el prestatario **no ve sus préstamos anulados** (se filtran a propósito) | Es menor. Agregar a la ficha: "el prestatario no ve los préstamos anulados (eliminación lógica)" |
+Decisiones del equipo (04/11): B5 = dejarlo listo + guía; B7 = el admin restablece; B8 = quitar el permiso; B9 = mostrar los anulados. Commits `5b8f447` (B1 y B2), `54b8f69` (B7, B8 y B9), `42cb64b` (B3 y B4) y `84e8569` (B5). B6 se probó en la sesión. **Donde la sección 8.2 dice "⚙️ Ver Bn", usar la columna "Qué poner en el informe".**
+
+| # | Qué se hizo en el código | Qué poner en el informe |
+|---|---|---|
+| B1 | El Administrador cancela reservas: `PUT /api/reservas/{id}/cancelar` lo admite y su pestaña Reservas tiene el botón "Cancelar" | **No cambia** RF16 ni CU05: ahora el código coincide. Texto de la Figura 89: agregar el botón "Cancelar" |
+| B2 | El Encargado tiene **"Reservar en ventanilla"** (con el DNI del prestatario; sin stock entra a la cola) y **"Cancelar"** en las pendientes y en la cola. Endpoint nuevo `POST /api/reservas/ventanilla` | RF04 (Tabla 6): agregar "el Encargado reserva en la ventanilla con el DNI del prestatario". RF16: no cambia. Texto de la Figura 85: el formulario y los botones nuevos. Anexo de la API: el endpoint |
+| B3 | La pestaña Monitoreo muestra **"Peticiones en 2 s o menos: X % — Cumple / No cumple RNF03"** (Micrometer, sin librería nueva) | RNF03 (Tabla 23): agregar "el sistema mide el % de peticiones que responden en 2 s o menos (pestaña Monitoreo)". Anexo G: agregar la métrica. Figura 91: captura nueva |
+| B4 | Prueba `ConcurrenciaStockTest`: dos préstamos a la vez del último ejemplar; solo uno se registra. Sin el bloqueo falla | RNF05 y 2.1.6: "el sistema bloquea la fila del libro mientras dura la operación (`SELECT … FOR UPDATE`) y una prueba automática lo comprueba" |
+| B5 | Queda **listo para desplegar**: un solo `.jar` con las pantallas, `Dockerfile` y [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md) (Render). **Falta que ustedes lo publiquen con su cuenta** | Anexo F: agregar "un solo .jar sirve la API y las pantallas; se despliega con Docker en Render (plan gratuito) con las credenciales de Neon en variables de entorno". Cambiar «forma parte del Sprint 4» por el resultado: la URL, cuando lo publiquen. RNF01: "el plan gratuito apaga el servicio sin visitas; el 99 % requiere un plan pagado" |
+| B6 | Con Chromium (motor de Chrome y Edge), 21 pantallas × 3 tamaños: **63 de 63 sin scroll horizontal ni errores**. Capturas en `docs/capturas/rnf06/` | RNF06: "se verificó en Chrome y Edge (escritorio, tablet y celular)". **Firefox lo prueban ustedes** en la PC y agregan la captura |
+| B7 | Botón **"Contraseña"** en Usuarios: el admin pone una nueva (misma regla), se cierran las sesiones del usuario y se le quita el bloqueo por intentos | Texto de la Figura 79: «el restablecimiento desde un módulo de administración aún no está implementado» → "el administrador la restablece desde la pestaña Usuarios". Encuesta, pregunta 15: cambiar «o actualizar sus credenciales» por "o cuando el administrador se la restableció". RF12: agregar "y restablecer la contraseña (no la ve: pone una nueva)" |
+| B8 | Anular un préstamo es **solo del Encargado** (el admin recibe 403) | **No cambia** la Tabla 35: ahora el código coincide |
+| B9 | "Mis Préstamos" muestra también los anulados, en gris; no cuentan como "en curso" | **No cambia** RF07. Texto de la Figura 93: "incluye los anulados con su estado" |
 
 ### 8.2 Cambios por sección del informe (en el orden del documento)
 
@@ -326,27 +328,30 @@ Comparé `docs/Avance_III_IntegradorV8_corregido.docx` **párrafo por párrafo**
 
 ### 8.3 Tablas para rehacer completas (contenido listo)
 
-**Tabla 34. Pruebas automatizadas (al 03/11/2026)**. Los números salen de las clases de prueba y suman exacto.
+**Tabla 34. Pruebas automatizadas (al 04/11/2026)**. Los números salen de las clases de prueba y suman exacto.
 
 | Capa | Qué se prueba | N.° |
 |---|---|---|
 | Backend | Regla de la contraseña (incluye los 72 bytes) | 14 |
 | Backend | Validación de datos con anotaciones (Bean Validation) | 23 |
-| Backend | Seguridad de los endpoints (401, 403, 400 y CORS con Spring Security) | 19 |
+| Backend | Seguridad de los endpoints (401, 403, 400 y CORS con Spring Security) | 23 |
 | Backend | Bloqueo tras 3 intentos fallidos (Guava) | 6 |
 | Backend | Sesión de 15 minutos sin actividad (Guava) | 6 |
 | Backend | Perfil único y usuario inactivo al iniciar sesión | 4 |
 | Backend | Hora de Lima y horario de atención (08:00–20:00) | 8 |
 | Backend | Préstamos (3 horas, ampliación, devolución dañada, anulación, historial y TAP) | 23 |
 | Backend | Libros (registro, edición, baja, mantenimiento y búsqueda) | 15 |
-| Backend | Reservas: cola de espera (RF04 y RF16) | 13 |
+| Backend | Reservas: cola de espera y reserva en ventanilla (RF04 y RF16) | 15 |
 | Backend | Reservas: cambiar fecha y franja (RF15) | 8 |
 | Backend | Reservas: eliminación física (RF17) | 6 |
 | Backend | Incidencias y sanciones (RF06) | 24 |
-| Backend | Usuarios: registro de encargados, edición y baja lógica (RF09, RF12 y RF13) | 26 |
+| Backend | Usuarios: encargados, edición, baja lógica y restablecer contraseña (RF09, RF12 y RF13) | 29 |
 | Backend | Reportes (8 reportes en Excel, PDF y CSV, e importación) | 25 |
 | Backend | Indicadores de gestión y dashboard | 14 |
 | Backend | Auditoría del inventario (IPI) | 9 |
+| Backend | Monitoreo: % de peticiones en 2 s o menos (RNF03) | 4 |
+| Backend | Concurrencia: dos préstamos a la vez del último ejemplar (RNF05) | 1 |
+| Backend | Despliegue: rutas de Angular y CORS configurable | 6 |
 | Backend | Manejo de errores | 5 |
 | Backend | Consultas contra la BD real (préstamos y libros) | 16 |
 | Backend | Arranque de la aplicación | 1 |
@@ -354,23 +359,25 @@ Comparé `docs/Avance_III_IntegradorV8_corregido.docx` **párrafo por párrafo**
 | Frontend | Estado y búsqueda del catálogo (RF03) | 5 |
 | Frontend | Regla de la contraseña | 3 |
 | Frontend | Incidencias y sanciones (RF06) | 6 |
-| Frontend | Pestaña Usuarios: filtro, edición, baja y reactivar (RF12 y RF13) | 15 |
+| Frontend | Pestaña Usuarios: filtro, edición, baja, reactivar y contraseña (RF12 y RF13) | 16 |
 | Frontend | Sesión del navegador | 2 |
 | Frontend | Formato de fechas (`formatDate`) | 4 |
-| Frontend | Franjas de recojo y cambiar fecha de una reserva (RF15) | 10 |
+| Frontend | Reservas: franjas, cambiar fecha (RF15), cancelar y reservar en ventanilla | 16 |
+| Frontend | Mis Préstamos con los anulados (RF07) | 1 |
 | Frontend | Tiempo de atención al registrar un préstamo (TAP) | 3 |
 | Frontend | Pestaña Auditoría (IPI) | 4 |
+| Frontend | Pestaña Monitoreo (RNF03) | 3 |
 | Frontend | Pestaña Libros ("Cargando…") | 2 |
 | Frontend | Arranque de la aplicación | 1 |
-| **Total** | **265 del backend y 62 del frontend** | **327** |
+| **Total** | **285 del backend y 73 del frontend** | **358** |
 
 **Tabla 35. Permisos de cada perfil**
 
 | Perfil | Pantalla | Qué puede hacer |
 |---|---|---|
-| Administrador | `/admin` | Ver el dashboard con los 4 indicadores. Registrar, consultar, editar y dar de baja libros; importar libros en CSV. Ver los préstamos activos y el historial con filtros. Reservas: ver todas, cambiar la fecha y la franja de una pendiente (RF15) y eliminar las canceladas o vencidas (RF17). Usuarios: registrar encargados, editar, dar de baja y reactivar prestatarios y encargados. Registrar la auditoría del inventario (IPI). Descargar los 8 reportes. Ver el monitoreo. *(Por la API: anular préstamos, ver B8; cancelar reservas, ver B1)* |
-| Encargado | `/encargado` | Registrar préstamos (buscando el libro), ampliarlos, registrar devoluciones (bueno o dañado) y anular préstamos. Entregar las reservas pendientes y ver la cola de espera. Registrar incidencias con su sanción, registrar el pago de multas y cancelar sanciones (RF06). Ver el historial con filtros. Descargar los 8 reportes. *(Por la API: registrar y cancelar reservas a nombre de un prestatario, ver B2)* |
-| Prestatario | `/catalogo` | Consultar el catálogo con estado y stock (búsqueda y categorías). Reservar o unirse a la cola de espera. Cambiar la fecha y la franja de sus reservas pendientes (RF15). Cancelar sus reservas o salir de la cola. Ver y filtrar sus préstamos |
+| Administrador | `/admin` | Ver el dashboard con los 4 indicadores. Registrar, consultar, editar y dar de baja libros; importar libros en CSV. Ver los préstamos activos y el historial con filtros. Reservas: ver todas, cambiar la fecha y la franja de una pendiente (RF15), cancelar (RF16) y eliminar las canceladas o vencidas (RF17). Usuarios: registrar encargados, editar, dar de baja, reactivar y restablecer la contraseña de prestatarios y encargados. Registrar la auditoría del inventario (IPI). Descargar los 8 reportes. Ver el monitoreo (incluye el % de peticiones en 2 s o menos) |
+| Encargado | `/encargado` | Registrar préstamos (buscando el libro), ampliarlos, registrar devoluciones (bueno o dañado) y anular préstamos. Reservar en la ventanilla a nombre de un prestatario (con su DNI), entregar y cancelar reservas y ver la cola de espera. Registrar incidencias con su sanción, registrar el pago de multas y cancelar sanciones (RF06). Ver el historial con filtros. Descargar los 8 reportes |
+| Prestatario | `/catalogo` | Consultar el catálogo con estado y stock (búsqueda y categorías). Reservar o unirse a la cola de espera. Cambiar la fecha y la franja de sus reservas pendientes (RF15). Cancelar sus reservas o salir de la cola. Ver y filtrar sus préstamos (también los anulados) |
 
 **Tabla 36. Librerías utilizadas en el sistema**
 
@@ -387,7 +394,7 @@ Comparé `docs/Avance_III_IntegradorV8_corregido.docx` **párrafo por párrafo**
 | Apache Commons CSV | 1.14.0 | Los 8 reportes en CSV e importación de libros | `ReporteService.generarCsv` e `importarLibrosCsv` |
 | OpenPDF | 2.0.3 | Los 8 reportes en PDF | `ReporteService.generarPdf` |
 | Logback | Incluida en Spring Boot | Logs en consola y en `logs/biblioteca.log` (30 días) | `resources/logback-spring.xml` |
-| Spring Boot Actuator + Micrometer | Incluidas en Spring Boot | Monitoreo (puerto 8081) | `application.properties`, `MonitoreoService` |
+| Spring Boot Actuator + Micrometer | Incluidas en Spring Boot | Monitoreo (puerto 8081) y % de peticiones en 2 s o menos (RNF03) | `application.properties`, `MonitoreoService` |
 | Angular | 22.1 (TypeScript 6.0, RxJS 7.8) | Interfaces; `formatDate` y el idioma `es-PE` de `@angular/common` para las fechas | `frontend/`, `utils/fechas.ts` |
 | Bootstrap | 5.3.8 | Paneles del Administrador y del Encargado | `styles/bootstrap-paneles.less` |
 | LESS | 4.2 | Estilos de Inicio, Login, Registro y Catálogo | Archivos `.less` |
@@ -399,12 +406,12 @@ Comparé `docs/Avance_III_IntegradorV8_corregido.docx` **párrafo por párrafo**
 | Formulario | Patrones de GUI | RF |
 |---|---|---|
 | Registrar préstamo (con búsqueda del libro) | Validación de entrada, Barra de búsqueda, Notificaciones | RF01, RF03 (y TAP) |
-| Reservas pendientes y cola de espera (Encargado) | Tabla de datos | RF04, RF16 |
+| Reservas pendientes, cola de espera y reservar en ventanilla (Encargado) | Tabla de datos, Validación de entrada, Barra de búsqueda, CRUD (reservar y cancelar) | RF04, RF16 |
 | Incidencias y sanciones (Encargado) | Validación de entrada, Tabla de datos, Alertas, CRUD | RF06 |
 | Historial (Encargado y Administrador) | Tabla de datos con filtros | RF07 |
 | Reportes (Encargado y Administrador) | Validación de entrada, Tabla de datos con filtros | RF08 |
-| Usuarios (Administrador) | CRUD, Tabla de datos con filtros, Validación de entrada, Notificaciones | RF09, RF12, RF13 |
-| Reservas (Administrador) | Tabla de datos con filtros, CRUD (cambiar fecha y eliminación física) | RF15, RF17 |
+| Usuarios (Administrador) | CRUD, Tabla de datos con filtros, Validación de entrada (también de la contraseña nueva), Notificaciones | RF09, RF12, RF13 |
+| Reservas (Administrador) | Tabla de datos con filtros, CRUD (cambiar fecha, cancelar y eliminación física) | RF15, RF16, RF17 |
 | Auditoría (Administrador) | Tabla de datos, Validación de entrada, Notificaciones | IPI (1.2.2) |
 | Mis Reservas (Prestatario) | CRUD (cambiar fecha, cancelar), Notificaciones | RF04, RF15, RF16 |
 
@@ -460,3 +467,21 @@ Para las capturas pendientes, ver la tabla de la sección 4 y "Capturas para el 
 - RF10, RF11, RF17 y RNF07. RF07 coincide salvo B9.
 - El diccionario de `usuario`, `administrador`, `encargado`, `prestatario`, `categoria`, `autor`, `libro_autor`, `incidencia` (salvo el detalle de la advertencia) y `sancion`.
 - 2.1.2.6 (salvo la frase de RF13), la consulta de una tabla y la de JOIN (2.1.4.2), el login, el registro y el bloqueo, el monitoreo (Anexo G) y las limitaciones (salvo la del horario).
+
+---
+
+## 9. Qué cambiar en `CLAUDE.md` por B1–B9 (04/11)
+
+- **Perfiles y permisos:**
+  - Administrador: agregar "cancelar reservas, restablecer contraseñas". Borrar "Solo por la API: anular préstamos" (ya no puede).
+  - Encargado: cambiar "Solo por la API: registrar y cancelar reservas a nombre de un prestatario (ventanilla)" por "reservar en ventanilla con el DNI del prestatario y cancelar reservas (botones en Reservas pendientes)".
+  - Prestatario: "ve también sus préstamos anulados".
+- **Reglas del negocio**, agregar:
+  - "Restablecer contraseña: solo el admin, a prestatarios y encargados; misma regla; cierra sus sesiones y quita el bloqueo por intentos."
+  - "Anular préstamos: solo el encargado."
+- **Stack:** "Despliegue: un solo `.jar` con las pantallas (`ng build` + `mvnw package`), `Dockerfile` y `docs/DESPLIEGUE.md` (Render); `environment.ts` de Angular con la URL de la API; CORS con `app.cors.origenes` y puerto con `PORT`".
+- **Estado:** 285 pruebas del backend y 73 del frontend. B1–B9 hechos el 04/11.
+- **Pendientes:**
+  - Publicar en Render (con su cuenta; antes, la migración 05 en Neon).
+  - Probar en Firefox (RNF06).
+  - Actualizar el informe (sección 8).
