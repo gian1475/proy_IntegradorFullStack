@@ -2,7 +2,9 @@ package com.alejandria.biblioteca.service;
 
 import com.alejandria.biblioteca.dao.ReservaDao;
 import com.alejandria.biblioteca.dao.UsuarioDao;
+import com.alejandria.biblioteca.dto.reserva.ActualizarReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaDTO;
+import com.alejandria.biblioteca.dto.reserva.ReservaVentanillaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaRespuestaDTO;
 import com.alejandria.biblioteca.entity.Libro;
 import com.alejandria.biblioteca.entity.Reserva;
@@ -89,6 +91,15 @@ public class ReservaService {
         return ReservaRespuestaDTO.desde(guardada);
     }
 
+    // reserva ventanilla (B2, RF04): el encargado reserva a nombre del prestatario con su DNI.
+    // se busca al prestatario y se usan las mismas reglas de crear (sancion, 7 dias, horario, cola de espera)
+    @Transactional
+    public ReservaRespuestaDTO crearEnVentanilla(ReservaVentanillaDTO dto) {
+        Usuario prestatario = usuarioDao.findByDni(dto.dniPrestatario().trim())
+                .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "No existe un usuario con ese DNI"));
+        return crear(new ReservaDTO(dto.idLibro(), prestatario.getIdUsuario(), dto.fechaRecojoLimite()));
+    }
+
     /** Sin ejemplares: la reserva no aparta nada, queda 'en_espera' con su puesto en la cola y sin fecha de recojo. */
     // cola de espera (RF04): la fecha de recojo se pone recien cuando le toque un ejemplar (ver ColaEsperaService)
     private ReservaRespuestaDTO entrarALaCola(Usuario prestatario, Libro libro, LocalDateTime ahora) {
@@ -160,6 +171,26 @@ public class ReservaService {
         reservaDao.save(reserva);
         libroService.reponerStock(reserva.getLibro().getIdLibro());
         log.info("Reserva #{} cancelada", idReserva);
+    }
+
+    // reserva actualizar (RF15): el prestatario o el admin cambian la fecha y la franja de recojo.
+    // criterio de aceptacion: solo una reserva 'pendiente' (y q no haya vencido: antes se liberan las vencidas).
+    // la nueva fecha sigue las mismas reglas q al reservar (futuro, 7 dias, horario). el stock no cambia:
+    // el ejemplar ya estaba apartado
+    @Transactional
+    public ReservaRespuestaDTO actualizar(Integer idReserva, ActualizarReservaDTO dto) {
+        liberarVencidas(); // si ya vencio, pasa a 'vencida' y ya no se puede cambiar
+        Reserva reserva = buscar(idReserva);
+        if (!PENDIENTE.equals(reserva.getEstadoReserva())) {
+            throw new NegocioException(HttpStatus.CONFLICT, "Solo se pueden modificar reservas en estado pendiente");
+        }
+        validarFechaRecojo(dto.fechaRecojoLimite(), horario.ahora());
+
+        LocalDateTime anterior = reserva.getFechaRecojoLimite();
+        reserva.setFechaRecojoLimite(dto.fechaRecojoLimite());
+        Reserva guardada = reservaDao.save(reserva);
+        log.info("Reserva #{} actualizada: recojo de {} a {}", idReserva, anterior, dto.fechaRecojoLimite());
+        return ReservaRespuestaDTO.desde(guardada);
     }
 
     // eliminacion fisica: aqui SI se borra la fila de la bd (DELETE FROM reserva WHERE id_reserva = ?).

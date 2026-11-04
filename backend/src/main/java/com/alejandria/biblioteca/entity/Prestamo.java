@@ -41,6 +41,10 @@ public class Prestamo {
     @Column(name = "fecha_devolucion_real")
     private LocalDateTime fechaDevolucionReal;
 
+    /** TAP (migración 05): cuándo empezó el encargado a registrarlo; fechaPrestamo es la confirmación. */
+    @Column(name = "inicio_atencion")
+    private LocalDateTime inicioAtencion;
+
     @Column(name = "ampliado", nullable = false)
     private Boolean ampliado = false;
 

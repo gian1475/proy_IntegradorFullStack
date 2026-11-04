@@ -1,0 +1,176 @@
+@if (mensajeOk()) {
+  <div class="alert alert-success">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
+}
+
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Registrar encargado</h2>
+  <p class="text-body-secondary small">El encargado inicia sesión con su correo y esta contraseña. Después puede atender la ventanilla de préstamos.</p>
+  <form (ngSubmit)="registrar()">
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="e-nombre">Nombres</label>
+        <input class="form-control" id="e-nombre" name="nombre" maxlength="50" [(ngModel)]="form.nombre" />
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="e-apellido">Apellidos</label>
+        <input class="form-control" id="e-apellido" name="apellido" maxlength="50" [(ngModel)]="form.apellido" />
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="e-dni">DNI</label>
+        <input class="form-control" id="e-dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="form.dni" />
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="e-correo">Correo</label>
+        <input class="form-control" id="e-correo" name="correo" type="email" maxlength="100" [(ngModel)]="form.correo" />
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="e-contrasena">Contraseña</label>
+        <input class="form-control" id="e-contrasena" name="contrasena" type="password" maxlength="64" autocomplete="new-password" [(ngModel)]="form.contrasena" />
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="e-turno">Turno</label>
+        <select class="form-select" id="e-turno" name="turno" [(ngModel)]="form.turno">
+          <option value="mañana">Mañana</option>
+          <option value="tarde">Tarde</option>
+        </select>
+      </div>
+    </div>
+    <ul class="list-unstyled d-flex flex-wrap gap-3 small mb-3">
+      @for (r of requisitos(); track r.texto) {
+        <li [class]="r.cumple ? 'text-success' : 'text-danger'">{{ r.cumple ? '✓' : '✗' }} {{ r.texto }}</li>
+      }
+    </ul>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="submit" class="btn btn-primary btn-sm" [disabled]="guardando()">Registrar encargado</button>
+    </div>
+  </form>
+</section>
+
+<!-- RF12: editar los datos de un prestatario o encargado (sin contraseña ni estado) -->
+@if (edicion) {
+  <section class="card card-body mb-4 border-primary">
+    <h2 class="h6 fw-bold text-primary mb-3">Editar {{ etiquetaPerfil(edicion.perfil).toLowerCase() }} #{{ edicion.idUsuario }}</h2>
+    <form (ngSubmit)="guardarEdicion()">
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label" for="u-nombre">Nombres</label>
+          <input #campoNombre class="form-control" id="u-nombre" name="editNombre" maxlength="50" [(ngModel)]="edicion.nombre" />
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label" for="u-apellido">Apellidos</label>
+          <input class="form-control" id="u-apellido" name="editApellido" maxlength="50" [(ngModel)]="edicion.apellido" />
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label" for="u-dni">DNI</label>
+          <input class="form-control" id="u-dni" name="editDni" maxlength="8" [(ngModel)]="edicion.dni" />
+        </div>
+        <div class="col-sm-6 col-lg-4">
+          <label class="form-label" for="u-correo">Correo</label>
+          <input class="form-control" id="u-correo" name="editCorreo" type="email" maxlength="100" [(ngModel)]="edicion.correo" />
+        </div>
+        @if (edicion.perfil === 'ENCARGADO') {
+          <div class="col-sm-6 col-lg-3">
+            <label class="form-label" for="u-turno">Turno</label>
+            <select class="form-select" id="u-turno" name="editTurno" [(ngModel)]="edicion.turno">
+              <option value="mañana">Mañana</option>
+              <option value="tarde">Tarde</option>
+            </select>
+          </div>
+        }
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary btn-sm" [disabled]="guardando()">Guardar cambios</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cancelarEdicion()">Cancelar</button>
+      </div>
+    </form>
+  </section>
+}
+
+<!-- B7: restablecer la contraseña de quien la olvidó (lo atiende el admin en la ventanilla) -->
+@if (cambioContrasena; as u) {
+  <section class="card card-body mb-4 border-primary">
+    <h2 class="h6 fw-bold text-primary mb-3">Restablecer la contraseña de {{ u.nombre }} {{ u.apellido }}</h2>
+    <p class="text-body-secondary small">Escriba una contraseña nueva y désela a la persona. Se cierran sus sesiones abiertas y, si estaba bloqueada por intentos fallidos, ya puede entrar.</p>
+    <form (ngSubmit)="guardarContrasena()">
+      <div class="row g-3 mb-2">
+        <div class="col-sm-6 col-lg-4">
+          <label class="form-label" for="u-contrasena">Contraseña nueva</label>
+          <input class="form-control" id="u-contrasena" name="contrasenaNueva" type="password" maxlength="64"
+                 autocomplete="new-password" [(ngModel)]="contrasenaNueva" />
+        </div>
+      </div>
+      <ul class="list-unstyled d-flex flex-wrap gap-3 small mb-3">
+        @for (r of requisitosNueva(); track r.texto) {
+          <li [class]="r.cumple ? 'text-success' : 'text-danger'">{{ r.cumple ? '✓' : '✗' }} {{ r.texto }}</li>
+        }
+      </ul>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary btn-sm" [disabled]="guardando()">Guardar contraseña</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cambioContrasena = null">Cancelar</button>
+      </div>
+    </form>
+  </section>
+}
+
+<!-- RF12 y RF13: prestatarios y encargados (el admin no sale en la lista) -->
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Usuarios ({{ usuariosFiltrados().length }})</h2>
+  <div class="row g-2 mb-3">
+    <div class="col-sm-4 col-lg-3">
+      <select class="form-select form-select-sm" aria-label="Perfil" [ngModel]="filtroPerfil()" (ngModelChange)="filtroPerfil.set($event)">
+        <option value="TODOS">Todos los perfiles</option>
+        <option value="PRESTATARIO">Prestatarios</option>
+        <option value="ENCARGADO">Encargados</option>
+      </select>
+    </div>
+    <div class="col-sm-8 col-lg-5">
+      <input class="form-control form-control-sm" placeholder="Buscar por nombre, DNI o correo" aria-label="Buscar usuario"
+             [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" />
+    </div>
+  </div>
+  @if (cargando()) {
+    <div class="text-center text-body-secondary py-4">Cargando...</div>
+  } @else if (usuariosFiltrados().length === 0) {
+    <div class="text-center text-body-secondary py-4">No hay usuarios que coincidan.</div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>DNI</th>
+            <th>Correo</th>
+            <th>Perfil</th>
+            <th>Turno</th>
+            <th>Estado</th>
+            <th class="text-end">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of usuariosFiltrados(); track u.idUsuario) {
+            <tr>
+              <td>{{ u.nombre }} {{ u.apellido }}</td>
+              <td>{{ u.dni }}</td>
+              <td>{{ u.correo }}</td>
+              <td>{{ etiquetaPerfil(u.perfil) }}</td>
+              <td>{{ u.turno ?? '-' }}</td>
+              <td><span class="badge" [class]="u.estado">{{ u.estado }}</span></td>
+              <td class="text-end text-nowrap">
+                <button class="btn btn-outline-secondary btn-sm me-1" (click)="editar(u)">Editar</button>
+                <button class="btn btn-outline-secondary btn-sm me-1" (click)="abrirContrasena(u)">Contraseña</button>
+                @if (u.estado === 'inactivo') {
+                  <button class="btn btn-outline-success btn-sm" (click)="reactivar(u)">Reactivar</button>
+                } @else {
+                  <button class="btn btn-outline-danger btn-sm" (click)="darDeBaja(u)">Dar de baja</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

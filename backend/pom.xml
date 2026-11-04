@@ -95,6 +95,17 @@
 	<build>
 		<!-- Nombre del .jar que genera ./mvnw clean package (queda en target/) -->
 		<finalName>biblioteca-alejandria</finalName>
+		<!-- despliegue (B5): si antes se compilo el frontend (cd frontend && npx ng build), sus archivos entran al .jar
+		     en static/ y el mismo .jar sirve la API y las pantallas. si no existe la carpeta, maven la salta -->
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+			<resource>
+				<directory>../frontend/dist/proy_Integrador/browser</directory>
+				<targetPath>static</targetPath>
+			</resource>
+		</resources>
 		<plugins>
 			<!-- Lombok trabaja al compilar: se registra como procesador de anotaciones -->
 			<plugin>
@@ -108,6 +119,15 @@
 							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<!-- hora de lima: las pruebas corren en hora de Lima, igual que la app (BibliotecaApplication.fijarZonaHoraria).
+			     sin esto, en una PC o un servidor en otra zona las pruebas con LocalDateTime.now() cambian de dia antes -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Duser.timezone=America/Lima</argLine>
 				</configuration>
 			</plugin>
 			<plugin>

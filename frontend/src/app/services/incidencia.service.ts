@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 /** Incidencia con su préstamo y su sanción (RF06). */
 export interface Incidencia {
@@ -38,7 +39,7 @@ export interface RegistroIncidencia {
 export class IncidenciaService {
   private http = inject(HttpClient);
   // ruta incidencias (front): las llamadas al backend de incidencias y sanciones (RF06), solo del encargado
-  private apiUrl = 'http://localhost:8080/api/incidencias';
+  private apiUrl = `${environment.apiUrl}/incidencias`;
 
   listar(): Observable<Incidencia[]> {
     return this.http.get<Incidencia[]>(this.apiUrl);

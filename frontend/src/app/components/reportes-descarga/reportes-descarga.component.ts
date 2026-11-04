@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormatoReporte, ReporteService, TIPOS_REPORTE, TipoReporte } from '../../services/reporte.service';
 import { mensajeDeError } from '../../utils/mensaje-error';
+import { fechaInput } from '../../utils/fechas';
 
 /** Descarga de reportes (RF08) con rango de fechas. La usan los paneles del administrador y del encargado. */
 @Component({
@@ -60,6 +61,6 @@ export class ReportesDescargaComponent {
   }
 
   private formatear(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return fechaInput(d); // formatDate de angular (utils/fechas.ts)
   }
 }

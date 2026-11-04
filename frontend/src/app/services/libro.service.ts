@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface LibroBackend {
   idLibro: number;
@@ -49,7 +50,7 @@ export interface Autor {
 export class LibroService {
   private http = inject(HttpClient);
   // ruta crud libro (front): aqui estan las llamadas al backend del crud de libros
-  private apiUrl = 'http://localhost:8080/api/libros';
+  private apiUrl = `${environment.apiUrl}/libros`;
 
   getLibros(): Observable<LibroBackend[]> {
     return this.http.get<LibroBackend[]>(this.apiUrl);
@@ -76,10 +77,10 @@ export class LibroService {
   }
 
   getCategorias(): Observable<Categoria[]> {
-    return this.http.get<Categoria[]>('http://localhost:8080/api/categorias');
+    return this.http.get<Categoria[]>(`${environment.apiUrl}/categorias`);
   }
 
   getAutores(): Observable<Autor[]> {
-    return this.http.get<Autor[]>('http://localhost:8080/api/autores');
+    return this.http.get<Autor[]>(`${environment.apiUrl}/autores`);
   }
 }

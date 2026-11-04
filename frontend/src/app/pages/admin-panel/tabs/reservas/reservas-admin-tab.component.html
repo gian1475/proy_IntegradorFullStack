@@ -5,6 +5,31 @@
   <div class="alert alert-danger">{{ mensajeError() }}</div>
 }
 
+<!-- RF15: cambiar la fecha y la franja de recojo de una reserva pendiente -->
+@if (edicion(); as e) {
+  <section class="card card-body mb-4 border-primary">
+    <h2 class="h6 fw-bold text-primary mb-3">Cambiar fecha de recojo de la reserva #{{ e.idReserva }}</h2>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="r-fecha">Fecha de recojo</label>
+        <input class="form-control" id="r-fecha" type="date" [ngModel]="e.fecha" (ngModelChange)="edicion.set({ idReserva: e.idReserva, fecha: $event, franja: e.franja })" />
+      </div>
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label" for="r-franja">Franja</label>
+        <select class="form-select" id="r-franja" [ngModel]="e.franja" (ngModelChange)="edicion.set({ idReserva: e.idReserva, fecha: e.fecha, franja: $event })">
+          @for (f of franjas; track f.valor) {
+            <option [value]="f.valor">{{ f.texto }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-primary btn-sm" (click)="guardarFecha()">Guardar</button>
+      <button class="btn btn-outline-secondary btn-sm" (click)="edicion.set(null)">Cancelar</button>
+    </div>
+  </section>
+}
+
 <section class="card card-body mb-4">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h2 class="h6 fw-bold text-primary mb-0">Reservas</h2>
@@ -16,6 +41,8 @@
     </div>
   </div>
   <p class="text-body-secondary small">
+    A una reserva pendiente se le puede <strong>cambiar la fecha y la franja de recojo</strong>; una pendiente o en cola se puede
+    <strong>cancelar</strong> (el ejemplar vuelve al stock o pasa al siguiente de la cola).
     Las reservas canceladas o vencidas se pueden <strong>eliminar de la base de datos</strong> (eliminación física).
     Las pendientes, las que están en la cola de espera y las atendidas no se pueden eliminar.
   </p>
@@ -56,6 +83,11 @@
               <td>
                 @if (sePuedeEliminar(r)) {
                   <button class="btn btn-outline-danger btn-sm" (click)="eliminar(r)">Eliminar</button>
+                } @else if (r.estadoReserva === 'pendiente') {
+                  <button class="btn btn-outline-secondary btn-sm me-1" (click)="editarFecha(r)">Cambiar fecha</button>
+                  <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
+                } @else if (r.estadoReserva === 'en_espera') {
+                  <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
                 } @else {
                   <span class="text-body-secondary">—</span>
                 }

@@ -1,5 +1,6 @@
 package com.alejandria.biblioteca.service;
 
+import com.alejandria.biblioteca.dao.AuditoriaInventarioDao;
 import com.alejandria.biblioteca.dao.LibroDao;
 import com.alejandria.biblioteca.dao.PrestamoDao;
 import com.alejandria.biblioteca.dao.ReservaDao;
@@ -31,12 +32,13 @@ class DashboardServiceTest {
     @Mock private LibroDao libroDao;
     @Mock private ReservaDao reservaDao;
     @Mock private UsuarioDao usuarioDao;
+    @Mock private AuditoriaInventarioDao auditoriaDao;
 
     private DashboardService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new DashboardService(prestamoDao, libroDao, reservaDao, usuarioDao);
+        servicio = new DashboardService(prestamoDao, libroDao, reservaDao, usuarioDao, auditoriaDao);
         when(libroDao.contarPorEstado()).thenReturn(List.of(
                 new Object[] {"disponible", 20L, 45L},
                 new Object[] {"prestado", 3L, 0L},
@@ -62,11 +64,26 @@ class DashboardServiceTest {
     }
 
     @Test
-    void losIndicadoresQueElSistemaNoPuedeMedirNoInventanUnValor() {
+    void sinHoraDeInicioNiAuditoriasTapEIpiNoInventanUnValor() {
         DashboardDTO d = servicio.obtener();
 
-        assertNull(indicador(d, "TAP").valor()); // falta guardar la hora de inicio de la atención
-        assertNull(indicador(d, "IPI").valor()); // sale de la auditoría física del inventario
+        assertNull(indicador(d, "TAP").valor()); // ningun prestamo del mes con la hora de inicio de la atencion
+        assertNull(indicador(d, "IPI").valor()); // ninguna auditoria fisica en el mes
+    }
+
+    @Test
+    void calculaElTapYElIpiDelMes() {
+        when(prestamoDao.promedioMinutosAtencionEntre(any(), any())).thenReturn(1.5);
+        when(prestamoDao.contarConInicioAtencionEntre(any(), any())).thenReturn(8L);
+        when(auditoriaDao.contarAuditadosEntre(any(), any())).thenReturn(20L);
+        when(auditoriaDao.contarCoincidentesEntre(any(), any())).thenReturn(19L);
+
+        DashboardDTO d = servicio.obtener();
+
+        assertEquals(1.5, indicador(d, "TAP").valor());
+        assertTrue(indicador(d, "TAP").cumpleMeta());   // meta: 2 min o menos
+        assertEquals(95.0, indicador(d, "IPI").valor());
+        assertTrue(indicador(d, "IPI").cumpleMeta());   // meta: 95 % o mas
     }
 
     @Test

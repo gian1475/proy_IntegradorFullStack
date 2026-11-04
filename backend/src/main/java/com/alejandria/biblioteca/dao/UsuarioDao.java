@@ -26,6 +26,11 @@ public interface UsuarioDao extends JpaRepository<Usuario, Integer> {
 
     boolean existsByCorreo(String correo);
 
+    // RF12: al editar, el dni y el correo no pueden ser los de OTRO usuario (los suyos si)
+    boolean existsByDniAndIdUsuarioNot(String dni, Integer idUsuario);
+
+    boolean existsByCorreoAndIdUsuarioNot(String correo, Integer idUsuario);
+
     // perfil 1: el usuario esta en la tabla administrador?
     @Query(value = "SELECT EXISTS (SELECT 1 FROM administrador WHERE id_usuario = :idUsuario)", nativeQuery = true)
     boolean esAdministrador(@Param("idUsuario") Integer idUsuario);
@@ -49,6 +54,29 @@ public interface UsuarioDao extends JpaRepository<Usuario, Integer> {
                  + "FROM usuario u JOIN encargado e ON e.id_usuario = u.id_usuario "
                  + "ORDER BY u.apellido, u.nombre", nativeQuery = true)
     List<Object[]> listarEncargados();
+
+    /**
+     * RF12 y RF13: prestatarios y encargados con su perfil (JOIN usuario + encargado + prestatario).
+     * El administrador no sale: no se edita ni se da de baja desde el panel.
+     * Cada fila: [id, nombre, apellido, dni, correo, estado, perfil, turno (null si es prestatario)].
+     */
+    @Query(value = "SELECT u.id_usuario, u.nombre, u.apellido, u.dni, u.correo, u.estado, "
+                 + "       CASE WHEN e.id_usuario IS NOT NULL THEN 'ENCARGADO' ELSE 'PRESTATARIO' END, e.turno "
+                 + "FROM usuario u "
+                 + "LEFT JOIN encargado e ON e.id_usuario = u.id_usuario "
+                 + "LEFT JOIN prestatario p ON p.id_usuario = u.id_usuario "
+                 + "WHERE e.id_usuario IS NOT NULL OR p.id_usuario IS NOT NULL "
+                 + "ORDER BY u.apellido, u.nombre", nativeQuery = true)
+    List<Object[]> listarUsuarios();
+
+    // turno del encargado (null si no es encargado)
+    @Query(value = "SELECT turno FROM encargado WHERE id_usuario = :idUsuario", nativeQuery = true)
+    String turnoDe(@Param("idUsuario") Integer idUsuario);
+
+    // RF12: el admin le cambia el turno al encargado
+    @Modifying
+    @Query(value = "UPDATE encargado SET turno = :turno WHERE id_usuario = :idUsuario", nativeQuery = true)
+    void cambiarTurno(@Param("idUsuario") Integer idUsuario, @Param("turno") String turno);
 
     // crear perfil 2: mete al usuario nuevo en la tabla encargado con su turno (RF09)
     @Modifying

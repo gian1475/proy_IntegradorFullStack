@@ -5,25 +5,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
+import com.google.common.base.Ticker;
+
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Sesión: se cierra a los 15 minutos sin actividad (RNF04)")
 class SesionServiceTest {
 
-    /** Reloj falso: permite adelantar el tiempo sin esperar de verdad. */
-    static class RelojFalso extends Clock {
-        private Instant ahora = Instant.parse("2026-10-28T14:00:00Z");
+    /** Reloj falso de Guava: permite adelantar el tiempo sin esperar de verdad (igual que en LimitadorIntentosLoginTest). */
+    static class RelojFalso extends Ticker {
+        private long nanos = 0;
 
-        @Override public ZoneId getZone() { return ZoneId.of("America/Lima"); }
-        @Override public Clock withZone(ZoneId zona) { return this; }
-        @Override public Instant instant() { return ahora; }
+        @Override
+        public long read() { return nanos; }
 
-        void avanzar(Duration tiempo) { ahora = ahora.plus(tiempo); }
+        void avanzar(Duration tiempo) { nanos += tiempo.toNanos(); }
     }
 
     private RelojFalso reloj;
@@ -62,6 +60,30 @@ class SesionServiceTest {
         Sesion s = servicio.crear(1, "PRESTATARIO");
         servicio.invalidar(s.token());
         assertTrue(servicio.validar(s.token()).isEmpty());
+    }
+
+    @Test
+    void alDarDeBajaAUnUsuarioSeCierranTodasSusSesiones() {
+        // RF13: si el usuario estaba conectado, su token deja de servir en ese momento
+        Sesion pc = servicio.crear(5, "PRESTATARIO");
+        Sesion celular = servicio.crear(5, "PRESTATARIO");
+        Sesion otro = servicio.crear(6, "PRESTATARIO");
+
+        servicio.cerrarSesionesDe(5);
+
+        assertTrue(servicio.validar(pc.token()).isEmpty());
+        assertTrue(servicio.validar(celular.token()).isEmpty());
+        assertTrue(servicio.validar(otro.token()).isPresent()); // los demás siguen conectados
+    }
+
+    @Test
+    void elMonitoreoSoloCuentaLasSesionesQueNoVencieron() {
+        servicio.crear(1, "ENCARGADO");
+        servicio.crear(2, "PRESTATARIO");
+        assertEquals(2, servicio.contarActivas());
+
+        reloj.avanzar(Duration.ofMinutes(16));
+        assertEquals(0, servicio.contarActivas());
     }
 
     @Test

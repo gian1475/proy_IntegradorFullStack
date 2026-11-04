@@ -17,6 +17,8 @@ public record MonitoreoDTO(
         Long peticionesHttp,
         Long peticionesConError,
         Double tiempoRespuestaPromedioMs,
+        // RNF03: % de peticiones que respondieron en 2 s o menos (meta: 95 % o más). null si todavía no hay
+        Double peticionesHasta2sPorcentaje,
         // Base de datos (pool de conexiones Hikari)
         Double conexionesBdActivas,
         Double conexionesBdTotales,

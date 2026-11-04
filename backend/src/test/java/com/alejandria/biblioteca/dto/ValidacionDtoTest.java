@@ -3,6 +3,7 @@ package com.alejandria.biblioteca.dto;
 import com.alejandria.biblioteca.dto.auth.RegistroDTO;
 import com.alejandria.biblioteca.dto.libro.LibroFormDTO;
 import com.alejandria.biblioteca.dto.prestamo.DevolucionDTO;
+import com.alejandria.biblioteca.dto.usuario.ActualizarUsuarioDTO;
 import com.alejandria.biblioteca.dto.usuario.RegistroEncargadoDTO;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -81,6 +82,18 @@ class ValidacionDtoTest {
         RegistroEncargadoDTO dto = new RegistroEncargadoDTO("María", "López", "1234",
                 "maria@alejandria.edu.pe", "Biblioteca#2026", "tarde");
         assertEquals(Set.of("El DNI debe tener 8 dígitos"), errores(dto));
+    }
+
+    @Test
+    void alEditarUnUsuarioSeUsanLasMismasReglasDelRegistro() {
+        // RF12: el admin edita nombres, DNI y correo (sin la contraseña)
+        assertTrue(errores(new ActualizarUsuarioDTO("Ana", "Torres", "71234567", "ana@alejandria.edu.pe", null)).isEmpty());
+        assertEquals(Set.of("El DNI debe tener 8 dígitos"),
+                errores(new ActualizarUsuarioDTO("Ana", "Torres", "7123", "ana@alejandria.edu.pe", null)));
+        assertEquals(Set.of("El correo no es válido"),
+                errores(new ActualizarUsuarioDTO("Ana", "Torres", "71234567", "ana@", null)));
+        assertEquals(Set.of("El nombre debe tener entre 1 y 50 caracteres"),
+                errores(new ActualizarUsuarioDTO(" ", "Torres", "71234567", "ana@alejandria.edu.pe", null)));
     }
 
     @Test

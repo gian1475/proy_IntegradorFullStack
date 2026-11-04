@@ -66,6 +66,14 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 02/11 | RF06: solo el **encargado** registra incidencias y sanciones; el admin las ve en el reporte | Lo dice el informe (RF06 y CU09: actor Encargado) |
 | 02/11 | RF06: la **advertencia** no bloquea (se registra ya `cumplida`); `tieneSancionActiva` solo cuenta suspensiones y multas | Ficha RF06: "La advertencia es informativa; suspensión y multa pendiente bloquean préstamos y reservas". Antes cualquier sanción activa bloqueaba |
 | 02/11 | RF06: cada incidencia lleva su sanción (en la BD puede no tenerla, pero la pantalla siempre la pide) y no se repite el mismo tipo de incidencia en un préstamo | CU09 "Registrar incidencia **y** sanción" |
+| 04/11 | B1–B9: el Administrador también cancela reservas; el Encargado reserva en ventanilla con el DNI y cancela; solo el Encargado anula préstamos; el admin restablece contraseñas (no la cambia cada usuario); "Mis Préstamos" muestra los anulados; el sistema se despliega como **un solo `.jar`** con las pantallas adentro | Decisiones del equipo para alinear el código con el informe V8 (análisis del 04/11) |
+| 03/11 | RF12: el admin edita **nombres, apellidos, DNI, correo** y, si es encargado, el **turno**. No cambia la contraseña ni el estado (el estado cambia con "Dar de baja" / "Reactivar" y con las sanciones de RF06) | Decisión del equipo. Así `suspendido` sigue dependiendo solo de una sanción |
+| 03/11 | RF13: **solo baja lógica** (`inactivo`). No se implementa el borrado físico de usuarios sin préstamos ni reservas que menciona la ficha del RF13 | Decisión del equipo: se ajusta el informe. La única eliminación física sigue siendo la de reservas (RF17) |
+| 03/11 | RF13: un prestatario con un **libro en sala** (préstamo `activo` o `vencido`) no se da de baja hasta que lo devuelva; sus reservas `pendiente` y `en_espera` se **cancelan solas** (el ejemplar vuelve al stock o pasa al siguiente de la cola). Sus sanciones quedan como están | Decisión del equipo. El historial no se toca |
+| 03/11 | RF13: al dar de baja se **cierran sus sesiones abiertas** (su token deja de servir en ese momento) | Antes un inactivo solo quedaba bloqueado en el siguiente login |
+| 03/11 | El admin puede **reactivar** a un usuario dado de baja: vuelve a `activo`, o a `suspendido` si todavía tiene una suspensión activa | Decisión del equipo: corrige bajas hechas por error sin tocar la BD |
+| 03/11 | Al administrador no se le edita ni se le da de baja desde el panel (403) | Así el admin no se puede dejar fuera a sí mismo |
+| 03/11 | La baja del usuario usa `DELETE /api/usuarios/{id}` aunque **no borra la fila** | Mismo patrón que libros (`baja`) y préstamos (`anulado`); además CORS ya permite `DELETE` y `PUT` (no se agregó `PATCH`) |
 
 ---
 
@@ -947,6 +955,198 @@ No se encontró nada más que convenga reemplazar: los reportes ya usan POI, Ope
 
 ---
 
+## RF12 y RF13 (03/11): editar y dar de baja usuarios ✅
+
+El administrador **edita** los datos de un prestatario o un encargado (RF12) y lo **da de baja** con eliminación lógica: el estado pasa a `inactivo` y la fila sigue en la BD con todo su historial (RF13). También lo puede **reactivar**. **No se cambió la BD**: el CHECK de `usuario.estado` ya aceptaba `inactivo`, y el login ya rechazaba a los inactivos ("El usuario se encuentra inactivo").
+
+| Acción | Prestatario | Encargado |
+|---|---|---|
+| Editar (RF12) | Nombres, apellidos, DNI y correo | Lo mismo + el turno (`mañana` o `tarde`) |
+| Dar de baja (RF13) | Se rechaza (409) si tiene un libro en sala. Se cancelan sus reservas pendientes y en cola. Queda `inactivo` | Queda `inactivo`; los préstamos que registró siguen en el historial con su nombre |
+| Después de la baja | No puede iniciar sesión y su sesión abierta se cierra. Aparece en el reporte de bajas lógicas | Igual |
+| Reactivar | `activo`, o `suspendido` si le queda una suspensión activa | `activo` |
+
+El DNI y el correo no pueden ser los de **otro** usuario (409 "El DNI ya se encuentra registrado"); los suyos sí se pueden volver a guardar. Al administrador no se le edita ni se le da de baja (403).
+
+| Archivo | Qué cambió |
+|---|---|
+| [UsuarioService.java](backend/src/main/java/com/alejandria/biblioteca/service/UsuarioService.java) | `listarUsuarios`, `actualizar` (RF12), `darDeBaja` (RF13) y `reactivar`. La validación del turno pasó a `validarTurno` (la usan el registro y la edición) |
+| [UsuarioController.java](backend/src/main/java/com/alejandria/biblioteca/controller/UsuarioController.java) | La clase ahora es `@RequestMapping("/api/usuarios")` (antes `/api/usuarios/encargados`); las rutas de encargados no cambiaron. Nuevas: `GET /api/usuarios`, `PUT /api/usuarios/{id}`, `DELETE /api/usuarios/{id}` (baja lógica) y `PUT /api/usuarios/{id}/reactivar`. Todo sigue con `@RolesAllowed(ADMINISTRADOR)` |
+| [dto/usuario/ActualizarUsuarioDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/usuario/ActualizarUsuarioDTO.java) (nuevo) | Los datos que se pueden editar, con las mismas anotaciones de Bean Validation del registro (sin contraseña) |
+| [dto/usuario/UsuarioAdminDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/usuario/UsuarioAdminDTO.java) (nuevo) | Una fila de la tabla "Usuarios": datos, estado, perfil y turno (sin la contraseña) |
+| [UsuarioDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/UsuarioDao.java) | `listarUsuarios` (usuario LEFT JOIN encargado y prestatario; el admin no sale), `existsByDniAndIdUsuarioNot`, `existsByCorreoAndIdUsuarioNot`, `turnoDe` y `cambiarTurno` |
+| [PrestamoDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/PrestamoDao.java), [ReservaDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/ReservaDao.java) | Consultas derivadas de Spring Data (sin SQL): ¿tiene un préstamo `activo` o `vencido`? y sus reservas en ciertos estados |
+| [SesionService.java](backend/src/main/java/com/alejandria/biblioteca/service/SesionService.java) | `cerrarSesionesDe(idUsuario)`: borra todos los tokens de ese usuario |
+| [IncidenciaService.java](backend/src/main/java/com/alejandria/biblioteca/service/IncidenciaService.java) | Una suspensión ya no cambia a `suspendido` a un usuario `inactivo` (antes lo habría "reactivado" a medias). La suspensión igual se cuenta |
+| [usuarios-tab](frontend/src/app/pages/admin-panel/tabs/usuarios/) (antes `encargados-tab`, se renombró con `git mv`) | La pestaña **"Encargados"** del admin ahora es **"Usuarios"**: mantiene el formulario de registro de encargados y suma la tabla de prestatarios y encargados con filtro por perfil, búsqueda y los botones **Editar**, **Dar de baja** (con confirmación) y **Reactivar** |
+| [utils/filtro-usuarios.ts](frontend/src/app/utils/filtro-usuarios.ts) (nuevo) | El filtro de la tabla (perfil + texto en nombre, DNI o correo, sin importar tildes) |
+| [services/usuario.service.ts](frontend/src/app/services/usuario.service.ts) | `listarUsuarios`, `actualizar`, `darDeBaja` y `reactivar`. Se quitó `listarEncargados` (la tabla nueva ya los muestra; el endpoint del backend sigue) |
+
+**Pruebas (primero la prueba, después el código):** no compilaban hasta que existió el código.
+- [UsuarioGestionServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/UsuarioGestionServiceTest.java) (18, nuevo): editar (datos limpios, turno del encargado, DNI y correo repetidos, admin 403, 404), dar de baja (inactivo y sesión cerrada, rechazo con un libro en sala, reservas canceladas, suspendido, encargado, ya inactivo, admin), reactivar (activo, suspendido, solo inactivos) y la lista.
+- [UsuarioBdTest](backend/src/test/java/com/alejandria/biblioteca/service/UsuarioBdTest.java) (+3, contra la BD, se deshacen): la baja deja la fila con `inactivo`, cancela la reserva pendiente y sale en el reporte de bajas lógicas; el DNI de otro da 409 y el propio sí se guarda; el turno cambia en la tabla `encargado`.
+- `AuthServicePerfilTest` (+1): un usuario dado de baja no puede iniciar sesión (criterio de aceptación de RF13). `SesionServiceTest` (+1): se cierran todas las sesiones del usuario y las de los demás siguen. `IncidenciaServiceTest` (+1): una suspensión no reactiva a un inactivo. `ValidacionDtoTest` (+1): la edición usa las mismas reglas del registro. `SeguridadEndpointsTest` (+2): el encargado y el prestatario reciben 403 y sin token 401; un DNI mal escrito da 400.
+- Frontend: [filtro-usuarios.spec.ts](frontend/src/app/utils/filtro-usuarios.spec.ts) (6) y [usuarios-tab.component.spec.ts](frontend/src/app/pages/admin-panel/tabs/usuarios/usuarios-tab.component.spec.ts) (8: lista, botones según el estado, baja con y sin confirmación, mensaje del backend, edición con `PUT`, DNI inválido, reactivar).
+- Total: **232 del backend y 38 del frontend**, todas pasan.
+
+**Prueba en vivo (03/11, sesión en la nube, PostgreSQL 16 local con `datos_demo.sql`, `.jar` + build del frontend + Chromium):** como admin, en la pestaña Usuarios:
+- Dar de baja a Andrés: "El prestatario tiene un libro prestado. Registre la devolución antes de darlo de baja".
+- Dar de baja a Sebastián: queda `inactivo` y su reserva pendiente pasa a `cancelada`.
+- Poner a Lucía el DNI de Camila: "El DNI ya se encuentra registrado".
+- Cambiar el turno de Rosa: se guardó.
+- Sebastián intenta entrar: "El usuario se encuentra inactivo". Después se lo reactivó.
+- Por la API: el token abierto de Lucía pasó de 200 a 401 al darla de baja, y dar de baja al admin responde 403.
+
+**Notas del entorno de la nube (no son errores del código):** el contenedor está en hora UTC. `PrestamoDaoTest.lasConsultasDelDashboardCuentanBienEnLaBd` falla entre las 00:00 y las 05:00 UTC si la JVM no está en hora de Lima (se corrió con `-Duser.timezone=America/Lima`). Además, un navegador en UTC toma como vencida la sesión, porque `expiraEn` llega en hora de Lima sin zona. En una PC de Lima no pasa ninguna de las dos cosas. El `mvnw` no pudo descargar Maven 3.9.16 y se usó el Maven 3.9.11 instalado.
+
+---
+
+## Cierre del código (03/11)
+
+Lo que faltaba del código según el informe, en bloques (un commit por bloque).
+
+### Bloque 1 – Arreglos de la revisión de RF12 y RF13 ✅
+
+| Duda | Qué se hizo | Archivo |
+|---|---|---|
+| D9 | Los mensajes ya no tienen género: "Se dio de baja a Lucía Ramírez Soto (estado inactivo)" y "Se reactivó a…". Antes decía "fue dado de baja" también para mujeres | [usuarios-tab.component.ts](frontend/src/app/pages/admin-panel/tabs/usuarios/usuarios-tab.component.ts) |
+| D10 | Al pulsar "Editar" el cursor va al campo "Nombres" y la pantalla sube sola hasta el formulario. Se usa `viewChild` + `afterNextRender` de Angular y `focus()` del navegador (no se agregó nada) | ídem y su `.html` (`#campoNombre`) |
+| D15 | 🐞 **Error latente:** el frontend leía `expiraEn` del login, que el backend manda en hora de Lima **sin zona**. Un navegador en otra zona (por ejemplo, en UTC) daba la sesión por vencida apenas se iniciaba. Ahora `guardarSesion` calcula el vencimiento con el reloj del navegador (ahora + 15 min), igual que `renovarSesion`. En Perú no se notaba | [auth.service.ts](frontend/src/app/services/auth.service.ts) |
+| D16 | 🐞 **Prueba frágil:** las pruebas no corrían en hora de Lima (la app la fija en `main`, que las pruebas no ejecutan). `PrestamoDaoTest.lasConsultasDelDashboardCuentanBienEnLaBd` fallaba en una máquina en UTC entre las 00:00 y las 05:00. Ahora el plugin de pruebas de Maven (`maven-surefire-plugin`, que ya venía con Spring Boot) corre con `-Duser.timezone=America/Lima` | [pom.xml](backend/pom.xml) |
+
+**Primero la prueba:**
+- [auth.service.spec.ts](frontend/src/app/services/auth.service.spec.ts) (2, nuevo): con un `expiraEn` que en UTC parece pasado sigue conectado, y se cierra a los 15 min sin actividad (con reloj falso de Vitest). Las dos fallaron antes del arreglo.
+- `usuarios-tab.component.spec.ts` (+1 y 2 ajustadas): el cursor va a "Nombres" al editar; los mensajes nuevos.
+- D16: `PrestamoDaoTest` falló a las 02:37 UTC sin la configuración y pasó con ella, sin pasar la zona a mano.
+- Total: **232 del backend y 41 del frontend**, todas pasan.
+
+---
+
+### Bloque 2 – L3: tres cosas más con librerías que ya estaban ✅
+
+Detalle en [docs/LIBRERIAS.md](docs/LIBRERIAS.md) ("Limpieza del 03/11"). No se instaló nada.
+
+| Antes | Ahora | Archivo |
+|---|---|---|
+| Sesiones en un `ConcurrentHashMap` con vencimiento a mano | Caché de **Guava** con `expireAfterAccess(15 min)`, igual que `LimitadorIntentosLogin` | [SesionService.java](backend/src/main/java/com/alejandria/biblioteca/service/SesionService.java), [Sesion.java](backend/src/main/java/com/alejandria/biblioteca/seguridad/Sesion.java) |
+| `texto == null \|\| texto.isBlank()` | `StringUtils.hasText` de **Spring** | `LibroService`, `PrestamoService`, `IncidenciaService` |
+| `padStart` y `toLocale...` en 5 lugares | `formatDate` de **Angular** en un solo archivo | [utils/fechas.ts](frontend/src/app/utils/fechas.ts) (nuevo) |
+
+En pantalla se ve igual: "06:21 p. m.", "2/11/2026", "Suspensión hasta el 10/11 20:00".
+
+**Pruebas:**
+- `SesionServiceTest` ahora usa el reloj falso de Guava (`Ticker`), como `LimitadorIntentosLoginTest`, y suma `elMonitoreoSoloCuentaLasSesionesQueNoVencieron` (+1).
+- `LibroServiceTest` (+1): buscar solo con espacios muestra todo el catálogo. `IncidenciaServiceTest` (+1): una descripción solo con espacios se guarda vacía. Se escribieron antes del cambio para asegurar que el comportamiento no cambia.
+- Frontend: [fechas.spec.ts](frontend/src/app/utils/fechas.spec.ts) (4, nuevo).
+- Total: **235 del backend y 45 del frontend**, todas pasan.
+
+---
+
+### Bloque 3 – RF15: editar la fecha y la franja de una reserva ✅
+
+El **Prestatario** (solo sus reservas) y el **Administrador** cambian la fecha y la franja de recojo de una reserva **`pendiente`** que todavía no venció (ficha RF15 y CU05). El encargado no. **No se cambió la BD**: se actualiza `reserva.fecha_recojo_limite`.
+
+| Regla | Cómo |
+|---|---|
+| Solo `pendiente` (criterio de aceptación) | Si está en cola, atendida, cancelada o vencida: 409 "Solo se pueden modificar reservas en estado pendiente" |
+| Antes de vencer | Primero se pasan a `vencida` las que ya vencieron (y su ejemplar vuelve al stock); después se revisa el estado |
+| La nueva fecha | Las mismas reglas que al reservar (se reutiliza `validarFechaRecojo`): en el futuro, dentro de 7 días y en horario de atención |
+| Stock | No cambia: el ejemplar ya estaba apartado |
+
+| Archivo | Qué cambió |
+|---|---|
+| [ReservaService.java](backend/src/main/java/com/alejandria/biblioteca/service/ReservaService.java) | `actualizar(idReserva, dto)` |
+| [ReservaController.java](backend/src/main/java/com/alejandria/biblioteca/controller/ReservaController.java) | `PUT /api/reservas/{id}` con `@RolesAllowed({ADMINISTRADOR, PRESTATARIO})`; el prestatario solo las suyas (`verificarPropietario`, 403) |
+| [dto/reserva/ActualizarReservaDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/reserva/ActualizarReservaDTO.java) (nuevo) | La nueva fecha límite, con `@NotNull` ("Elija la fecha y la franja de recojo") |
+| [utils/franjas-recojo.ts](frontend/src/app/utils/franjas-recojo.ts) (nuevo) | Las 4 franjas en un solo lugar (antes estaban escritas en el HTML del catálogo) y las funciones para pasar de fecha + franja al límite y al revés |
+| [user-catalog](frontend/src/app/pages/user-catalog/) | "Mis Reservas": botón **Cambiar fecha** en las reservas con fecha (no en las de la cola), con un modal de fecha y franja. Si el backend no deja, el mensaje sale en el modal |
+| [reservas-admin-tab](frontend/src/app/pages/admin-panel/tabs/reservas/) | Botón **Cambiar fecha** en las pendientes, con un formulario arriba de la tabla |
+| [services/reserva.service.ts](frontend/src/app/services/reserva.service.ts) | `actualizar(idReserva, fechaRecojoLimite)` |
+| [angular.json](frontend/angular.json) | El aviso de tamaño del paquete inicial pasa de 800 kB a 850 kB (con los datos de `es-PE` del bloque 2 llegaba a 803 kB). El error sigue en 1 MB |
+
+**Primero la prueba:**
+- [ReservaActualizacionTest](backend/src/test/java/com/alejandria/biblioteca/service/ReservaActualizacionTest.java) (8, nuevo): cambia fecha y franja sin tocar el stock; solo pendientes (4 estados); una que ya venció se libera y no se cambia; la nueva fecha sigue las reglas (7 días, horario); 404.
+- `SeguridadEndpointsTest` (+2): el encargado recibe 403; sin fecha da 400 "Elija la fecha y la franja de recojo".
+- Frontend: [franjas-recojo.spec.ts](frontend/src/app/utils/franjas-recojo.spec.ts) (4), [reservas-admin-tab.component.spec.ts](frontend/src/app/pages/admin-panel/tabs/reservas/reservas-admin-tab.component.spec.ts) (3) y [user-catalog.component.spec.ts](frontend/src/app/pages/user-catalog/user-catalog.component.spec.ts) (3).
+- Total: **245 del backend y 55 del frontend**, todas pasan.
+
+---
+
+### Bloque 4 – Indicadores TAP e IPI con la migración 05 ✅
+
+Hasta ahora el dashboard y el reporte de indicadores mostraban TAP e IPI como **"Sin dato"**. Ahora se calculan con las fórmulas del apartado 1.2.2 del informe. **Cambia la BD**: [migración 05](database/migraciones/migracion_05_tap_ipi.sql), también en `schema_postgresql.sql`. Se puede ejecutar más de una vez.
+
+> ⚠️ **Ejecutar la migración 05 en Neon antes de arrancar el backend nuevo.** Con `ddl-auto=validate`, el backend no arranca si falta la columna o la tabla. Desde la sesión en la nube no se pudo, porque la red del entorno bloquea Neon.
+
+| Indicador | Qué se guarda | Fórmula | Meta |
+|---|---|---|---|
+| **TAP** | `prestamo.inicio_atencion` (columna nueva). El frontend mide los **segundos** desde que el encargado escribe o elige algo en el formulario hasta que confirma, y el backend guarda `inicio = fecha_prestamo − segundos`. Se manda la duración y no la hora para que no importe si el reloj de la PC está desfasado del servidor. Si viene de "Entregar" una reserva, cuenta desde que se abre el formulario. Si no llega, es negativo o pasa de 1 hora, queda vacío y ese préstamo no cuenta; **el préstamo se registra igual** | promedio de (`fecha_prestamo − inicio_atencion`) en minutos, solo de los préstamos del periodo que tienen el dato (sin anulados) | ≤ 2 min |
+| **IPI** | Tabla nueva `auditoria_inventario`: libro, administrador, fecha, `stock_sistema` (lo que decía el sistema en ese momento) y `conteo_fisico` | títulos cuyo **último** conteo del periodo coincide / títulos auditados × 100 (`DISTINCT ON` de PostgreSQL) | ≥ 95 % (meta mínima: `cumpleMetaMinima`) |
+
+La auditoría **no corrige el stock** sola: si el conteo no coincide, el mensaje dice que se corrija en la pestaña Libros. No se audita un libro dado de baja.
+
+| Archivo | Qué cambió |
+|---|---|
+| [migracion_05_tap_ipi.sql](database/migraciones/migracion_05_tap_ipi.sql) (nuevo), [schema_postgresql.sql](database/schema_postgresql.sql) | La columna con su CHECK (`inicio_atencion <= fecha_prestamo`) y la tabla con sus llaves y CHECK (`>= 0`) |
+| [entity/Prestamo.java](backend/src/main/java/com/alejandria/biblioteca/entity/Prestamo.java), [entity/AuditoriaInventario.java](backend/src/main/java/com/alejandria/biblioteca/entity/AuditoriaInventario.java) (nueva) | El campo `inicioAtencion` y la entidad de la auditoría (Lombok) |
+| [dao/AuditoriaInventarioDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/AuditoriaInventarioDao.java) (nuevo), [PrestamoDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/PrestamoDao.java) | Las consultas del IPI (auditados y coincidentes) y del TAP (promedio en minutos y cuántos préstamos lo tienen) |
+| [service/IndicadoresGestion.java](backend/src/main/java/com/alejandria/biblioteca/service/IndicadoresGestion.java) | `record Datos` con todo lo del periodo (`Datos.leer` lo usan el dashboard y el reporte, sin repetir código), TAP e IPI calculados, `cumpleMetaMinima` |
+| [service/AuditoriaService.java](backend/src/main/java/com/alejandria/biblioteca/service/AuditoriaService.java), [controller/AuditoriaController.java](backend/src/main/java/com/alejandria/biblioteca/controller/AuditoriaController.java) (nuevos) | `GET /api/auditorias` (IPI del mes y sus conteos) y `POST /api/auditorias`. Solo el administrador |
+| [dto/auditoria/](backend/src/main/java/com/alejandria/biblioteca/dto/auditoria/) (nuevo), [RegistroPrestamoDTO.java](backend/src/main/java/com/alejandria/biblioteca/dto/prestamo/RegistroPrestamoDTO.java) | El conteo con `@PositiveOrZero` ("El conteo físico no puede ser negativo") y `segundosAtencion` (opcional) |
+| [PrestamoService.java](backend/src/main/java/com/alejandria/biblioteca/service/PrestamoService.java), `DashboardService`, `ReporteService` | El inicio de la atención al registrar y los indicadores con `Datos.leer` |
+| [registrar-tab](frontend/src/app/pages/encargado-panel/tabs/registrar/) | `marcarInicio()` con el primer `(input)` o `(change)` del formulario; manda los segundos; el siguiente préstamo cuenta desde cero |
+| [auditoria-tab](frontend/src/app/pages/admin-panel/tabs/auditoria/) (pestaña nueva **Auditoría** del admin), [services/auditoria.service.ts](frontend/src/app/services/auditoria.service.ts) | El IPI del mes, una tabla con todos los títulos (stock del sistema, último conteo del mes, conteo físico y "Registrar") y los conteos del mes |
+
+**Primero la prueba** (no compilaban hasta que existió el código):
+- `IndicadoresGestionTest` (+4): TAP en minutos con meta máxima, IPI con meta mínima, sin datos no inventa valor.
+- `PrestamoServiceTest` (+4): guarda el inicio de la atención (confirmación − 90 s); sin el tiempo el préstamo igual se registra; −5 s y 3601 s no se guardan.
+- [AuditoriaServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/AuditoriaServiceTest.java) (5, nuevo): guarda el stock del sistema y el conteo; si no coincide el stock no cambia; libro de baja (409) y que no existe (404); resumen del mes.
+- [AuditoriaBdTest](backend/src/test/java/com/alejandria/biblioteca/service/AuditoriaBdTest.java) (4, nuevo, contra la BD, enero de 2020, se deshace): el IPI cuenta el último conteo de cada título; conteo negativo rechazado por la BD; el TAP promedia 2 y 4 min = 3; el inicio no puede ser después del préstamo.
+- `DashboardServiceTest` (+1): TAP 1.5 min e IPI 95 % del mes. `SeguridadEndpointsTest` (+2): encargado y prestatario 403 en `/api/auditorias`; conteo −1 da 400.
+- Frontend: [registrar-tab.component.spec.ts](frontend/src/app/pages/encargado-panel/tabs/registrar/registrar-tab.component.spec.ts) (3) y [auditoria-tab.component.spec.ts](frontend/src/app/pages/admin-panel/tabs/auditoria/auditoria-tab.component.spec.ts) (4).
+- Total: **265 del backend y 62 del frontend**, todas pasan. `schema_postgresql.sql` + `datos_demo.sql` se probaron en una BD nueva, y la migración 05 se ejecutó dos veces en la BD local sin error.
+
+**Prueba en vivo (03/11, nube, PostgreSQL local, `.jar` + build + Chromium, cierre de prueba 23:59 por la hora):**
+- El encargado registró un préstamo tardando 4 s: `inicio_atencion` quedó 4 s antes de `fecha_prestamo` y el dashboard mostró TAP 0.1 min, "Cumple la meta".
+- El admin contó dos títulos (uno igual al sistema y otro con 1 de más): IPI 50 % en la pestaña Auditoría y en el dashboard ("No cumple la meta").
+- RF15: el admin cambió la reserva #8 a la franja 14:30 - 17:30, el prestatario la vio así en su modal y la cambió a 17:30 - 20:00 ("Fecha actualizada").
+
+**Para la demo:** los datos de la demo **no** traen TAP ni auditorías (no se inventan valores). Registren un préstamo en vivo y un par de conteos en la pestaña Auditoría, y muestren el dashboard.
+
+---
+
+## Brechas del informe B1 a B9 (04/11) ✅
+
+El análisis de coherencia del informe V8 con el código (sección 8 de `Pendientes agregar a local.md`) encontró 9 cosas que el informe pide y el código no hacía. Se resolvieron todas, con las decisiones del equipo del 04/11.
+
+| # | Qué pedía el informe | Qué se hizo | Archivos |
+|---|---|---|---|
+| B1 | RF16 y CU05: el **Administrador** también cancela reservas | `PUT /api/reservas/{id}/cancelar` admite `ADMINISTRADOR`; botón **Cancelar** en su pestaña Reservas (pendientes y en cola) | `ReservaController`, `reservas-admin-tab` |
+| B2 | RF04 y RF16: el **Encargado** registra y cancela reservas | `POST /api/reservas/ventanilla`: reserva con el **DNI** del prestatario (mismas reglas; sin stock entra a la cola). En "Reservas pendientes": formulario **Reservar en ventanilla** y botón **Cancelar** en las pendientes y en la cola | `ReservaService.crearEnVentanilla`, `ReservaVentanillaDTO` (nuevo), `reservas-tab` del encargado |
+| B3 | RNF03: el 95 % de las operaciones en ≤ 2 s ("un promedio no basta") | Micrometer cuenta las peticiones de hasta 2 s (`management.metrics.distribution.slo.http.server.requests=2s`, sin librería nueva). `MonitoreoService.porcentajeHasta` calcula el % y la pestaña Monitoreo lo muestra con "Cumple / No cumple RNF03" | `application.properties`, `MonitoreoService`, `MonitoreoDTO`, `monitoreo-tab` |
+| B4 | RNF05: la concurrencia del stock "requiere pruebas" | Prueba nueva: dos transacciones prestan **a la vez** el último ejemplar; solo una presta y el stock queda en 0. Ya lo garantizaba el bloqueo de `LibroDao.buscarParaActualizar` (`SELECT … FOR UPDATE`). **Sin el bloqueo la prueba falla** ("el último ejemplar se prestó dos veces"): se comprobó quitándolo un momento | `ConcurrenciaStockTest` (nuevo) |
+| B5 | Tabla 33 y Anexo F: despliegue en la nube | Queda **listo para desplegar**: un solo `.jar` con las pantallas adentro (la API en la misma dirección, `/api`), URL de la API en `environment` de Angular, CORS y puerto configurables, `FrontendController` para recargar `/admin`, `Dockerfile` y la guía [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md) para Render. **El despliegue lo hace el equipo con su cuenta** (desde la nube no se puede: la red del entorno bloquea esos servicios) | `environments/`, `angular.json`, `SeguridadConfig`, `pom.xml`, `FrontendController` (nuevo), `Dockerfile`, `.dockerignore` |
+| B6 | RNF06: Chrome, Edge y Firefox, en PC y celular | Revisión automática con Chromium (motor de Chrome y de Edge) de las **21 pantallas** de los 3 perfiles en 3 tamaños (escritorio 1366 px, tablet 768 px y celular 390 px): **63 de 63 sin scroll horizontal ni errores de JavaScript**. Capturas en [docs/capturas/rnf06/](docs/capturas/rnf06/). **Firefox no está en la máquina de la sesión: falta probarlo a mano** | `docs/capturas/rnf06/` |
+| B7 | El restablecimiento de contraseña por el admin "aún no estaba implementado" | `PUT /api/usuarios/{id}/contrasena` (solo el admin; no a otro admin): la regla de la contraseña, BCrypt, cierra sus sesiones y **le quita el bloqueo** por intentos fallidos. Botón **Contraseña** en la pestaña Usuarios, con los requisitos en verde/rojo | `UsuarioService.restablecerContrasena`, `RestablecerContrasenaDTO` (nuevo), `usuarios-tab` |
+| B8 | Tabla 35: el Administrador no anula préstamos | `DELETE /api/prestamos/{id}` solo para el **Encargado** (antes también el admin, por la API) | `PrestamoController` |
+| B9 | RF07: el historial muestra **todos** los préstamos | "Mis Préstamos" del prestatario muestra también los **anulados**, con su etiqueta en gris; no cuentan como "en curso" | `user-catalog` |
+
+**Primero la prueba** (en B1, B2, B7, B8, B9, B3 y B5 se vio el rojo antes del código; B4 documenta un comportamiento que ya existía y se comprobó que falla sin el bloqueo):
+- Backend (+20): `SeguridadEndpointsTest` (+4: el admin cancela, ventanilla solo del encargado, solo el encargado anula, solo el admin restablece), `ReservaColaEsperaTest` (+2: ventanilla con DNI y DNI que no existe), `UsuarioGestionServiceTest` (+3: restablecer con BCrypt, cierre de sesión y desbloqueo; la regla; el admin no), [MonitoreoServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/MonitoreoServiceTest.java) (3), [MonitoreoRnf03Test](backend/src/test/java/com/alejandria/biblioteca/seguridad/MonitoreoRnf03Test.java) (1, con las métricas reales), [ConcurrenciaStockTest](backend/src/test/java/com/alejandria/biblioteca/service/ConcurrenciaStockTest.java) (1) y [DespliegueTest](backend/src/test/java/com/alejandria/biblioteca/seguridad/DespliegueTest.java) (6: las 5 rutas de Angular y CORS configurable).
+- Frontend (+11): pestaña Reservas del admin (+1), [reservas-tab del encargado](frontend/src/app/pages/encargado-panel/tabs/reservas/reservas-tab.component.spec.ts) (5, nuevo), pestaña Usuarios (+1), Mis Préstamos (+1) y [monitoreo-tab](frontend/src/app/pages/admin-panel/tabs/monitoreo/monitoreo-tab.component.spec.ts) (3, nuevo).
+- Total: **285 del backend y 73 del frontend**, todas pasan.
+
+**Prueba en vivo (04/11, BD local):**
+- `.jar` único en `localhost:8080`, sin `npm start`: login, recargar `/admin` y Monitoreo con "100 %, Cumple RNF03". Todas las llamadas a la API salieron a la misma dirección.
+- **Imagen Docker** ejecutada con `PORT=8090`: sirve las pantallas y el login responde. En la sesión se construyó usando el caché local de Maven y el `dist` ya compilado, porque la red del entorno corta las descargas de npm y Maven dentro de Docker. En Render se descargan normalmente.
+- Por la API:
+  - el admin canceló una reserva;
+  - el encargado reservó en ventanilla para Juan;
+  - el admin anulando un préstamo recibe 403;
+  - el admin restableció la contraseña de Lucía: entró con la nueva, y con la vieja recibió "Credenciales incorrectas".
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -973,7 +1173,7 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cómo se actualiza el stock / estado del libro? | `stock automatico`, `estado del libro` |
 | Regla de las 3 horas | `3 horas` |
 | Sanciones | `sancion activa` |
-| Reservas | `reserva crear`, `reserva cancelar` |
+| Reservas | `reserva crear`, `reserva cancelar`, `reserva actualizar` (RF15) |
 | Librerías | `guava`, `logback`, `apache poi`, `commons csv`, `openpdf`, `actuator`, `reporte prestamos` |
 | ¿Por qué no usan la hora de la BD? ¿Dónde se fija la hora de Lima? | `hora de lima` (incluye `BibliotecaApplication.fijarZonaHoraria`) |
 | ¿Dónde validan el DNI y el correo? | `validar datos` |
@@ -1000,6 +1200,18 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cómo se validan los datos con anotaciones? | `bean validation`, `validar datos` |
 | ¿Dónde están los getters de las entidades? | `lombok` |
 | ¿Dónde se usa Bootstrap? | `bootstrap` |
+| ¿Dónde se editan los datos de un usuario (RF12)? | `editar usuario` (backend y frontend) |
+| ¿Dónde se da de baja a un usuario (RF13)? ¿Por qué no se borra? | `eliminacion logica`, `baja logica` |
+| ¿Qué pasa con sus préstamos y reservas? ¿Y con su sesión? | `RF13` en `UsuarioService.darDeBaja`, `cerrarSesionesDe` |
+| ¿Dónde se filtra la tabla de usuarios? | `gestion usuarios` |
+| ¿Cómo se calcula el TAP? ¿Dónde empieza la atención? | `indicadores TAP` (backend y frontend) |
+| ¿Cómo se calcula el IPI? ¿Dónde se registra el conteo físico? | `indicadores IPI`, `auditoria inventario` |
+| ¿Dónde se edita una reserva (RF15)? | `reserva actualizar` |
+| ¿Dónde reserva el encargado en la ventanilla? ¿Quién cancela? | `reserva ventanilla`, `reserva cancelar` |
+| ¿Cómo se restablece una contraseña olvidada? | `restablecer contra` |
+| ¿Cómo se comprueba el RNF03 (95 % en 2 s)? | `monitoreo RNF03` |
+| ¿Qué pasa si dos encargados prestan el último ejemplar a la vez? | `ConcurrenciaStockTest`, `buscarParaActualizar` |
+| ¿Cómo se despliega? ¿Por qué un solo .jar? | `despliegue` (`FrontendController`, `environment`, `docs/DESPLIEGUE.md`) |
 
 ---
 
@@ -1088,3 +1300,22 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 7 | Código: un DTO con anotaciones (`RegistroDTO`) y la respuesta 400 "El DNI debe tener 8 dígitos" (Postman, DevTools o el registro) | ⬜ |
 | 7 | Código: una entidad con `@Getter @Setter` (Lombok) | ⬜ |
 | 7 | Terminal con `./mvnw test` → 205 pruebas, BUILD SUCCESS (reemplaza a la de 160) | ⬜ |
+| 9 | RF12/RF13: pestaña **Usuarios** con la tabla (prestatarios y encargados, uno `inactivo` con "Reactivar") — reemplaza a `admin-encargados.png` | ⬜ `admin-usuarios.png` |
+| 9 | RF12: formulario "Editar encargado" con el turno, y el mensaje "El DNI ya se encuentra registrado" al poner el DNI de otro | ⬜ `admin-usuario-editar.png`, `admin-usuario-dni-repetido.png` |
+| 9 | RF13: confirmación de "Dar de baja", el mensaje de éxito con el estado `inactivo` y el rechazo "tiene un libro prestado" | ⬜ `admin-usuario-baja.png`, `admin-usuario-baja-rechazada.png` (cambia datos: en la demo) |
+| 9 | RF13: el usuario dado de baja intenta entrar → "El usuario se encuentra inactivo" | ⬜ `login-usuario-inactivo.png` |
+| 9 | Reporte de bajas lógicas con el usuario `inactivo` | ⬜ |
+| 9 | Código: `UsuarioService.darDeBaja` y `UsuarioController` (`DELETE` que no borra) | ⬜ |
+| 9 | Terminal con `./mvnw test` → **265** pruebas y `npx ng test --watch=false` → **62** pruebas (reemplaza a las de 232 y 38) | ⬜ |
+| 10 | RF15: "Mis Reservas" → modal "Cambiar fecha de recojo" y la tarjeta con la nueva fecha; admin → Reservas → "Cambiar fecha" | ⬜ `prestatario-cambiar-fecha.png`, `admin-reserva-cambiar-fecha.png` |
+| 10 | TAP: registrar un préstamo en vivo y el dashboard con el TAP del mes | ⬜ `admin-dashboard-tap-ipi.png` |
+| 10 | IPI: pestaña Auditoría con el IPI del mes, un conteo que coincide y otro que no (mensaje "NO coincide…") | ⬜ `admin-auditoria-ipi.png` |
+| 10 | Neon: SQL Editor con la migración 05 ejecutada (la columna `inicio_atencion` y `auditorias = 0`) | ⬜ |
+| 10 | Código: `IndicadoresGestion.calcular`, `AuditoriaInventarioDao.contarCoincidentesEntre` (DISTINCT ON) y `marcarInicio` del frontend | ⬜ |
+| 11 | B1/B2: admin → Reservas con "Cancelar"; encargado → "Reservar en ventanilla" y "Cancelar" en la cola | ⬜ |
+| 11 | B7: Usuarios → "Contraseña" con los requisitos y el mensaje "Contraseña de … restablecida" | ⬜ |
+| 11 | B3: Monitoreo con "Peticiones en 2 s o menos — Cumple RNF03" | ⬜ |
+| 11 | B4: terminal con `ConcurrenciaStockTest` en verde (y opcional: el rojo sin el `@Lock`) | ⬜ |
+| 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Falta Firefox** (tómenla en su PC) | 🟡 |
+| 11 | B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen | ⬜ |
+| 11 | Terminal con `./mvnw test` → **285** y `npx ng test --watch=false` → **73** | ⬜ |

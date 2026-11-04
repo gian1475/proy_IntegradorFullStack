@@ -19,6 +19,9 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
     /** ¿El libro tiene préstamos que aún no se devuelven? (para no darlo de baja). */
     boolean existsByLibroIdLibroAndEstadoPrestamoIn(Integer idLibro, List<String> estados);
 
+    /** RF13: ¿el prestatario tiene un libro en sala (préstamo activo o vencido)? Entonces no se le da de baja. */
+    boolean existsByPrestatarioIdUsuarioAndEstadoPrestamoIn(Integer idPrestatario, List<String> estados);
+
     /** Consulta de UNA tabla: historial de préstamos de un prestatario. */
     // consulta una tabla: solo usa la tabla prestamo, filtrado por el prestatario.
     // trae todos los campos (SELECT *): id, prestatario, encargado, libro, fecha de inicio, hora limite,
@@ -139,6 +142,18 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
                  + "WHERE i.tipo_incidencia IN ('daño', 'pérdida') "
                  + "AND p.fecha_prestamo >= :desde AND p.fecha_prestamo < :hasta", nativeQuery = true)
     long contarPrestamosConIncidenciaEntre(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    /** TAP (1.2.2): promedio en minutos de (confirmación - inicio de la atención). null si ninguno lo tiene. */
+    // indicadores TAP: EXTRACT(EPOCH ...) da los segundos entre las dos horas; / 60 = minutos
+    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (fecha_prestamo - inicio_atencion))) / 60 FROM prestamo "
+                 + "WHERE inicio_atencion IS NOT NULL AND estado_prestamo <> 'anulado' "
+                 + "AND fecha_prestamo >= :desde AND fecha_prestamo < :hasta", nativeQuery = true)
+    Double promedioMinutosAtencionEntre(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
+    /** TAP: cuántos préstamos del periodo tienen la hora de inicio de la atención (la N de la fórmula). */
+    @Query(value = "SELECT COUNT(*) FROM prestamo WHERE inicio_atencion IS NOT NULL AND estado_prestamo <> 'anulado' "
+                 + "AND fecha_prestamo >= :desde AND fecha_prestamo < :hasta", nativeQuery = true)
+    long contarConInicioAtencionEntre(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 
     /** Préstamos del periodo por categoría (JOIN prestamo + libro + categoria). Cada fila: [categoria, cantidad]. */
     @Query(value = "SELECT c.nombre, COUNT(p.id_prestamo) FROM categoria c "

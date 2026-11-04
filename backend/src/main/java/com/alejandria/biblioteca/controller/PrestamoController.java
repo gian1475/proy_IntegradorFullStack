@@ -98,9 +98,10 @@ public class PrestamoController {
     }
 
     /** ELIMINAR (lógico): el préstamo queda 'anulado', no se borra la fila. */
-    // crud prestamo eliminar: DELETE /api/prestamos/{id}. es eliminacion logica, ver PrestamoService.anular
+    // crud prestamo eliminar: DELETE /api/prestamos/{id}. es eliminacion logica, ver PrestamoService.anular.
+    // solo el encargado (B8, Tabla 35 del informe): el admin consulta los prestamos pero no los anula
     @DeleteMapping("/{id}")
-    @RolesAllowed({Rol.ENCARGADO, Rol.ADMINISTRADOR})
+    @RolesAllowed(Rol.ENCARGADO)
     public ResponseEntity<Map<String, String>> anular(@PathVariable Integer id) {
         prestamoService.anular(id);
         return ResponseEntity.ok(Map.of("mensaje", "Préstamo anulado correctamente"));

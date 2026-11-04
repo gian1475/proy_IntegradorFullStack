@@ -1,6 +1,7 @@
 package com.alejandria.biblioteca.seguridad;
 
 import com.alejandria.biblioteca.service.SesionService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -24,8 +25,16 @@ import java.util.List;
 @EnableMethodSecurity(jsr250Enabled = true) // jsr250 = activa @RolesAllowed en los controllers
 public class SeguridadConfig {
 
-    /** Única dirección desde la que el navegador puede llamar a la API: el frontend Angular. */
-    public static final String ORIGEN_FRONTEND = "http://localhost:4200";
+    /**
+     * Direcciones desde las que el navegador puede llamar a la API (el frontend Angular).
+     * Por defecto la de desarrollo; en un servidor se cambia con la variable de entorno APP_CORS_ORIGENES
+     * (B5). Si el .jar sirve también las pantallas, la API y el frontend están en la misma dirección y CORS no se usa.
+     */
+    private final List<String> origenesFrontend;
+
+    public SeguridadConfig(@Value("${app.cors.origenes:http://localhost:4200}") List<String> origenesFrontend) {
+        this.origenesFrontend = origenesFrontend;
+    }
 
     @Bean
     public SecurityFilterChain cadenaDeFiltros(HttpSecurity http, SesionService sesionService) throws Exception {
@@ -46,11 +55,11 @@ public class SeguridadConfig {
                 .build();
     }
 
-    // cors: solo el frontend propio (localhost:4200) puede llamar a la api
+    // cors: solo el frontend propio (localhost:4200, o el q diga app.cors.origenes) puede llamar a la api
     @Bean
     public CorsConfigurationSource configuracionCors() {
         CorsConfiguration cors = new CorsConfiguration();
-        cors.setAllowedOrigins(List.of(ORIGEN_FRONTEND));
+        cors.setAllowedOrigins(origenesFrontend);
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cors.setAllowedHeaders(List.of("*"));
 

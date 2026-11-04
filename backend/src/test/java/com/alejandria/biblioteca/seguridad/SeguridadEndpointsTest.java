@@ -62,6 +62,106 @@ class SeguridadEndpointsTest {
     }
 
     @Test
+    void soloElAdminEditaYDaDeBajaUsuarios() throws Exception {
+        // RF12 y RF13: actor Administrador
+        mvc.perform(get("/api/usuarios").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/usuarios/2").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/usuarios/2").header("Authorization", token(Rol.PRESTATARIO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/usuarios/2"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void editarUnUsuarioConDniMalEscritoDa400() throws Exception {
+        String json = """
+                {"nombre":"Ana","apellido":"Torres","dni":"71","correo":"ana@alejandria.edu.pe"}
+                """;
+        mvc.perform(put("/api/usuarios/2").header("Authorization", token(Rol.ADMINISTRADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El DNI debe tener 8 dígitos"));
+    }
+
+    @Test
+    void elEncargadoNoEditaReservas() throws Exception {
+        // RF15: actor Prestatario y Administrador
+        mvc.perform(put("/api/reservas/1").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"fechaRecojoLimite\":\"2026-10-30T17:30:00\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void editarUnaReservaSinFechaDa400() throws Exception {
+        mvc.perform(put("/api/reservas/1").header("Authorization", token(Rol.ADMINISTRADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("Elija la fecha y la franja de recojo"));
+    }
+
+    @Test
+    void laAuditoriaDelInventarioEsSoloDelAdmin() throws Exception {
+        // IPI: la auditoria fisica la registra el administrador
+        mvc.perform(get("/api/auditorias").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/auditorias").header("Authorization", token(Rol.PRESTATARIO)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unConteoFisicoNegativoDa400() throws Exception {
+        mvc.perform(post("/api/auditorias").header("Authorization", token(Rol.ADMINISTRADOR))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"idLibro\":1,\"conteoFisico\":-1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El conteo físico no puede ser negativo"));
+    }
+
+    @Test
+    void elAdminTambienCancelaReservas() throws Exception {
+        // B1 (RF16 y CU05): los tres perfiles cancelan. una reserva que no existe da 404 (paso el permiso), no 403
+        mvc.perform(put("/api/reservas/999999/cancelar").header("Authorization", token(Rol.ADMINISTRADOR)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void soloElEncargadoReservaEnVentanilla() throws Exception {
+        // B2 (RF04): el encargado reserva a nombre de un prestatario con su DNI
+        String json = """
+                {"dniPrestatario":"12","idLibro":1,"fechaRecojoLimite":"2026-10-30T17:30:00"}
+                """;
+        // con datos validos: el prestatario no tiene permiso (los datos se revisan antes que el permiso del metodo)
+        mvc.perform(post("/api/reservas/ventanilla").header("Authorization", token(Rol.PRESTATARIO))
+                        .contentType(MediaType.APPLICATION_JSON).content(json.replace("\"12\"", "\"33333333\"")))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/reservas/ventanilla").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El DNI debe tener 8 dígitos"));
+    }
+
+    @Test
+    void soloElEncargadoAnulaPrestamos() throws Exception {
+        // B8 (Tabla 35 del informe): anular es del encargado. el admin solo consulta
+        mvc.perform(delete("/api/prestamos/999999").header("Authorization", token(Rol.ADMINISTRADOR)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/prestamos/999999").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isNotFound()); // paso el permiso: el prestamo no existe
+    }
+
+    @Test
+    void soloElAdminRestableceContrasenas() throws Exception {
+        // B7: el admin pone una contraseña nueva a quien la olvido (ventanilla)
+        String json = """
+                {"contrasena":"Biblioteca#2026"}
+                """;
+        mvc.perform(put("/api/usuarios/2/contrasena").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void unPrestatarioNoPuedeVerLosPrestamosDeOtro() throws Exception {
         // el token es del usuario 1; pide los prestamos del usuario 2
         mvc.perform(get("/api/prestamos/prestatario/2").header("Authorization", token(Rol.PRESTATARIO)))

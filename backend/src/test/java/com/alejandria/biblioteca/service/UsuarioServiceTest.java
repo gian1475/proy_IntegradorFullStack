@@ -1,10 +1,14 @@
 package com.alejandria.biblioteca.service;
 
+import com.alejandria.biblioteca.dao.PrestamoDao;
+import com.alejandria.biblioteca.dao.ReservaDao;
+import com.alejandria.biblioteca.dao.SancionDao;
 import com.alejandria.biblioteca.dao.UsuarioDao;
 import com.alejandria.biblioteca.dto.usuario.EncargadoDTO;
 import com.alejandria.biblioteca.dto.usuario.RegistroEncargadoDTO;
 import com.alejandria.biblioteca.entity.Usuario;
 import com.alejandria.biblioteca.exception.NegocioException;
+import com.alejandria.biblioteca.seguridad.LimitadorIntentosLogin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,12 +26,18 @@ import static org.mockito.Mockito.*;
 class UsuarioServiceTest {
 
     @Mock private UsuarioDao usuarioDao;
+    @Mock private PrestamoDao prestamoDao;
+    @Mock private ReservaDao reservaDao;
+    @Mock private ReservaService reservaService;
+    @Mock private SancionDao sancionDao;
+    @Mock private SesionService sesionService;
+    @Mock private LimitadorIntentosLogin limitador;
 
     private UsuarioService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new UsuarioService(usuarioDao);
+        servicio = new UsuarioService(usuarioDao, prestamoDao, reservaDao, reservaService, sancionDao, sesionService, limitador);
     }
 
     @Test

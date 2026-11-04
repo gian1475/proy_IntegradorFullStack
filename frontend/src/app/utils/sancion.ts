@@ -1,3 +1,5 @@
+import { diaMes, horaDe24 } from './fechas';
+
 /** RF06: reglas de incidencias y sanciones que usa la pestaña "Incidencias" del encargado. */
 
 export type TipoIncidencia = 'retraso' | 'daño' | 'pérdida';
@@ -38,7 +40,7 @@ export function textoSancion(s: SancionResumen): string {
     case 'advertencia':
       return 'Advertencia';
     case 'suspensión':
-      return s.finSancion ? `Suspensión hasta el ${diaMes(s.finSancion)} ${hora(s.finSancion)}` : 'Suspensión';
+      return s.finSancion ? `Suspensión hasta el ${diaMes(s.finSancion)} ${horaDe24(s.finSancion)}` : 'Suspensión';
     case 'multa': {
       const monto = `Multa de S/ ${Number(s.monto ?? 0).toFixed(2)}`;
       if (s.estadoSancion === 'activa') return `${monto} (pendiente de pago)`;
@@ -50,16 +52,3 @@ export function textoSancion(s: SancionResumen): string {
   }
 }
 
-function diaMes(fecha: string): string {
-  const d = new Date(fecha);
-  return `${dos(d.getDate())}/${dos(d.getMonth() + 1)}`;
-}
-
-function hora(fecha: string): string {
-  const d = new Date(fecha);
-  return `${dos(d.getHours())}:${dos(d.getMinutes())}`;
-}
-
-function dos(n: number): string {
-  return String(n).padStart(2, '0');
-}

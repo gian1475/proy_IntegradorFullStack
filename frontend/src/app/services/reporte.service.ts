@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface ResultadoImportacion {
   creados: number;
@@ -40,6 +41,8 @@ export interface Monitoreo {
   peticionesHttp: number;
   peticionesConError: number;
   tiempoRespuestaPromedioMs: number;
+  /** RNF03: % de peticiones que respondieron en 2 s o menos (null si todavía no hay). */
+  peticionesHasta2sPorcentaje: number | null;
   conexionesBdActivas: number | null;
   conexionesBdTotales: number | null;
   sesionesActivas: number;
@@ -93,7 +96,7 @@ const EXTENSIONES: Record<FormatoReporte, string> = { excel: 'xlsx', pdf: 'pdf',
 })
 export class ReporteService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/reportes';
+  private apiUrl = `${environment.apiUrl}/reportes`;
 
   /** Descarga un reporte. desde / hasta en formato AAAA-MM-DD (vacío = sin límite). Se pide con HttpClient para que viaje el token. */
   descargar(tipo: string, formato: FormatoReporte, desde: string, hasta: string): Observable<Blob> {
@@ -113,12 +116,12 @@ export class ReporteService {
   }
 
   obtenerMonitoreo(): Observable<Monitoreo> {
-    return this.http.get<Monitoreo>('http://localhost:8080/api/monitoreo');
+    return this.http.get<Monitoreo>(`${environment.apiUrl}/monitoreo`);
   }
 
   // dashboard (front): pide el resumen del dashboard del admin
   obtenerDashboard(): Observable<Dashboard> {
-    return this.http.get<Dashboard>('http://localhost:8080/api/dashboard');
+    return this.http.get<Dashboard>(`${environment.apiUrl}/dashboard`);
   }
 
   /** Crea un enlace temporal y lo "clickea" para que el navegador descargue el archivo. */

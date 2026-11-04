@@ -28,16 +28,17 @@ class AuthServicePerfilTest {
     @Mock private UsuarioService usuarioService;
 
     private AuthService servicio;
+    private Usuario carlos;
 
     @BeforeEach
     void preparar() {
         servicio = new AuthService(usuarioDao, usuarioService, new SesionService(15), new LimitadorIntentosLogin());
-        Usuario u = new Usuario();
-        u.setIdUsuario(5);
-        u.setCorreo("carlos@alejandria.edu.pe");
-        u.setContrasena(new BCryptPasswordEncoder().encode(CONTRASENA));
-        u.setEstado("activo");
-        when(usuarioDao.findByCorreo("carlos@alejandria.edu.pe")).thenReturn(Optional.of(u));
+        carlos = new Usuario();
+        carlos.setIdUsuario(5);
+        carlos.setCorreo("carlos@alejandria.edu.pe");
+        carlos.setContrasena(new BCryptPasswordEncoder().encode(CONTRASENA));
+        carlos.setEstado("activo");
+        when(usuarioDao.findByCorreo("carlos@alejandria.edu.pe")).thenReturn(Optional.of(carlos));
     }
 
     @Test
@@ -61,6 +62,17 @@ class AuthServicePerfilTest {
         when(usuarioDao.contarPerfiles(5)).thenReturn(0L); // antes salia "prestatario" por defecto
 
         assertThrows(NegocioException.class, () -> servicio.login(login()));
+    }
+
+    @Test
+    void unUsuarioDadoDeBajaNoPuedeIniciarSesion() {
+        // RF13, criterio de aceptación: un usuario inactivo no puede iniciar sesión
+        carlos.setEstado("inactivo"); // el admin lo dio de baja
+
+        NegocioException error = assertThrows(NegocioException.class, () -> servicio.login(login()));
+        assertEquals(403, error.getEstado().value());
+        assertEquals("El usuario se encuentra inactivo", error.getMessage());
+        verify(usuarioDao, never()).contarPerfiles(5);
     }
 
     private LoginDTO login() {

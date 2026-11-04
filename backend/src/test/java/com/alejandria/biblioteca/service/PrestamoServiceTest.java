@@ -15,6 +15,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
+import org.mockito.ArgumentCaptor;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -111,6 +114,43 @@ class PrestamoServiceTest {
 
         assertThrows(NegocioException.class, () -> servicio.ampliar(1));
         verify(prestamoDao, never()).save(any());
+    }
+
+    // ---------- TAP: hora de inicio de la atención (indicador 1.2.2) ----------
+
+    @Test
+    void guardaLaHoraEnQueEmpezoLaAtencion() {
+        prepararRegistro();
+
+        servicio.registrar(new RegistroPrestamoDTO("33333333", 10, 90), 2); // el encargado tardó 1 min 30 s
+
+        ArgumentCaptor<Prestamo> guardado = ArgumentCaptor.forClass(Prestamo.class);
+        verify(prestamoDao).save(guardado.capture());
+        assertEquals(AHORA.minusSeconds(90), guardado.getValue().getInicioAtencion());
+        assertEquals(AHORA, guardado.getValue().getFechaPrestamo()); // la confirmación
+    }
+
+    @Test
+    void sinElTiempoDeAtencionElPrestamoIgualSeRegistra() {
+        prepararRegistro();
+
+        servicio.registrar(registro(), 2);
+
+        ArgumentCaptor<Prestamo> guardado = ArgumentCaptor.forClass(Prestamo.class);
+        verify(prestamoDao).save(guardado.capture());
+        assertNull(guardado.getValue().getInicioAtencion()); // no cuenta para el TAP
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-5, 3601})
+    void unTiempoDeAtencionImposibleNoSeGuardaPeroElPrestamoSi(int segundos) {
+        prepararRegistro();
+
+        servicio.registrar(new RegistroPrestamoDTO("33333333", 10, segundos), 2);
+
+        ArgumentCaptor<Prestamo> guardado = ArgumentCaptor.forClass(Prestamo.class);
+        verify(prestamoDao).save(guardado.capture());
+        assertNull(guardado.getValue().getInicioAtencion());
     }
 
     // ---------- Horario de atención: 8:00 a 20:00 (RF01 y RF05) ----------
@@ -304,7 +344,7 @@ class PrestamoServiceTest {
     }
 
     private RegistroPrestamoDTO registro() {
-        return new RegistroPrestamoDTO("33333333", 10);
+        return new RegistroPrestamoDTO("33333333", 10, null);
     }
 
     private DevolucionDTO devolucion(String estadoFisico) {

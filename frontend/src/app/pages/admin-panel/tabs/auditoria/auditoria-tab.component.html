@@ -1,0 +1,93 @@
+@if (mensajeOk()) {
+  <div class="alert alert-success">{{ mensajeOk() }}</div>
+}
+@if (mensajeError()) {
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
+}
+
+<!-- IPI del mes: titulos cuyo ultimo conteo coincide / titulos auditados x 100 -->
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-2">Índice de precisión del inventario (IPI) de este mes</h2>
+  @if (mes(); as m) {
+    @if (m.ipi === null) {
+      <p class="mb-0"><span class="fs-4 fw-bold">Sin dato</span> <span class="text-body-secondary">— todavía no hay conteos físicos este mes.</span></p>
+    } @else {
+      <p class="mb-0">
+        <span class="fs-4 fw-bold" [class.text-success]="m.ipi >= 95" [class.text-danger]="m.ipi < 95">{{ m.ipi }} %</span>
+        <span class="text-body-secondary"> — {{ m.coinciden }} de {{ m.auditados }} títulos auditados coinciden con el sistema. Meta: 95 % o más.</span>
+      </p>
+    }
+  } @else {
+    <p class="text-body-secondary mb-0">Cargando...</p>
+  }
+  <p class="text-body-secondary small mt-2 mb-0">
+    Cuente los ejemplares <strong>disponibles</strong> de cada título en la estantería y escriba el número. Si un título se cuenta
+    dos veces en el mes, vale el último conteo. La auditoría no cambia el stock: si el conteo es correcto, corrija el stock en "Libros".
+  </p>
+</section>
+
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Registrar conteo físico</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Libro</th>
+          <th>Estado</th>
+          <th class="text-end">Stock en el sistema</th>
+          <th>Último conteo del mes</th>
+          <th style="width: 9rem">Conteo físico</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (l of libros(); track l.idLibro) {
+          <tr>
+            <td>{{ l.titulo }} <span class="text-body-secondary small">({{ l.isbn }})</span></td>
+            <td><span class="badge" [class]="l.estadoLibro">{{ etiquetaEstado(l.estadoLibro) }}</span></td>
+            <td class="text-end">{{ l.stock }}</td>
+            <td>
+              @if (ultimoConteo(l.idLibro); as u) {
+                {{ u.conteoFisico }} {{ u.coincide ? '✓' : '✗' }} <span class="text-body-secondary small">({{ u.fechaAuditoria | date: 'dd/MM HH:mm' }})</span>
+              } @else {
+                <span class="text-body-secondary">—</span>
+              }
+            </td>
+            <td>
+              <input class="form-control form-control-sm" type="number" min="0" step="1" [attr.aria-label]="'Conteo físico de ' + l.titulo"
+                     [(ngModel)]="conteos[l.idLibro]" />
+            </td>
+            <td><button class="btn btn-outline-primary btn-sm" (click)="registrar(l)">Registrar</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+@if (mes(); as m) {
+  @if (m.auditorias.length > 0) {
+    <section class="card card-body mb-4">
+      <h2 class="h6 fw-bold text-primary mb-3">Conteos de este mes ({{ m.auditorias.length }})</h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr><th>Fecha</th><th>Libro</th><th class="text-end">Sistema</th><th class="text-end">Conteo</th><th>¿Coincide?</th><th>Registró</th></tr>
+          </thead>
+          <tbody>
+            @for (a of m.auditorias; track a.idAuditoria) {
+              <tr>
+                <td>{{ a.fechaAuditoria | date: 'dd/MM HH:mm' }}</td>
+                <td>{{ a.tituloLibro }}</td>
+                <td class="text-end">{{ a.stockSistema }}</td>
+                <td class="text-end">{{ a.conteoFisico }}</td>
+                <td><span class="badge" [class]="a.coincide ? 'activo' : 'vencido'">{{ a.coincide ? 'Sí' : 'No' }}</span></td>
+                <td>{{ a.administrador }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+}

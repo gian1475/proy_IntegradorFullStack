@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -93,7 +94,7 @@ public class IncidenciaService {
         Incidencia incidencia = new Incidencia();
         incidencia.setPrestamo(prestamo);
         incidencia.setTipoIncidencia(dto.tipoIncidencia());
-        incidencia.setDescripcion(dto.descripcion() == null || dto.descripcion().isBlank() ? null : dto.descripcion().trim());
+        incidencia.setDescripcion(StringUtils.hasText(dto.descripcion()) ? dto.descripcion().trim() : null);
         incidencia.setFechaIncidencia(ahora);
         incidencia.setEstadoIncidencia("pendiente");
 
@@ -104,8 +105,11 @@ public class IncidenciaService {
         // la suspension del usuario corresponde a su sancion: queda 'suspendido' y se cuenta la suspension
         if (SUSPENSION.equals(sancion.getTipoSancion())) {
             Usuario prestatario = prestamo.getPrestatario();
-            prestatario.setEstado("suspendido");
-            usuarioDao.save(prestatario);
+            // RF13: si el admin ya lo dio de baja sigue 'inactivo' (solo el admin lo reactiva)
+            if (!"inactivo".equals(prestatario.getEstado())) {
+                prestatario.setEstado("suspendido");
+                usuarioDao.save(prestatario);
+            }
             usuarioDao.sumarSuspension(prestatario.getIdUsuario());
         }
 

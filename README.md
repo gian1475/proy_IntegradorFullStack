@@ -36,7 +36,7 @@ frontend/src/
 └── app/
     ├── pages/          Pantallas: home, login, registro, catálogo y los paneles
     │   ├── admin-panel/       Panel del Administrador; cada pestaña está en tabs/
-    │   │   └── tabs/          dashboard, libros, prestamos, reservas, encargados, reportes, monitoreo
+    │   │   └── tabs/          dashboard, libros, prestamos, reservas, usuarios, reportes, monitoreo
     │   └── encargado-panel/   Panel del Encargado; cada pestaña está en tabs/
     │       └── tabs/          activos, registrar, reservas
     ├── components/     Header, banner, secciones de libros, historial de préstamos y descarga de reportes
@@ -55,7 +55,8 @@ database/
     ├── migracion_01_prestamo.sql             Préstamos: ampliación, estado físico y eliminación lógica
     ├── migracion_02_sancion_monto.sql        Monto de las multas
     ├── migracion_03_reserva_cola.sql         Estado 'en_espera' para la cola de espera de reservas
-    └── migracion_04_quitar_fk_hibernate.sql  Quita 3 llaves foráneas que creó Hibernate
+    ├── migracion_04_quitar_fk_hibernate.sql  Quita 3 llaves foráneas que creó Hibernate
+    └── migracion_05_tap_ipi.sql              Inicio de la atención (TAP) y auditoría del inventario (IPI)
 
 docs/
 ├── Avance_III_IntegradorV8_corregido.docx  Informe del Avance III
@@ -78,16 +79,16 @@ Flujo de una petición: **controller → service → dao → base de datos**.
 
 | Perfil | Pantalla | Puede |
 |---|---|---|
-| Administrador | `/admin` | Dashboard con los indicadores de gestión, gestionar libros (CRUD), ver préstamos activos y el historial, eliminar reservas canceladas o vencidas, registrar encargados, descargar reportes, ver el monitoreo. Por la API (sin botón en su panel) también puede anular préstamos |
-| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas y ver la cola de espera, ver el historial, registrar incidencias con su sanción (advertencia, suspensión o multa) y registrar el pago de las multas (RF06), descargar reportes. Por la API (sin botón en su panel) también puede registrar y cancelar reservas a nombre de un prestatario (ventanilla) |
-| Prestatario | `/catalogo` | Ver el catálogo (stock y estado de cada libro), reservar, entrar a la cola de espera si no hay stock, cancelar sus reservas, ver y filtrar sus préstamos |
+| Administrador | `/admin` | Dashboard con los 4 indicadores de gestión (TAP, PDF, IPI y TIM), gestionar libros (CRUD), ver préstamos activos y el historial, cambiar la fecha y la franja de una reserva pendiente (RF15), cancelar reservas (RF16), eliminar reservas canceladas o vencidas, registrar la auditoría física del inventario (IPI), gestionar usuarios (registrar encargados; editar, dar de baja, reactivar y restablecer la contraseña de prestatarios y encargados: RF09, RF12 y RF13), descargar reportes, ver el monitoreo (incluye el % de peticiones en 2 s o menos, RNF03) |
+| Encargado | `/encargado` | Registrar préstamos, ampliarlos, registrar devoluciones, anular préstamos, atender reservas, reservar en la ventanilla a nombre de un prestatario (con su DNI), cancelar reservas y ver la cola de espera, ver el historial, registrar incidencias con su sanción (advertencia, suspensión o multa) y registrar el pago de las multas (RF06), descargar reportes |
+| Prestatario | `/catalogo` | Ver el catálogo (stock y estado de cada libro), reservar, entrar a la cola de espera si no hay stock, cambiar la fecha y la franja de recojo de sus reservas pendientes (RF15), cancelar sus reservas, ver y filtrar sus préstamos (también los anulados) |
 
 El backend valida el rol en cada endpoint con Spring Security (`@RolesAllowed`): sin sesión responde **401** y con un rol no permitido responde **403**.
 
 ## Cómo levantar el proyecto
 
 1. **Credenciales**: copiar `backend/.env.example` como `backend/.env` y completar la URL, el usuario y la contraseña de Neon. El `.env` no se sube a GitHub.
-2. **Base de datos**: si es una base nueva, ejecutar en el SQL Editor de Neon `database/schema_postgresql.sql` y después `database/datos_demo.sql` (libros y movimientos de ejemplo para la demo). Si ya existía, ejecutar las migraciones que falten, que están en `database/migraciones/` (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`, `migracion_04_quitar_fk_hibernate.sql`) y `datos_demo.sql`. Todos se pueden ejecutar más de una vez.
+2. **Base de datos**: si es una base nueva, ejecutar en el SQL Editor de Neon `database/schema_postgresql.sql` y después `database/datos_demo.sql` (libros y movimientos de ejemplo para la demo). Si ya existía, ejecutar las migraciones que falten, que están en `database/migraciones/` (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`, `migracion_04_quitar_fk_hibernate.sql`, `migracion_05_tap_ipi.sql`) y `datos_demo.sql`. Todos se pueden ejecutar más de una vez. **La 05 tiene que estar antes de arrancar el backend** (con `ddl-auto=validate` no arranca si falta).
    **Horario de atención:** el backend no registra préstamos fuera de 08:00–20:00 y la hora límite nunca pasa de las 20:00 (`app.horario.apertura` y `app.horario.cierre` en `application.properties`). Para probar de noche, sin tocar el archivo, definir la variable antes de levantar el backend: `$env:APP_HORARIO_CIERRE="23:59"` (PowerShell). En el repositorio el cierre se queda en `20:00`.
    **Hora:** el backend siempre usa la hora de Lima (`America/Lima`, se fija al arrancar en `BibliotecaApplication`), aunque la PC o el servidor estén en otra zona. El servidor de Neon está en hora GMT, por eso la hora la manda Java y no la BD.
 3. **Backend** (desde la carpeta `backend/`, porque ahí busca el `.env`):
@@ -119,6 +120,7 @@ Todas usan la misma **contraseña de prueba**, que maneja el equipo: no está en
 - **Devolución con retraso:** los 2 préstamos vencidos de hoy.
 - **Cola de espera:** si se cancela la reserva pendiente de *Cien Años de Soledad*, el ejemplar pasa a Camila, la primera de la cola.
 - **Mantenimiento:** *Cosmos* volvió dañado y era su único ejemplar.
+- **Usuarios (RF12 y RF13):** pestaña **Usuarios** del admin. José Luis ya está `inactivo` (botón "Reactivar"). Si se intenta dar de baja a quien tiene un libro en sala, el sistema lo rechaza; al dar de baja a quien tiene una reserva pendiente (Sebastián, Lucía o Diego), la reserva se cancela y esa persona ya no puede iniciar sesión.
 
 ## Empaquetado (.jar)
 
@@ -130,6 +132,12 @@ java -jar target/biblioteca-alejandria.jar
 
 `clean package` compila, ejecuta las pruebas y genera `target/biblioteca-alejandria.jar`. El `.jar` debe ejecutarse desde `backend/` para que encuentre el `.env` (o con las variables `SPRING_DATASOURCE_*` definidas en el sistema).
 
+**Un solo `.jar` con las pantallas:** si antes se compila el frontend (`cd frontend` y `npx ng build`), el `.jar` también trae las pantallas y todo se abre en `http://localhost:8080`, sin `npm start`.
+
+## Despliegue en la nube
+
+El repositorio trae un `Dockerfile` que arma ese `.jar` único. Los pasos para publicarlo en Render, con las credenciales de Neon en variables de entorno, están en [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md). Antes hay que ejecutar en Neon todas las migraciones (hoy falta la 05).
+
 ## Pruebas
 
 ```
@@ -137,9 +145,9 @@ cd backend
 ./mvnw test
 ```
 
-205 pruebas del backend: incidencias y sanciones (RF06: las 3 sanciones, qué incidencia corresponde a cada préstamo, pago, cancelación y fin de la suspensión, también contra la BD), zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos con anotaciones (Bean Validation), seguridad de los endpoints (401, 403 y CORS con Spring Security), perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo (con los autores en la misma consulta), cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
+285 pruebas del backend: cancelar y reservar en ventanilla (B1 y B2), restablecer contraseña (B7), % de peticiones en 2 s (RNF03), dos préstamos a la vez del último ejemplar (concurrencia, RNF05), rutas de Angular y CORS configurable (despliegue), indicadores TAP e IPI (fórmulas, auditoría del inventario y consultas contra la BD), edición de reservas (RF15), sesiones con la caché de Guava, edición y baja lógica de usuarios (RF12 y RF13: DNI y correo únicos, no se da de baja con un libro en sala, se cancelan sus reservas, se cierra su sesión, reactivar, también contra la BD), incidencias y sanciones (RF06: las 3 sanciones, qué incidencia corresponde a cada préstamo, pago, cancelación y fin de la suspensión, también contra la BD), zona horaria (hora de Lima), regla de contraseña (también en bytes), validación de datos con anotaciones (Bean Validation), seguridad de los endpoints (401, 403 y CORS con Spring Security), perfil único, bloqueo por intentos fallidos, sesión de 15 minutos, cálculo de la hora límite (3 horas), horario de atención (08:00–20:00), ampliación (1 hora, sin reservas, sin pasar del cierre), devolución (dañado → mantenimiento), anulación, baja de libros, búsqueda del catálogo (con los autores en la misma consulta), cola de espera de reservas, eliminación física de reservas, historial con filtros, los 8 reportes, registro de encargados, indicadores del dashboard, monto de las multas, manejo de errores y consultas contra la BD real (con la hora de Lima). Las pruebas que usan la BD se deshacen al terminar: no dejan datos guardados.
 
-Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña, "Cargando..." en la pestaña Libros, incidencias que corresponden a cada préstamo), 24 pruebas:
+Frontend (alertas de 15 minutos, estado y búsqueda del catálogo, regla de contraseña, "Cargando..." en la pestaña Libros, incidencias que corresponden a cada préstamo, pestaña Usuarios con su filtro, edición y baja, sesión con el reloj del navegador, formato de fechas, franjas de recojo, cambiar fecha de una reserva, tiempo de atención del préstamo y pestaña Auditoría, reservas en ventanilla y cancelar, restablecer contraseña, monitoreo RNF03 y préstamos anulados), 73 pruebas:
 
 ```
 cd frontend
@@ -154,15 +162,21 @@ npx ng test --watch=false
 | Libros | `GET /api/libros`, `GET /{id}`, `GET /buscar?q=` (título, autor, categoría o ISBN), `GET /autor/{nombre}` (públicos); `POST`, `PUT /{id}`, `DELETE /{id}` | Administrador |
 | Categorías y autores | `GET /api/categorias`, `GET /api/autores` (listas para los formularios) | Público |
 | Préstamos | `POST /api/prestamos`, `PUT /{id}/ampliar`, `PUT /{id}/devolucion` | Encargado |
-| | `GET /activos`, `GET /{id}`, `GET /historial?dni=&libro=&desde=&hasta=`, `DELETE /{id}` (anular) | Encargado y Administrador |
+| | `GET /activos`, `GET /{id}`, `GET /historial?dni=&libro=&desde=&hasta=` | Encargado y Administrador |
+| | `DELETE /{id}` (anular: queda `anulado`) | Encargado |
 | | `GET /prestatario/{id}` | Los 3 perfiles (el prestatario, solo los suyos) |
 | Reservas | `GET /api/reservas` | Administrador y Encargado |
 | | `GET /usuario/{id}` | Los 3 perfiles (el prestatario, solo las suyas) |
-| | `POST` (sin stock entra a la cola de espera), `PUT /{id}/cancelar` | Prestatario (solo las suyas) y Encargado |
+| | `POST` (sin stock entra a la cola de espera) | Prestatario (solo las suyas) y Encargado |
+| | `POST /ventanilla` (el encargado reserva con el DNI del prestatario) | Encargado |
+| | `PUT /{id}/cancelar` | Los 3 perfiles (el prestatario, solo las suyas) |
+| | `PUT /{id}` (cambiar fecha y franja de recojo de una pendiente, RF15) | Prestatario (solo las suyas) y Administrador |
 | | `DELETE /{id}` (eliminación física) | Administrador |
 | Reportes | `GET /api/reportes/{tipo}/{formato}?desde=&hasta=` (tipo: `prestamos`, `devoluciones`, `reservas`, `incidencias`, `bajas`, `stock`, `indicadores`, `tiempos`; formato: `excel`, `pdf`, `csv`) | Administrador y Encargado |
 | Importar libros | `POST /api/reportes/libros/csv` | Administrador |
-| Encargados | `GET /api/usuarios/encargados`, `POST /api/usuarios/encargados` | Administrador |
+| Usuarios | `GET /api/usuarios/encargados`, `POST /api/usuarios/encargados` (RF09) | Administrador |
+| | `GET /api/usuarios` (prestatarios y encargados), `PUT /{id}` (editar, RF12), `DELETE /{id}` (baja lógica: queda `inactivo`, RF13), `PUT /{id}/reactivar`, `PUT /{id}/contrasena` (restablecer) | Administrador |
+| Auditoría (IPI) | `GET /api/auditorias` (IPI del mes y sus conteos), `POST /api/auditorias` (conteo físico de un título) | Administrador |
 | Incidencias (RF06) | `GET /api/incidencias`, `POST /api/incidencias` (incidencia + sanción), `PUT /sanciones/{id}/pago`, `PUT /sanciones/{id}/cancelar` | Encargado |
 | Monitoreo | `GET /api/monitoreo` | Administrador |
 | Dashboard | `GET /api/dashboard` | Administrador |

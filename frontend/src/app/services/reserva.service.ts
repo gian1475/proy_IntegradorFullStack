@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface ReservaBackend {
   idReserva: number;
@@ -24,7 +25,7 @@ export interface ReservaBackend {
 })
 export class ReservaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/reservas';
+  private apiUrl = `${environment.apiUrl}/reservas`;
 
   /**
    * fechaRecojoLimite en formato local "AAAA-MM-DDTHH:mm:ss" (hasta cuándo puede recoger el libro).
@@ -34,12 +35,23 @@ export class ReservaService {
     return this.http.post<ReservaBackend>(this.apiUrl, { idLibro, idUsuario, fechaRecojoLimite });
   }
 
+  // reserva ventanilla (front, B2): el encargado reserva a nombre del prestatario con su DNI.
+  // sin stock va null y el prestatario entra a la cola de espera
+  crearEnVentanilla(dniPrestatario: string, idLibro: number, fechaRecojoLimite: string | null): Observable<ReservaBackend> {
+    return this.http.post<ReservaBackend>(`${this.apiUrl}/ventanilla`, { dniPrestatario, idLibro, fechaRecojoLimite });
+  }
+
   getReservasPorUsuario(idUsuario: number): Observable<ReservaBackend[]> {
     return this.http.get<ReservaBackend[]>(`${this.apiUrl}/usuario/${idUsuario}`);
   }
 
   getTodas(): Observable<ReservaBackend[]> {
     return this.http.get<ReservaBackend[]>(this.apiUrl);
+  }
+
+  // reserva actualizar (front, RF15): nueva fecha y franja de recojo (el final de la franja, "AAAA-MM-DDTHH:mm:ss")
+  actualizar(idReserva: number, fechaRecojoLimite: string): Observable<ReservaBackend> {
+    return this.http.put<ReservaBackend>(`${this.apiUrl}/${idReserva}`, { fechaRecojoLimite });
   }
 
   /** Eliminación lógica: la reserva queda 'cancelada' (PUT). */

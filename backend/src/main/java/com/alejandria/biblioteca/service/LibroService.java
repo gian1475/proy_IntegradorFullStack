@@ -14,6 +14,7 @@ import com.alejandria.biblioteca.exception.NegocioException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.HashSet;
 import java.util.List;
@@ -53,7 +54,7 @@ public class LibroService {
     /** RF03: busca por título, autor, categoría o código (ISBN). Cada libro trae su stock y su estado. */
     @Transactional(readOnly = true)
     public List<LibroDTO> buscar(String texto) {
-        if (texto == null || texto.isBlank()) {
+        if (!StringUtils.hasText(texto)) { // null, "" o solo espacios (StringUtils de Spring)
             return listar();
         }
         return aDTO(libroDao.buscarEnCatalogo(texto.trim()));

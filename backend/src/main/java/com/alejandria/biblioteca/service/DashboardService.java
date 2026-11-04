@@ -1,5 +1,6 @@
 package com.alejandria.biblioteca.service;
 
+import com.alejandria.biblioteca.dao.AuditoriaInventarioDao;
 import com.alejandria.biblioteca.dao.LibroDao;
 import com.alejandria.biblioteca.dao.PrestamoDao;
 import com.alejandria.biblioteca.dao.ReservaDao;
@@ -34,12 +35,15 @@ public class DashboardService {
     private final LibroDao libroDao;
     private final ReservaDao reservaDao;
     private final UsuarioDao usuarioDao;
+    private final AuditoriaInventarioDao auditoriaDao;
 
-    public DashboardService(PrestamoDao prestamoDao, LibroDao libroDao, ReservaDao reservaDao, UsuarioDao usuarioDao) {
+    public DashboardService(PrestamoDao prestamoDao, LibroDao libroDao, ReservaDao reservaDao, UsuarioDao usuarioDao,
+                            AuditoriaInventarioDao auditoriaDao) {
         this.prestamoDao = prestamoDao;
         this.libroDao = libroDao;
         this.reservaDao = reservaDao;
         this.usuarioDao = usuarioDao;
+        this.auditoriaDao = auditoriaDao;
     }
 
     @Transactional
@@ -62,9 +66,7 @@ public class DashboardService {
             ejemplares += numero(fila[2]);
         }
 
-        long prestamosMes = prestamoDao.contarPrestamosEntre(inicioMes, finMes);
-        long conRetraso = prestamoDao.contarDevueltosConRetrasoEntre(inicioMes, finMes);
-        long conIncidencia = prestamoDao.contarPrestamosConIncidenciaEntre(inicioMes, finMes);
+        IndicadoresGestion.Datos datos = IndicadoresGestion.Datos.leer(prestamoDao, auditoriaDao, inicioMes, finMes);
 
         return new DashboardDTO(
                 ahora,
@@ -76,11 +78,11 @@ public class DashboardService {
                 prestamoDao.countByEstadoPrestamo("vencido"),
                 reservaDao.countByEstadoReserva("pendiente"),
                 usuarioDao.contarPrestatarios(),
-                prestamosMes,
+                datos.prestamos(),
                 prestamoDao.contarDevueltosEntre(inicioMes, finMes),
-                conRetraso,
+                datos.conRetraso(),
                 prestamoDao.contarDevueltosDanadosEntre(inicioMes, finMes),
-                IndicadoresGestion.calcular(prestamosMes, conRetraso, conIncidencia, "este mes"),
+                IndicadoresGestion.calcular(datos, "este mes"),
                 aConteos(prestamoDao.prestamosPorCategoriaEntre(inicioMes, finMes)),
                 ultimos7Dias(ahora.toLocalDate())
         );

@@ -1,6 +1,54 @@
+@if (mensajeOk()) {
+  <div class="alert alert-success">{{ mensajeOk() }}</div>
+}
 @if (mensajeError()) {
   <div class="alert alert-danger">{{ mensajeError() }}</div>
 }
+
+<!-- B2 (RF04, actor Encargado): reservar en la ventanilla a nombre de un prestatario -->
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-3">Reservar en ventanilla</h2>
+  <p class="text-body-secondary small">Para un prestatario que pide reservar en la ventanilla. Si el libro no tiene ejemplares, entra a la cola de espera.</p>
+  <form (ngSubmit)="reservarEnVentanilla()">
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6 col-lg-3">
+        <label class="form-label" for="v-dni">DNI del prestatario</label>
+        <input class="form-control" id="v-dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="dni" />
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <label class="form-label" for="v-buscar">Buscar libro</label>
+        <input class="form-control" id="v-buscar" name="buscar" placeholder="Título, autor, categoría o ISBN"
+               [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" />
+      </div>
+      <div class="col-sm-12 col-lg-6">
+        <label class="form-label" for="v-libro">Libro ({{ librosReservables().length }})</label>
+        <select class="form-select" id="v-libro" name="libro" [(ngModel)]="idLibro">
+          <option [ngValue]="null">Seleccione un libro</option>
+          @for (l of librosReservables(); track l.idLibro) {
+            <option [ngValue]="l.idLibro">{{ l.titulo }} ({{ etiquetaEstado(l.estadoLibro) }}, stock: {{ l.stock }})</option>
+          }
+        </select>
+      </div>
+      @if (!sinStock()) {
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label" for="v-fecha">Fecha de recojo</label>
+          <input class="form-control" id="v-fecha" name="fecha" type="date" [(ngModel)]="fecha" />
+        </div>
+        <div class="col-sm-6 col-lg-4">
+          <label class="form-label" for="v-franja">Franja</label>
+          <select class="form-select" id="v-franja" name="franja" [(ngModel)]="franja">
+            @for (f of franjas; track f.valor) {
+              <option [value]="f.valor">{{ f.texto }}</option>
+            }
+          </select>
+        </div>
+      } @else {
+        <div class="col-12 small text-body-secondary">Este libro no tiene ejemplares: la reserva entra a la cola de espera, sin fecha.</div>
+      }
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">{{ sinStock() ? 'Agregar a la cola' : 'Reservar' }}</button>
+  </form>
+</section>
 
 <section class="card card-body mb-4">
   <h2 class="h6 fw-bold text-primary mb-3">Reservas pendientes de recojo</h2>
@@ -27,7 +75,10 @@
               <td>{{ r.nombrePrestatario }}</td>
               <td>{{ r.tituloLibro }}</td>
               <td>{{ r.fechaRecojoLimite | date: 'dd/MM HH:mm' }}</td>
-              <td><button class="btn btn-primary btn-sm" (click)="entregar.emit(r)">Entregar</button></td>
+              <td class="text-nowrap">
+                <button class="btn btn-primary btn-sm me-1" (click)="entregar.emit(r)">Entregar</button>
+                <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
+              </td>
             </tr>
           }
         </tbody>
@@ -50,6 +101,7 @@
             <th>Puesto</th>
             <th>Prestatario</th>
             <th>En la cola desde</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -59,6 +111,7 @@
               <td>{{ r.posicionCola }}</td>
               <td>{{ r.nombrePrestatario }}</td>
               <td>{{ r.fechaReserva | date: 'dd/MM HH:mm' }}</td>
+              <td><button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button></td>
             </tr>
           }
         </tbody>
