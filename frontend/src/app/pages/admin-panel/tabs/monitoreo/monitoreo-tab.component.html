@@ -28,6 +28,21 @@
           <tr><td>Peticiones HTTP</td><td>{{ m.peticionesHttp }}</td><td>Total atendidas desde el inicio</td></tr>
           <tr><td>Peticiones con error</td><td>{{ m.peticionesConError }}</td><td>Respuestas 4xx y 5xx (por ejemplo, login fallido)</td></tr>
           <tr><td>Tiempo de respuesta promedio</td><td>{{ m.tiempoRespuestaPromedioMs }} ms</td><td>Cuánto tarda el backend en responder</td></tr>
+          <!-- monitoreo RNF03: el promedio no basta, el RNF03 pide que al menos el 95 % responda en 2 s o menos -->
+          <tr>
+            <td>Peticiones en 2 s o menos</td>
+            <td>
+              @if (m.peticionesHasta2sPorcentaje === null) {
+                <span class="badge text-bg-secondary">Sin dato</span>
+              } @else {
+                {{ m.peticionesHasta2sPorcentaje }} %
+                <span class="badge" [class]="m.peticionesHasta2sPorcentaje >= 95 ? 'text-bg-success' : 'text-bg-danger'">
+                  {{ m.peticionesHasta2sPorcentaje >= 95 ? 'Cumple RNF03' : 'No cumple RNF03' }}
+                </span>
+              }
+            </td>
+            <td>RNF03: al menos el 95 % de las operaciones debe responder en 2 segundos o menos</td>
+          </tr>
           <tr><td>Conexiones a la BD</td><td>{{ m.conexionesBdActivas ?? '-' }} activas / {{ m.conexionesBdTotales ?? '-' }}</td><td>Pool de conexiones a Neon (HikariCP)</td></tr>
           <tr><td>Sesiones activas</td><td>{{ m.sesionesActivas }}</td><td>Usuarios con sesión iniciada</td></tr>
           <tr><td>Préstamos activos / vencidos</td><td>{{ m.prestamosActivos }} / {{ m.prestamosVencidos }}</td><td>Libros que están en sala ahora</td></tr>

@@ -7,10 +7,12 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.TimeGauge;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.CountAtBucket;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
@@ -23,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 public class MonitoreoService {
 
     private static final double BYTES_POR_MB = 1024.0 * 1024.0;
+    /** RNF03: las operaciones deben responder en 2 segundos o menos (al menos el 95 %). */
+    public static final Duration LIMITE_RNF03 = Duration.ofSeconds(2);
 
     private final MeterRegistry registro;
     private final HealthEndpoint healthEndpoint;
@@ -65,6 +69,7 @@ public class MonitoreoService {
                 totalPeticiones,
                 conError,
                 totalPeticiones == 0 ? 0.0 : redondear(tiempoTotalMs / totalPeticiones),
+                porcentajeHasta(peticiones, LIMITE_RNF03),
                 valor("hikaricp.connections.active"),
                 valor("hikaricp.connections"),
                 sesionService.contarActivas(),
@@ -72,6 +77,32 @@ public class MonitoreoService {
                 prestamoDao.countByEstadoPrestamo("vencido"),
                 reservaDao.countByEstadoReserva("pendiente")
         );
+    }
+
+    /**
+     * RNF03: qué % de las peticiones tardó hasta el límite (2 s). null si no hay peticiones o si no se configuró
+     * el límite (management.metrics.distribution.slo.http.server.requests=2s en application.properties).
+     */
+    // monitoreo RNF03: micrometer guarda en el histograma cuantas peticiones tardaron hasta 2 s (un "SLO").
+    // el promedio no basta: una sola peticion muy lenta se esconde en el promedio, el % no
+    public static Double porcentajeHasta(Collection<Timer> peticiones, Duration limite) {
+        double limiteNanos = limite.toNanos();
+        long total = 0;
+        long rapidas = 0;
+        boolean hayLimite = false;
+        for (Timer t : peticiones) {
+            for (CountAtBucket balde : t.takeSnapshot().histogramCounts()) {
+                if (balde.bucket() == limiteNanos) {
+                    rapidas += (long) balde.count();
+                    hayLimite = true;
+                }
+            }
+            total += t.count();
+        }
+        if (!hayLimite || total == 0) {
+            return null;
+        }
+        return Math.round(rapidas * 1000.0 / total) / 10.0;
     }
 
     /** Valor de un Gauge (indicador), o null si la métrica no existe. */

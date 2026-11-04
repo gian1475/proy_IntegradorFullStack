@@ -40,6 +40,8 @@ export interface Monitoreo {
   peticionesHttp: number;
   peticionesConError: number;
   tiempoRespuestaPromedioMs: number;
+  /** RNF03: % de peticiones que respondieron en 2 s o menos (null si todavía no hay). */
+  peticionesHasta2sPorcentaje: number | null;
   conexionesBdActivas: number | null;
   conexionesBdTotales: number | null;
   sesionesActivas: number;
