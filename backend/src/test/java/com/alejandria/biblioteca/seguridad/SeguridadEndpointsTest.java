@@ -142,6 +142,26 @@ class SeguridadEndpointsTest {
     }
 
     @Test
+    void soloElEncargadoAnulaPrestamos() throws Exception {
+        // B8 (Tabla 35 del informe): anular es del encargado. el admin solo consulta
+        mvc.perform(delete("/api/prestamos/999999").header("Authorization", token(Rol.ADMINISTRADOR)))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/prestamos/999999").header("Authorization", token(Rol.ENCARGADO)))
+                .andExpect(status().isNotFound()); // paso el permiso: el prestamo no existe
+    }
+
+    @Test
+    void soloElAdminRestableceContrasenas() throws Exception {
+        // B7: el admin pone una contraseña nueva a quien la olvido (ventanilla)
+        String json = """
+                {"contrasena":"Biblioteca#2026"}
+                """;
+        mvc.perform(put("/api/usuarios/2/contrasena").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void unPrestatarioNoPuedeVerLosPrestamosDeOtro() throws Exception {
         // el token es del usuario 1; pide los prestamos del usuario 2
         mvc.perform(get("/api/prestamos/prestatario/2").header("Authorization", token(Rol.PRESTATARIO)))

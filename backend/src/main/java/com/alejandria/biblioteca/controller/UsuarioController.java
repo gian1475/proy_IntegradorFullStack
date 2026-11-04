@@ -3,6 +3,7 @@ package com.alejandria.biblioteca.controller;
 import com.alejandria.biblioteca.dto.usuario.ActualizarUsuarioDTO;
 import com.alejandria.biblioteca.dto.usuario.EncargadoDTO;
 import com.alejandria.biblioteca.dto.usuario.RegistroEncargadoDTO;
+import com.alejandria.biblioteca.dto.usuario.RestablecerContrasenaDTO;
 import com.alejandria.biblioteca.dto.usuario.UsuarioAdminDTO;
 import com.alejandria.biblioteca.seguridad.Rol;
 import com.alejandria.biblioteca.service.UsuarioService;
@@ -54,6 +55,12 @@ public class UsuarioController {
     @DeleteMapping("/{id}")
     public UsuarioAdminDTO darDeBaja(@PathVariable Integer id) {
         return usuarioService.darDeBaja(id);
+    }
+
+    // restablecer contra (B7): PUT /api/usuarios/{id}/contrasena
+    @PutMapping("/{id}/contrasena")
+    public UsuarioAdminDTO restablecerContrasena(@PathVariable Integer id, @Valid @RequestBody RestablecerContrasenaDTO dto) {
+        return usuarioService.restablecerContrasena(id, dto);
     }
 
     @PutMapping("/{id}/reactivar")

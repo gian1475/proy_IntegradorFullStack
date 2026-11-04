@@ -38,6 +38,10 @@ export class UsuariosTabComponent implements OnInit {
 
   form: RegistroEncargado = this.formularioVacio();
 
+  /** B7: usuario al que se le restablece la contraseña (null = a nadie). */
+  cambioContrasena: UsuarioAdmin | null = null;
+  contrasenaNueva = '';
+
   /** RF12: usuario que se está editando (null = no se edita a nadie). */
   edicion: (ActualizarUsuario & { idUsuario: number; perfil: string }) | null = null;
 
@@ -99,6 +103,7 @@ export class UsuariosTabComponent implements OnInit {
 
   editar(u: UsuarioAdmin): void {
     this.limpiarMensajes();
+    this.cambioContrasena = null;
     this.edicion = { idUsuario: u.idUsuario, perfil: u.perfil, nombre: u.nombre, apellido: u.apellido,
                      dni: u.dni, correo: u.correo, turno: u.turno };
     // el formulario esta arriba de la tabla: despues de dibujarlo se pone el cursor en "Nombres"
@@ -134,6 +139,43 @@ export class UsuariosTabComponent implements OnInit {
         this.edicion = null;
         this.mensajeOk.set(`Datos de ${u.nombre} ${u.apellido} actualizados.`);
         this.cargarUsuarios();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardando.set(false);
+        this.mensajeError.set(mensajeDeError(err));
+      }
+    });
+  }
+
+  // ---------- B7: restablecer la contraseña ----------
+
+  abrirContrasena(u: UsuarioAdmin): void {
+    this.limpiarMensajes();
+    this.edicion = null;
+    this.cambioContrasena = u;
+    this.contrasenaNueva = '';
+  }
+
+  requisitosNueva(): { texto: string; cumple: boolean }[] {
+    return requisitosContrasena(this.contrasenaNueva);
+  }
+
+  // restablecer contra (front): misma regla contra del registro; el backend la vuelve a revisar
+  guardarContrasena(): void {
+    const u = this.cambioContrasena;
+    if (!u) return;
+    this.limpiarMensajes();
+    if (!contrasenaValida(this.contrasenaNueva)) {
+      this.mensajeError.set('La contraseña no cumple los requisitos de seguridad');
+      return;
+    }
+    this.guardando.set(true);
+    this.usuarioService.restablecerContrasena(u.idUsuario, this.contrasenaNueva).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.cambioContrasena = null;
+        this.contrasenaNueva = '';
+        this.mensajeOk.set(`Contraseña de ${u.nombre} ${u.apellido} restablecida. Ya puede iniciar sesión con la nueva.`);
       },
       error: (err: HttpErrorResponse) => {
         this.guardando.set(false);

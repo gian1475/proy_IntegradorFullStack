@@ -5,10 +5,12 @@ import com.alejandria.biblioteca.dao.ReservaDao;
 import com.alejandria.biblioteca.dao.SancionDao;
 import com.alejandria.biblioteca.dao.UsuarioDao;
 import com.alejandria.biblioteca.dto.usuario.ActualizarUsuarioDTO;
+import com.alejandria.biblioteca.dto.usuario.RestablecerContrasenaDTO;
 import com.alejandria.biblioteca.dto.usuario.UsuarioAdminDTO;
 import com.alejandria.biblioteca.entity.Reserva;
 import com.alejandria.biblioteca.entity.Usuario;
 import com.alejandria.biblioteca.exception.NegocioException;
+import com.alejandria.biblioteca.seguridad.LimitadorIntentosLogin;
 import com.alejandria.biblioteca.seguridad.Rol;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -39,12 +42,13 @@ class UsuarioGestionServiceTest {
     @Mock private ReservaService reservaService;
     @Mock private SancionDao sancionDao;
     @Mock private SesionService sesionService;
+    @Mock private LimitadorIntentosLogin limitador;
 
     private UsuarioService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new UsuarioService(usuarioDao, prestamoDao, reservaDao, reservaService, sancionDao, sesionService);
+        servicio = new UsuarioService(usuarioDao, prestamoDao, reservaDao, reservaService, sancionDao, sesionService, limitador);
     }
 
     private Usuario usuario(int id, String estado) {
@@ -270,6 +274,44 @@ class UsuarioGestionServiceTest {
             NegocioException e = assertThrows(NegocioException.class, () -> servicio.reactivar(5));
             assertEquals(409, e.getEstado().value());
             assertEquals("El usuario no está inactivo", e.getMessage());
+        }
+    }
+
+    @Nested
+    @DisplayName("B7: el admin restablece la contraseña (quien la olvidó va a la ventanilla)")
+    class RestablecerContrasena {
+
+        @Test
+        void guardaLaNuevaComoHashCierraSusSesionesYLoDesbloquea() {
+            Usuario u = prestatario(5, "activo");
+            when(usuarioDao.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            servicio.restablecerContrasena(5, new RestablecerContrasenaDTO("Nueva#Clave2026"));
+
+            assertTrue(u.getContrasena().startsWith("$2a$"));                 // bcrypt, nunca texto plano
+            assertTrue(new BCryptPasswordEncoder().matches("Nueva#Clave2026", u.getContrasena()));
+            verify(sesionService).cerrarSesionesDe(5);                        // la sesion vieja deja de servir
+            verify(limitador).registrarExito("ana@alejandria.edu.pe");        // si estaba bloqueado por 3 intentos, ya puede entrar
+        }
+
+        @Test
+        void laNuevaContrasenaDebeCumplirLaRegla() {
+            Usuario u = prestatario(5, "activo");
+
+            NegocioException e = assertThrows(NegocioException.class,
+                    () -> servicio.restablecerContrasena(5, new RestablecerContrasenaDTO("123456")));
+            assertEquals(400, e.getEstado().value());
+            assertEquals("$2a$hash", u.getContrasena());
+            verify(usuarioDao, never()).save(any());
+        }
+
+        @Test
+        void alAdministradorNoSeLeRestableceDesdeAqui() {
+            when(usuarioDao.findById(1)).thenReturn(Optional.of(usuario(1, "activo")));
+
+            NegocioException e = assertThrows(NegocioException.class,
+                    () -> servicio.restablecerContrasena(1, new RestablecerContrasenaDTO("Nueva#Clave2026")));
+            assertEquals(403, e.getEstado().value());
         }
     }
 

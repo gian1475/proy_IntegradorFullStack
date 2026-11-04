@@ -118,6 +118,29 @@ describe('pestaña Usuarios del admin (RF12 y RF13)', () => {
     expect(fixture.nativeElement.textContent).toContain('El DNI debe tener 8 dígitos');
   });
 
+  // B7: el admin restablece la contraseña de quien la olvidó
+  it('restablecer contraseña revisa la regla y manda PUT a /contrasena', () => {
+    const fixture = abrir();
+    const c = fixture.componentInstance;
+
+    c.abrirContrasena(valeria);
+    c.contrasenaNueva = 'corta';
+    c.guardarContrasena();
+    fixture.detectChanges();
+    http.expectNone(r => r.method === 'PUT');
+    expect(fixture.nativeElement.textContent).toContain('La contraseña no cumple los requisitos de seguridad');
+
+    c.contrasenaNueva = 'Nueva#Clave2026';
+    c.guardarContrasena();
+    const req = http.expectOne(r => r.method === 'PUT' && r.url === `${API}/5/contrasena`);
+    expect(req.request.body).toEqual({ contrasena: 'Nueva#Clave2026' });
+    req.flush({ ...valeria });
+    fixture.detectChanges();
+
+    expect(c.cambioContrasena).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Contraseña de Valeria Flores restablecida');
+  });
+
   it('reactivar manda PUT a /reactivar', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const fixture = abrir();

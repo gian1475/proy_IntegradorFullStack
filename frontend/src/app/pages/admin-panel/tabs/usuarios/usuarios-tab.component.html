@@ -89,6 +89,32 @@
   </section>
 }
 
+<!-- B7: restablecer la contraseña de quien la olvidó (lo atiende el admin en la ventanilla) -->
+@if (cambioContrasena; as u) {
+  <section class="card card-body mb-4 border-primary">
+    <h2 class="h6 fw-bold text-primary mb-3">Restablecer la contraseña de {{ u.nombre }} {{ u.apellido }}</h2>
+    <p class="text-body-secondary small">Escriba una contraseña nueva y désela a la persona. Se cierran sus sesiones abiertas y, si estaba bloqueada por intentos fallidos, ya puede entrar.</p>
+    <form (ngSubmit)="guardarContrasena()">
+      <div class="row g-3 mb-2">
+        <div class="col-sm-6 col-lg-4">
+          <label class="form-label" for="u-contrasena">Contraseña nueva</label>
+          <input class="form-control" id="u-contrasena" name="contrasenaNueva" type="password" maxlength="64"
+                 autocomplete="new-password" [(ngModel)]="contrasenaNueva" />
+        </div>
+      </div>
+      <ul class="list-unstyled d-flex flex-wrap gap-3 small mb-3">
+        @for (r of requisitosNueva(); track r.texto) {
+          <li [class]="r.cumple ? 'text-success' : 'text-danger'">{{ r.cumple ? '✓' : '✗' }} {{ r.texto }}</li>
+        }
+      </ul>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary btn-sm" [disabled]="guardando()">Guardar contraseña</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cambioContrasena = null">Cancelar</button>
+      </div>
+    </form>
+  </section>
+}
+
 <!-- RF12 y RF13: prestatarios y encargados (el admin no sale en la lista) -->
 <section class="card card-body mb-4">
   <h2 class="h6 fw-bold text-primary mb-3">Usuarios ({{ usuariosFiltrados().length }})</h2>
@@ -134,6 +160,7 @@
               <td><span class="badge" [class]="u.estado">{{ u.estado }}</span></td>
               <td class="text-end text-nowrap">
                 <button class="btn btn-outline-secondary btn-sm me-1" (click)="editar(u)">Editar</button>
+                <button class="btn btn-outline-secondary btn-sm me-1" (click)="abrirContrasena(u)">Contraseña</button>
                 @if (u.estado === 'inactivo') {
                   <button class="btn btn-outline-success btn-sm" (click)="reactivar(u)">Reactivar</button>
                 } @else {

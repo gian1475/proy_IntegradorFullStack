@@ -7,10 +7,12 @@ import com.alejandria.biblioteca.dao.UsuarioDao;
 import com.alejandria.biblioteca.dto.usuario.ActualizarUsuarioDTO;
 import com.alejandria.biblioteca.dto.usuario.EncargadoDTO;
 import com.alejandria.biblioteca.dto.usuario.RegistroEncargadoDTO;
+import com.alejandria.biblioteca.dto.usuario.RestablecerContrasenaDTO;
 import com.alejandria.biblioteca.dto.usuario.UsuarioAdminDTO;
 import com.alejandria.biblioteca.entity.Reserva;
 import com.alejandria.biblioteca.entity.Usuario;
 import com.alejandria.biblioteca.exception.NegocioException;
+import com.alejandria.biblioteca.seguridad.LimitadorIntentosLogin;
 import com.alejandria.biblioteca.seguridad.Rol;
 import com.alejandria.biblioteca.seguridad.ValidadorContrasena;
 import org.slf4j.Logger;
@@ -47,16 +49,19 @@ public class UsuarioService {
     private final ReservaService reservaService;
     private final SancionDao sancionDao;
     private final SesionService sesionService;
+    private final LimitadorIntentosLogin limitador;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public UsuarioService(UsuarioDao usuarioDao, PrestamoDao prestamoDao, ReservaDao reservaDao,
-                          ReservaService reservaService, SancionDao sancionDao, SesionService sesionService) {
+                          ReservaService reservaService, SancionDao sancionDao, SesionService sesionService,
+                          LimitadorIntentosLogin limitador) {
         this.usuarioDao = usuarioDao;
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
         this.reservaService = reservaService;
         this.sancionDao = sancionDao;
         this.sesionService = sesionService;
+        this.limitador = limitador;
     }
 
     /**
@@ -199,6 +204,26 @@ public class UsuarioService {
         usuarioDao.save(usuario);
 
         log.info("Usuario #{} reactivado por el admin: estado '{}'", idUsuario, usuario.getEstado());
+        return aDto(usuario, perfil, turnoDe(idUsuario, perfil));
+    }
+
+    // restablecer contra (B7): quien olvido su contraseña va a la ventanilla y el admin le pone una nueva.
+    // misma regla contra del registro, se guarda con bcrypt, se cierran sus sesiones y, si estaba bloqueado
+    // por 3 intentos fallidos, se le quita el bloqueo para q entre con la nueva
+    @Transactional
+    public UsuarioAdminDTO restablecerContrasena(Integer idUsuario, RestablecerContrasenaDTO dto) {
+        Usuario usuario = buscar(idUsuario);
+        String perfil = perfilEditable(usuario);
+        if (!ValidadorContrasena.esValida(dto.contrasena())) {
+            throw new NegocioException(HttpStatus.BAD_REQUEST, ValidadorContrasena.MENSAJE_REGLA);
+        }
+
+        usuario.setContrasena(passwordEncoder.encode(dto.contrasena()));
+        usuarioDao.save(usuario);
+        sesionService.cerrarSesionesDe(idUsuario);
+        limitador.registrarExito(usuario.getCorreo());
+
+        log.info("Contraseña del usuario #{} restablecida por el admin", idUsuario); // logback: sin la contraseña
         return aDto(usuario, perfil, turnoDe(idUsuario, perfil));
     }
 

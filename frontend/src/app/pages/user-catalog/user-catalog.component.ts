@@ -137,8 +137,9 @@ export class UserCatalogComponent implements OnInit {
 
     this.errorPrestamos.set('');
     this.prestamoService.listarPorPrestatario(usuario.idUsuario).subscribe({
-      // eliminacion logica: los prestamos anulados no se le muestran al prestatario
-      next: data => this.misPrestamos.set(data.filter(p => p.estadoPrestamo !== 'anulado')),
+      // eliminacion logica (B9): el anulado tambien sale, con su estado, porque RF07 dice q el historial
+      // muestra todos los prestamos. no cuenta como "en curso"
+      next: data => this.misPrestamos.set(data),
       error: (err: HttpErrorResponse) => this.errorPrestamos.set(mensajeDeError(err))
     });
   }

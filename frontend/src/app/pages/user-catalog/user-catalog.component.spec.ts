@@ -28,12 +28,12 @@ describe('Mis Reservas del prestatario (RF15)', () => {
 
   afterEach(() => localStorage.clear());
 
-  function abrir() {
+  function abrir(prestamos: object[] = []) {
     const fixture = TestBed.createComponent(UserCatalogComponent);
     fixture.detectChanges();
     http.match(r => r.url.includes('/libros')).forEach(r => r.flush([]));
     http.expectOne(`${API}/reservas/usuario/5`).flush([reserva, enCola]);
-    http.match(r => r.url.includes('/prestamos')).forEach(r => r.flush([]));
+    http.match(r => r.url.includes('/prestamos')).forEach(r => r.flush(prestamos));
     fixture.componentInstance.selectMenu('reservas');
     fixture.detectChanges();
     return fixture;
@@ -65,6 +65,19 @@ describe('Mis Reservas del prestatario (RF15)', () => {
 
     expect(c.modalCambiarFecha()).toBeNull();
     expect(c.fechaCambiada()).toBe(true);
+  });
+
+  // B9 (RF07: "el historial muestra todos los préstamos"): el anulado también sale, con su estado
+  it('Mis Préstamos muestra también los préstamos anulados con su estado', () => {
+    const base = { idPrestatario: 5, idEncargado: 2, idLibro: 3, fechaPrestamo: '2026-10-20T10:00:00',
+                   fechaDevolucionPrevista: '2026-10-20T13:00:00', fechaDevolucionReal: null, ampliado: false,
+                   estadoFisicoDevolucion: null };
+    const fixture = abrir([{ ...base, idPrestamo: 1, estadoPrestamo: 'devuelto' },
+                           { ...base, idPrestamo: 2, estadoPrestamo: 'anulado' }]);
+    const c = fixture.componentInstance;
+
+    expect(c.misPrestamos().map(p => p.estadoPrestamo)).toEqual(['devuelto', 'anulado']);
+    expect(c.prestamosEnCurso()).toBe(0); // el anulado no cuenta como "en curso"
   });
 
   it('si el backend no deja cambiarla, muestra su mensaje en el modal', () => {

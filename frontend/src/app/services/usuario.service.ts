@@ -70,6 +70,11 @@ export class UsuarioService {
     return this.http.delete<UsuarioAdmin>(`${this.apiUrl}/${id}`);
   }
 
+  // restablecer contra (front, B7): el admin pone una contraseña nueva a quien la olvido
+  restablecerContrasena(id: number, contrasena: string): Observable<UsuarioAdmin> {
+    return this.http.put<UsuarioAdmin>(`${this.apiUrl}/${id}/contrasena`, { contrasena });
+  }
+
   reactivar(id: number): Observable<UsuarioAdmin> {
     return this.http.put<UsuarioAdmin>(`${this.apiUrl}/${id}/reactivar`, {});
   }
