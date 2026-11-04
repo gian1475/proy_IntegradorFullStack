@@ -44,8 +44,10 @@ public class LibroService {
 
     // ---------- CONSULTAR ----------
 
-    // crud libro consultar: trae los libros de la tabla libro menos los dados de baja.
-    // se muestra: titulo, isbn, año, editorial, stock, estado, categoria y autores
+    // crud libro consultar: trae los libros menos los dados de baja.
+    // se muestra: titulo, isbn, año, editorial, stock, estado, categoria y autores.
+    // OJO: NO es la consulta de una tabla. con @EntityGraph usa 4 tablas (libro, categoria, libro_autor y autor)
+    // en un solo JOIN. la consulta de una tabla del sistema es PrestamoDao.buscarPorPrestatario
     @Transactional(readOnly = true)
     public List<LibroDTO> listar() {
         return aDTO(libroDao.findByEstadoLibroNotOrderByTitulo(BAJA));
@@ -62,7 +64,7 @@ public class LibroService {
 
     @Transactional(readOnly = true)
     public List<LibroDTO> buscarPorAutor(String nombre) {
-        return aDTO(sinBajas(libroDao.findByAutorNombreOrApellido(nombre, nombre)));
+        return aDTO(sinBajas(libroDao.buscarPorAutor(nombre)));
     }
 
     @Transactional(readOnly = true)

@@ -1,6 +1,7 @@
 package com.alejandria.biblioteca.dto;
 
 import com.alejandria.biblioteca.dto.auth.RegistroDTO;
+import com.alejandria.biblioteca.dto.incidencia.RegistroIncidenciaDTO;
 import com.alejandria.biblioteca.dto.libro.LibroFormDTO;
 import com.alejandria.biblioteca.dto.prestamo.DevolucionDTO;
 import com.alejandria.biblioteca.dto.usuario.ActualizarUsuarioDTO;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.math.BigDecimal;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -120,5 +122,53 @@ class ValidacionDtoTest {
     void laDevolucionAceptaBuenoYDaniado() {
         assertTrue(errores(new DevolucionDTO("bueno")).isEmpty());
         assertTrue(errores(new DevolucionDTO("dañado")).isEmpty());
+    }
+
+    // ---------- Rangos de valores (semana 13: "rangos de valores aceptables") ----------
+    // se prueban los bordes: el valor justo en el limite pasa y el siguiente no
+
+    @Test
+    void elAnioDelLibroVaDe1000A2100() {
+        assertTrue(errores(new LibroFormDTO("Clean Code", "9780132350884", 1000, "Prentice Hall", 1, 1, null)).isEmpty());
+        assertTrue(errores(new LibroFormDTO("Clean Code", "9780132350884", 2100, "Prentice Hall", 1, 1, null)).isEmpty());
+        assertEquals(Set.of("El año de publicación no es válido"),
+                errores(new LibroFormDTO("Clean Code", "9780132350884", 2101, "Prentice Hall", 1, 1, null)));
+    }
+
+    private RegistroIncidenciaDTO suspension(Integer dias) {
+        return new RegistroIncidenciaDTO(1, "retraso", null, "suspensión", dias, null);
+    }
+
+    private RegistroIncidenciaDTO multa(String monto) {
+        return new RegistroIncidenciaDTO(1, "daño", null, "multa", null, new BigDecimal(monto));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 30})
+    void laSuspensionAceptaDe1A30Dias(int dias) {
+        assertTrue(errores(suspension(dias)).isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 31, -5})
+    void laSuspensionRechazaMenosDe1OMasDe30Dias(int dias) {
+        assertEquals(Set.of("La suspensión es de 1 a 30 días"), errores(suspension(dias)));
+    }
+
+    @Test
+    void elMontoDeLaMultaEsMayorQue0YConHasta2Decimales() {
+        assertTrue(errores(multa("0.01")).isEmpty());
+        assertTrue(errores(multa("999999.99")).isEmpty()); // lo maximo de DECIMAL(8,2) en la BD
+        assertEquals(Set.of("El monto de la multa debe ser mayor que 0"), errores(multa("0.00")));
+        assertEquals(Set.of("El monto puede tener hasta 6 cifras y 2 decimales"), errores(multa("1000000.00")));
+        assertEquals(Set.of("El monto puede tener hasta 6 cifras y 2 decimales"), errores(multa("12.345")));
+    }
+
+    @Test
+    void elTipoDeIncidenciaYDeSancionSoloAceptanSusValores() {
+        assertEquals(Set.of("El tipo de incidencia debe ser retraso, daño o pérdida"),
+                errores(new RegistroIncidenciaDTO(1, "robo", null, "advertencia", null, null)));
+        assertEquals(Set.of("La sanción debe ser advertencia, suspensión o multa"),
+                errores(new RegistroIncidenciaDTO(1, "retraso", null, "expulsión", null, null)));
     }
 }

@@ -66,7 +66,7 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 02/11 | RF06: solo el **encargado** registra incidencias y sanciones; el admin las ve en el reporte | Lo dice el informe (RF06 y CU09: actor Encargado) |
 | 02/11 | RF06: la **advertencia** no bloquea (se registra ya `cumplida`); `tieneSancionActiva` solo cuenta suspensiones y multas | Ficha RF06: "La advertencia es informativa; suspensión y multa pendiente bloquean préstamos y reservas". Antes cualquier sanción activa bloqueaba |
 | 02/11 | RF06: cada incidencia lleva su sanción (en la BD puede no tenerla, pero la pantalla siempre la pide) y no se repite el mismo tipo de incidencia en un préstamo | CU09 "Registrar incidencia **y** sanción" |
-| 04/11 | B1–B9: el Administrador también cancela reservas; el Encargado reserva en ventanilla con el DNI y cancela; solo el Encargado anula préstamos; el admin restablece contraseñas (no la cambia cada usuario); "Mis Préstamos" muestra los anulados; el sistema se despliega como **un solo `.jar`** con las pantallas adentro | Decisiones del equipo para alinear el código con el informe V8 (análisis del 04/11) |
+| 03/11 | B1–B9: el Administrador también cancela reservas; el Encargado reserva en ventanilla con el DNI y cancela; solo el Encargado anula préstamos; el admin restablece contraseñas (no la cambia cada usuario); "Mis Préstamos" muestra los anulados; el sistema se despliega como **un solo `.jar`** con las pantallas adentro | Decisiones del equipo para alinear el código con el informe V8 (análisis del 03/11) |
 | 03/11 | RF12: el admin edita **nombres, apellidos, DNI, correo** y, si es encargado, el **turno**. No cambia la contraseña ni el estado (el estado cambia con "Dar de baja" / "Reactivar" y con las sanciones de RF06) | Decisión del equipo. Así `suspendido` sigue dependiendo solo de una sanción |
 | 03/11 | RF13: **solo baja lógica** (`inactivo`). No se implementa el borrado físico de usuarios sin préstamos ni reservas que menciona la ficha del RF13 | Decisión del equipo: se ajusta el informe. La única eliminación física sigue siendo la de reservas (RF17) |
 | 03/11 | RF13: un prestatario con un **libro en sala** (préstamo `activo` o `vencido`) no se da de baja hasta que lo devuelva; sus reservas `pendiente` y `en_espera` se **cancelan solas** (el ejemplar vuelve al stock o pasa al siguiente de la cola). Sus sanciones quedan como están | Decisión del equipo. El historial no se toca |
@@ -74,6 +74,8 @@ El frontend no se conecta a la BD ni necesita credenciales: solo le habla al bac
 | 03/11 | El admin puede **reactivar** a un usuario dado de baja: vuelve a `activo`, o a `suspendido` si todavía tiene una suspensión activa | Decisión del equipo: corrige bajas hechas por error sin tocar la BD |
 | 03/11 | Al administrador no se le edita ni se le da de baja desde el panel (403) | Así el admin no se puede dejar fuera a sí mismo |
 | 03/11 | La baja del usuario usa `DELETE /api/usuarios/{id}` aunque **no borra la fila** | Mismo patrón que libros (`baja`) y préstamos (`anulado`); además CORS ya permite `DELETE` y `PUT` (no se agregó `PATCH`) |
+| 03/11 | D20: la hora límite (y la ampliación) no pasa del cierre **del día en que empezó el préstamo** | Antes se tomaba el cierre del día de la hora límite: si las 3 horas cruzaban la medianoche (solo con un cierre de prueba como 23:59), el tope pasaba al día siguiente |
+| 03/11 | La consola (logs y Maven) escribe en **UTF-8** (`logging.charset.console` y `.mvn/jvm.config`) | En Windows Java usaba Cp1252 y las tildes salían como `�` aunque la consola estuviera en UTF-8 |
 
 ---
 
@@ -1115,9 +1117,9 @@ La auditoría **no corrige el stock** sola: si el conteo no coincide, el mensaje
 
 ---
 
-## Brechas del informe B1 a B9 (04/11) ✅
+## Brechas del informe B1 a B9 (03/11) ✅
 
-El análisis de coherencia del informe V8 con el código (sección 8 de `Pendientes agregar a local.md`) encontró 9 cosas que el informe pide y el código no hacía. Se resolvieron todas, con las decisiones del equipo del 04/11.
+El análisis de coherencia del informe V8 con el código (sección 8 de `Pendientes agregar a local.md`) encontró 9 cosas que el informe pide y el código no hacía. Se resolvieron todas, con las decisiones del equipo del 03/11.
 
 | # | Qué pedía el informe | Qué se hizo | Archivos |
 |---|---|---|---|
@@ -1136,7 +1138,7 @@ El análisis de coherencia del informe V8 con el código (sección 8 de `Pendien
 - Frontend (+11): pestaña Reservas del admin (+1), [reservas-tab del encargado](frontend/src/app/pages/encargado-panel/tabs/reservas/reservas-tab.component.spec.ts) (5, nuevo), pestaña Usuarios (+1), Mis Préstamos (+1) y [monitoreo-tab](frontend/src/app/pages/admin-panel/tabs/monitoreo/monitoreo-tab.component.spec.ts) (3, nuevo).
 - Total: **285 del backend y 73 del frontend**, todas pasan.
 
-**Prueba en vivo (04/11, BD local):**
+**Prueba en vivo (03/11, BD local):**
 - `.jar` único en `localhost:8080`, sin `npm start`: login, recargar `/admin` y Monitoreo con "100 %, Cumple RNF03". Todas las llamadas a la API salieron a la misma dirección.
 - **Imagen Docker** ejecutada con `PORT=8090`: sirve las pantallas y el login responde. En la sesión se construyó usando el caché local de Maven y el `dist` ya compilado, porque la red del entorno corta las descargas de npm y Maven dentro de Docker. En Render se descargan normalmente.
 - Por la API:
@@ -1144,6 +1146,60 @@ El análisis de coherencia del informe V8 con el código (sección 8 de `Pendien
   - el encargado reservó en ventanilla para Juan;
   - el admin anulando un préstamo recibe 403;
   - el admin restableció la contraseña de Lucía: entró con la nueva, y con la vieja recibió "Credenciales incorrectas".
+
+---
+
+## Migración 05 en Neon y lo último de PLAN_CODIGO (03/11, en la PC) ✅
+
+**Fechas:** lo que la bitácora y las notas de la nube decían "04/11" pasó el **03/11** en hora de Lima (el reloj de la nube estaba en UTC). Se corrigió en esta bitácora, `docs/DESPLIEGUE.md` y `docs/LIBRERIAS.md`.
+
+**Migración 05 en Neon.** Antes de las pruebas se revisó Neon (solo lectura): faltaban `prestamo.inicio_atencion` y la tabla `auditoria_inventario`. Se ejecutó [migracion_05_tap_ipi.sql](database/migraciones/migracion_05_tap_ipi.sql) desde la PC con un programa Java (driver PostgreSQL 42.7.14 y las credenciales de `backend/.env`), **en una sola transacción**: si algo fallaba, no quedaba nada a medias. No tocó ninguna fila. La revisión de después muestra la columna y la tabla (con 0 auditorías). Neon tiene ahora las migraciones 01 a 05.
+
+**Pruebas contra Neon (antes de los arreglos de abajo):** `./mvnw test` → **285 de 285** y `npx ng test --watch=false` → **73 de 73**. `ConcurrenciaStockTest` no dejó su libro (`999-CONCURRENCIA`) en Neon.
+
+**Lo que quedaba de código en `PLAN_CODIGO.md`:**
+
+| Tarea | Qué se hizo | Archivo |
+|---|---|---|
+| D14 | `findByAutorNombreOrApellido(nombre, nombre)` → `buscarPorAutor(texto)`: un solo parámetro que se busca en el nombre o en el apellido. Con `DISTINCT` y `@EntityGraph` (los autores llegan en la misma consulta, sin el N+1 de D15). Cada consulta de `LibroDao` tiene encima las tablas y el SQL equivalente, como `PrestamoDao` | [LibroDao.java](backend/src/main/java/com/alejandria/biblioteca/dao/LibroDao.java), `LibroService.buscarPorAutor` |
+| D20 | `limitarAlCierre(inicio, limite)`: el tope es el cierre del día del **inicio** del préstamo. La ampliación pasa la fecha del préstamo. Con el horario real (08:00–20:00) no cambia nada | [HorarioAtencion.java](backend/src/main/java/com/alejandria/biblioteca/service/HorarioAtencion.java), `PrestamoService` (registrar y ampliar) |
+| D13 | El aviso `"@charset" must be the first rule` del build: LESS dejaba el `@charset` de Bootstrap **dentro** de `.con-bootstrap { }`. Ahora `styles.less` empieza con `@charset "UTF-8";` y LESS quita el de Bootstrap. Se comparó el CSS antes y después: **el resto es idéntico** | [styles.less](frontend/src/styles.less) |
+| D8 | Las tildes de la consola: `logging.charset.console=UTF-8` (logs del sistema) y `backend/.mvn/jvm.config` con `-Dstdout.encoding=UTF-8` (lo que escribe Maven, como los nombres de las pruebas). Antes: "Actualizaci�n de reservas"; ahora "Actualización de reservas" y "eliminada físicamente de la BD". En una consola antigua de Windows, antes `chcp 65001` | `application.properties`, `backend/.mvn/jvm.config` (nuevo) |
+
+**Primero la prueba:**
+- D14, [LibroDaoTest](backend/src/test/java/com/alejandria/biblioteca/dao/LibroDaoTest.java) (+2, contra la BD, solo leen): busca con un solo texto en el nombre ("erich") o en el apellido ("martin"); con "john" (John Vlissides y Ralph Johnson, autores de Design Patterns) el libro sale una vez y con sus autores cargados. Con el método de un parámetro pero la consulta vieja, la segunda **falló**: los autores llegaban con otra consulta por libro (Hibernate 7 ya no repetía el libro; el `DISTINCT` deja la regla escrita).
+- D20, [HorarioAtencionTest](backend/src/test/java/com/alejandria/biblioteca/service/HorarioAtencionTest.java) (+2): con cierre 23:59, un préstamo de las 21:55 queda hasta las 23:59 (antes **00:55 del día siguiente**) y una ampliación de 23:30 queda en 23:59 (antes 00:30). Las dos fallaron con la regla vieja.
+- D13 y D8 son de configuración (sin prueba JUnit ni Vitest): se comprobaron con el build sin avisos y con la salida de Maven y del log.
+- Total: **289 del backend y 73 del frontend**, todas pasan contra Neon (03/11). `ConcurrenciaStockTest` volvió a dejar Neon limpio.
+
+---
+
+## Revisión completa y pruebas de la semana 13 (04/11) ✅
+
+**Comprobación de todo el sistema:**
+- `npx ng build` sin avisos, `./mvnw clean package` (con las pruebas contra Neon) → BUILD SUCCESS, y el `.jar` trae las pantallas.
+- Con el `.jar` arrancado contra Neon se probó por HTTP:
+  - `/` y recargar `/admin` → 200 (pantallas de Angular);
+  - `GET /api/libros` → 200 (25 libros);
+  - `/api/reservas` sin token → 401;
+  - login con una contraseña mala → 401 "Credenciales incorrectas";
+  - registro con DNI de 7 dígitos → "El DNI debe tener 8 dígitos";
+  - registro con contraseña `corta` → el mensaje de la regla;
+  - `/actuator/health` → db UP.
+- No se creó ningún dato en Neon.
+
+**Clases del 26/10, 28/10 y 02/11** (resúmenes que el equipo dejó en `docs/`). Lo que piden quedó en I73 de `PLAN_INFORME.md`, en la sección 10 de `GUION_SUSTENTACION.md` y en `CLAUDE.md`. Para el 04/11 el profe pidió el **tercer commit** y pruebas unitarias (login, una "suma", modificar registros), de integración con la BD y de validaciones (contraseña, tipos, longitudes y rangos). Al revisarlas contra lo que había:
+
+| Qué faltaba | Qué se hizo |
+|---|---|
+| Ninguna prueba del login con una contraseña **incorrecta** (las 4 de `AuthServicePerfilTest` siempre usaban la correcta) | [AuthServiceLoginTest](backend/src/test/java/com/alejandria/biblioteca/service/AuthServiceLoginTest.java) (5, nuevo): con la correcta entra y recibe su token (y la contraseña está como hash BCrypt); el correo se acepta con mayúsculas y espacios; con una incorrecta, 401 "Credenciales incorrectas"; con un correo que no existe, el mismo mensaje; al tercer intento fallido, 429 aunque después ponga la correcta |
+| Los **rangos** estaban como anotaciones pero sin prueba: los días de suspensión (1 a 30), el monto de la multa y el año máximo del libro | `ValidacionDtoTest` (+8): se prueban los bordes (año 1000 y 2100 pasan, 2101 no; 1 y 30 días pasan, 0, 31 y -5 no; multa de 0.01 y 999999.99 pasan, 0.00, 1000000.00 y 12.345 no) y que el tipo de incidencia y de sanción solo acepten sus valores |
+| Los comentarios de `LibroService.listar` y `LibroDao`, el guion y C4 decían que la lista de libros es "de una tabla". Desde D15 (`@EntityGraph`) usa **4 tablas** (`libro`, `categoria`, `libro_autor` y `autor`). El 28/10 el profe revisó justo esto en la biblioteca: "la cantidad de métodos o clases no determina cuántas tablas usa una consulta" | Se corrigieron los comentarios (el código no cambió), el guion y `PLAN_CODIGO.md`. La consulta de una tabla sigue siendo `PrestamoDao.buscarPorPrestatario` |
+| El guion tenía respuestas viejas: TAP e IPI "sin dato", Guava solo para el login, "90 pruebas", CORS solo `localhost:4200` | Actualizadas |
+
+Las pruebas nuevas comprueban comportamiento que ya existía, así que pasaron a la primera: no hubo que cambiar el código del sistema.
+
+**Total: 302 del backend y 73 del frontend**, todas pasan contra Neon (04/11).
 
 ---
 
@@ -1212,6 +1268,8 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cómo se comprueba el RNF03 (95 % en 2 s)? | `monitoreo RNF03` |
 | ¿Qué pasa si dos encargados prestan el último ejemplar a la vez? | `ConcurrenciaStockTest`, `buscarParaActualizar` |
 | ¿Cómo se despliega? ¿Por qué un solo .jar? | `despliegue` (`FrontendController`, `environment`, `docs/DESPLIEGUE.md`) |
+| ¿Por qué `buscarPorAutor` recibe un solo texto? ¿Qué SQL hace cada consulta de libros? | `D14` (`LibroDao`) |
+| ¿Y si las 3 horas cruzan la medianoche? | `D20` (`HorarioAtencion.limitarAlCierre`) |
 
 ---
 
@@ -1310,7 +1368,7 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 10 | RF15: "Mis Reservas" → modal "Cambiar fecha de recojo" y la tarjeta con la nueva fecha; admin → Reservas → "Cambiar fecha" | ⬜ `prestatario-cambiar-fecha.png`, `admin-reserva-cambiar-fecha.png` |
 | 10 | TAP: registrar un préstamo en vivo y el dashboard con el TAP del mes | ⬜ `admin-dashboard-tap-ipi.png` |
 | 10 | IPI: pestaña Auditoría con el IPI del mes, un conteo que coincide y otro que no (mensaje "NO coincide…") | ⬜ `admin-auditoria-ipi.png` |
-| 10 | Neon: SQL Editor con la migración 05 ejecutada (la columna `inicio_atencion` y `auditorias = 0`) | ⬜ |
+| 10 | Neon: SQL Editor con la migración 05 ejecutada (la columna `inicio_atencion` y `auditorias = 0`). La migración ya se ejecutó el 03/11 desde la PC: para la captura basta con pegar en el SQL Editor **solo las dos consultas de comprobación** del final del archivo (son de solo lectura) | ⬜ |
 | 10 | Código: `IndicadoresGestion.calcular`, `AuditoriaInventarioDao.contarCoincidentesEntre` (DISTINCT ON) y `marcarInicio` del frontend | ⬜ |
 | 11 | B1/B2: admin → Reservas con "Cancelar"; encargado → "Reservar en ventanilla" y "Cancelar" en la cola | ⬜ |
 | 11 | B7: Usuarios → "Contraseña" con los requisitos y el mensaje "Contraseña de … restablecida" | ⬜ |
@@ -1318,4 +1376,12 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 11 | B4: terminal con `ConcurrenciaStockTest` en verde (y opcional: el rojo sin el `@Lock`) | ⬜ |
 | 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Falta Firefox** (tómenla en su PC) | 🟡 |
 | 11 | B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen | ⬜ |
-| 11 | Terminal con `./mvnw test` → **285** y `npx ng test --watch=false` → **73** | ⬜ |
+| 11 | Terminal con `./mvnw test` → **302** y `npx ng test --watch=false` → **73** (reemplaza a la de 285) | ⬜ |
+| 12 | D20: terminal con `HorarioAtencionTest` en verde (8 pruebas, incluidas las 2 de la medianoche) y el código de `limitarAlCierre(inicio, limite)` | ⬜ |
+| 12 | D14: `LibroDao` con el comentario del SQL equivalente encima de `buscarPorAutor` | ⬜ |
+| 12 | D8: terminal de `./mvnw test` con los nombres de las pruebas con tildes ("Actualización de reservas") | ⬜ |
+| 13 | Semana 13: `AuthServiceLoginTest` en verde (5) y el código de una prueba (`conLaContrasenaIncorrectaNoEntra`) | ⬜ |
+| 13 | Semana 13: `ValidacionDtoTest` en verde (31), con los métodos de rangos (`laSuspensionRechazaMenosDe1OMasDe30Dias`) | ⬜ |
+| 13 | Semana 13: una prueba de integración con la BD en verde (`UsuarioBdTest` o `ConcurrenciaStockTest`) | ⬜ |
+| 13 | Casos de prueba funcionales (I73): una captura por mensaje (CP01 a CP18) | ⬜ |
+| 13 | GitHub: la lista de commits con el **tercer commit** (para el Anexo E) | ⬜ |

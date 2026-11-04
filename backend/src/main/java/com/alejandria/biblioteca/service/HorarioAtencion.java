@@ -50,10 +50,11 @@ public class HorarioAtencion {
         }
     }
 
-    /** Si la hora límite pasa del cierre de ese día, queda en la hora de cierre. */
-    // horario de atencion: 3 horas o 1 hora de ampliacion, pero nunca despues de las 20:00
-    public LocalDateTime limitarAlCierre(LocalDateTime limite) {
-        LocalDateTime cierreDelDia = limite.toLocalDate().atTime(cierre);
+    /** Si la hora límite pasa del cierre del día en que empezó el préstamo, queda en la hora de cierre. */
+    // horario de atencion: 3 horas o 1 hora de ampliacion, pero nunca despues de las 20:00.
+    // D20: el cierre es el del dia del INICIO, asi una hora limite q cruza la medianoche no pasa al dia siguiente
+    public LocalDateTime limitarAlCierre(LocalDateTime inicio, LocalDateTime limite) {
+        LocalDateTime cierreDelDia = inicio.toLocalDate().atTime(cierre);
         return limite.isAfter(cierreDelDia) ? cierreDelDia : limite;
     }
 

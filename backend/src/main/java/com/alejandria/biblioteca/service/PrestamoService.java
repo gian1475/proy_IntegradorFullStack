@@ -98,7 +98,7 @@ public class PrestamoService {
         prestamo.setFechaPrestamo(ahora);
         prestamo.setInicioAtencion(inicioDeLaAtencion(dto.segundosAtencion(), ahora));
         // horario de atencion: si las 3 horas pasan de las 20:00, la hora limite queda en las 20:00
-        prestamo.setFechaDevolucionPrevista(horario.limitarAlCierre(calcularHoraLimite(ahora)));
+        prestamo.setFechaDevolucionPrevista(horario.limitarAlCierre(ahora, calcularHoraLimite(ahora)));
         prestamo.setAmpliado(false);
         prestamo.setEstadoPrestamo("activo");
 
@@ -169,7 +169,7 @@ public class PrestamoService {
 
         // horario de atencion: "hasta" 1 hora, sin pasar del cierre. si ya termina a las 20:00 no hay nada q ampliar
         LocalDateTime limiteActual = prestamo.getFechaDevolucionPrevista();
-        LocalDateTime nuevoLimite = horario.limitarAlCierre(limiteActual.plusHours(HORAS_AMPLIACION));
+        LocalDateTime nuevoLimite = horario.limitarAlCierre(prestamo.getFechaPrestamo(), limiteActual.plusHours(HORAS_AMPLIACION));
         if (!nuevoLimite.isAfter(limiteActual)) {
             throw new NegocioException(HttpStatus.CONFLICT,
                     "No se puede ampliar: el préstamo ya termina a la hora de cierre (" + horario.getCierre() + ")");

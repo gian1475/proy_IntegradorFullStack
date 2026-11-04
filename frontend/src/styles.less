@@ -1,5 +1,9 @@
+// D13: @charset tiene que ser la primera regla del CSS. Bootstrap trae el suyo, pero al encerrarlo en
+// .con-bootstrap quedaba DENTRO de la regla (el navegador lo ignoraba y el build mostraba un aviso).
+// Con este al inicio, LESS deja solo el primero y quita el de Bootstrap. El resto del CSS no cambia.
+@charset "UTF-8";
+
 // Bootstrap encerrado en .con-bootstrap (solo lo usan los paneles del administrador y del encargado).
-// Va primero porque Bootstrap empieza con @charset, que tiene que ser la primera regla del archivo.
 @import "styles/bootstrap-paneles.less";
 
 @bg-page: #fbf9f5;

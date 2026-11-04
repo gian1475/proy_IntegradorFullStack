@@ -174,7 +174,7 @@ Lombok trabaja **al compilar**: el `.class` tiene los métodos como si los hubi�
 
 **Dónde:** corre en el puerto **8081** y solo responde desde la misma PC: `http://localhost:8081/actuator/health`, `/info` y `/metrics`. El admin ve un resumen en la pestaña Monitoreo (`MonitoreoService`).
 
-**RNF03 (desde el 04/11):** Micrometer, que viene con Actuator, también cuenta cuántas peticiones respondieron en **2 segundos o menos** (`management.metrics.distribution.slo.http.server.requests=2s` en `application.properties`). `MonitoreoService.porcentajeHasta` calcula el porcentaje y la pestaña Monitoreo dice si cumple la meta del 95 %. No se agregó ninguna librería.
+**RNF03 (desde el 03/11):** Micrometer, que viene con Actuator, también cuenta cuántas peticiones respondieron en **2 segundos o menos** (`management.metrics.distribution.slo.http.server.requests=2s` en `application.properties`). `MonitoreoService.porcentajeHasta` calcula el porcentaje y la pestaña Monitoreo dice si cumple la meta del 95 %. No se agregó ninguna librería.
 
 ### Spring Data JPA + driver de PostgreSQL
 

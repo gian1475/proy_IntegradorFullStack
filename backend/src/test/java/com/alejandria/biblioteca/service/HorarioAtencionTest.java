@@ -37,13 +37,32 @@ class HorarioAtencionTest {
     @Test
     void unaHoraAntesDelCierreNoSeCambia() {
         LocalDateTime limite = HOY_10.withHour(13);
-        assertEquals(limite, horario.limitarAlCierre(limite));
+        assertEquals(limite, horario.limitarAlCierre(HOY_10, limite));
     }
 
     @Test
     void unaHoraDespuesDelCierreQuedaEnElCierre() {
         // prestamo a las 18:30: 18:30 + 3 h = 21:30, pero la biblioteca cierra a las 20:00
-        assertEquals(HOY_10.withHour(20), horario.limitarAlCierre(HOY_10.withHour(21).withMinute(30)));
+        LocalDateTime inicio = HOY_10.withHour(18).withMinute(30);
+        assertEquals(HOY_10.withHour(20), horario.limitarAlCierre(inicio, inicio.plusHours(3)));
+    }
+
+    // D20: el tope es el cierre del dia en q EMPIEZA el prestamo. antes se tomaba el cierre del dia de la
+    // hora limite: con el cierre de prueba de las 23:59, un prestamo de las 21:55 quedaba hasta las 00:55
+    // del dia siguiente. con el horario real (08:00-20:00) no pasaba, pero la regla tiene q valer siempre
+    @Test
+    void siLasTresHorasCruzanLaMedianocheQuedaEnElCierreDelDiaDelPrestamo() {
+        HorarioAtencion hastaMedianoche = horario(LocalTime.of(23, 59), HOY_10.withHour(21).withMinute(55));
+        LocalDateTime inicio = HOY_10.withHour(21).withMinute(55);
+        assertEquals(HOY_10.withHour(23).withMinute(59), hastaMedianoche.limitarAlCierre(inicio, inicio.plusHours(3)));
+    }
+
+    @Test
+    void unaAmpliacionQueCruzaLaMedianocheTampocoPasaDelCierre() {
+        HorarioAtencion hastaMedianoche = horario(LocalTime.of(23, 59), HOY_10.withHour(23));
+        LocalDateTime inicio = HOY_10.withHour(20).withMinute(30); // limite actual 23:30, + 1 h = 00:30
+        assertEquals(HOY_10.withHour(23).withMinute(59),
+                hastaMedianoche.limitarAlCierre(inicio, HOY_10.withHour(23).withMinute(30).plusHours(1)));
     }
 
     @Test
@@ -61,8 +80,13 @@ class HorarioAtencionTest {
 
     /** Horario de 8:00 a 20:00 con un reloj fijo en la hora indicada (hora de Lima). */
     static HorarioAtencion horario(LocalDateTime ahora) {
+        return horario(LocalTime.of(20, 0), ahora);
+    }
+
+    /** Horario de 8:00 hasta el cierre indicado (por ejemplo 23:59, el de prueba para la noche). */
+    static HorarioAtencion horario(LocalTime cierre, LocalDateTime ahora) {
         ZoneId lima = ZoneId.of("America/Lima");
         Clock reloj = Clock.fixed(ahora.atZone(lima).toInstant(), lima);
-        return new HorarioAtencion(LocalTime.of(8, 0), LocalTime.of(20, 0), reloj);
+        return new HorarioAtencion(LocalTime.of(8, 0), cierre, reloj);
     }
 }

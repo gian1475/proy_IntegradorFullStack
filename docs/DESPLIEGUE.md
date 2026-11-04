@@ -10,7 +10,7 @@ La base de datos sigue en **Neon**.
 Navegador ──► https://<su-app>.onrender.com ──► .jar (Spring Boot: pantallas + /api) ──► Neon (PostgreSQL)
 ```
 
-## Qué se cambió en el código para poder desplegar (04/11)
+## Qué se cambió en el código para poder desplegar (03/11)
 
 | Antes | Ahora | Dónde |
 |---|---|---|

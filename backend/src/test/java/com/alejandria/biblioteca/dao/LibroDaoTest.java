@@ -73,6 +73,23 @@ class LibroDaoTest {
         assertTrue(libros.stream().allMatch(l -> Hibernate.isInitialized(l.getAutores())));
     }
 
+    // D14: buscarPorAutor recibe un solo texto y lo busca en el nombre o en el apellido del autor
+    @Test
+    void buscaPorAutorConUnSoloTextoEnNombreOApellido() {
+        assertTrue(titulos(libroDao.buscarPorAutor("martin")).contains("Clean Code")); // apellido de Robert Martin
+        assertTrue(titulos(libroDao.buscarPorAutor("erich")).contains("Design Patterns")); // nombre de Erich Gamma
+    }
+
+    // D14: "john" coincide con el nombre de John Vlissides y con el apellido de Ralph Johnson,
+    // los dos autores de Design Patterns: el libro tiene que salir una sola vez, y con sus autores
+    // en la misma consulta (antes llegaban con otra consulta por libro: el N+1 de D15)
+    @Test
+    void buscarPorAutorNoRepiteLibrosYTraeLosAutoresEnLaMismaConsulta() {
+        List<Libro> libros = libroDao.buscarPorAutor("john");
+        assertEquals(1, libros.stream().filter(l -> "Design Patterns".equals(l.getTitulo())).count());
+        assertTrue(libros.stream().allMatch(l -> Hibernate.isInitialized(l.getAutores())));
+    }
+
     private List<String> titulos(List<Libro> libros) {
         return libros.stream().map(Libro::getTitulo).toList();
     }
