@@ -1,0 +1,11 @@
+# no entran a la imagen: dependencias y compilados (se rehacen adentro), credenciales y documentos
+**/node_modules
+frontend/dist
+frontend/.angular
+backend/target
+backend/logs
+**/.env
+**/.env.*
+.git
+docs
+*.md

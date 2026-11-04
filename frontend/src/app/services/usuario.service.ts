@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 /** Encargado con su turno (sin la contraseña). */
 export interface Encargado {
@@ -49,7 +50,7 @@ export interface ActualizarUsuario {
 export class UsuarioService {
   private http = inject(HttpClient);
   // ruta usuarios (front): solo el admin la usa (RF09, RF12 y RF13)
-  private apiUrl = 'http://localhost:8080/api/usuarios';
+  private apiUrl = `${environment.apiUrl}/usuarios`;
 
   // crear perfil 2 (front): el admin registra un encargado desde su panel
   registrarEncargado(datos: RegistroEncargado): Observable<Encargado> {

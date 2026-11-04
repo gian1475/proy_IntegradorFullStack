@@ -17,6 +17,12 @@
       "type": "java.lang.String",
       "defaultValue": "20:00",
       "description": "Hora de cierre de la biblioteca (HH:mm). La hora límite de un préstamo nunca pasa de esta hora. Lo usa HorarioAtencion."
+    },
+    {
+      "name": "app.cors.origenes",
+      "type": "java.util.List<java.lang.String>",
+      "defaultValue": "http://localhost:4200",
+      "description": "Direcciones del frontend que pueden llamar a la API (CORS). En un servidor: variable APP_CORS_ORIGENES, separadas por comas."
     }
   ]
 }

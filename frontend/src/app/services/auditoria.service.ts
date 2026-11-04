@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 /** IPI: un conteo físico de un título, con el stock que tenía el sistema en ese momento. */
 export interface Auditoria {
@@ -29,7 +30,7 @@ export interface AuditoriaMes {
 export class AuditoriaService {
   private http = inject(HttpClient);
   // auditoria inventario (front): solo el admin
-  private apiUrl = 'http://localhost:8080/api/auditorias';
+  private apiUrl = `${environment.apiUrl}/auditorias`;
 
   resumenDelMes(): Observable<AuditoriaMes> {
     return this.http.get<AuditoriaMes>(this.apiUrl);

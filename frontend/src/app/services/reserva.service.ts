@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface ReservaBackend {
   idReserva: number;
@@ -24,7 +25,7 @@ export interface ReservaBackend {
 })
 export class ReservaService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/reservas';
+  private apiUrl = `${environment.apiUrl}/reservas`;
 
   /**
    * fechaRecojoLimite en formato local "AAAA-MM-DDTHH:mm:ss" (hasta cuándo puede recoger el libro).

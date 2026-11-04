@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 /** Préstamo con nombre del prestatario y título del libro (consulta con JOIN). */
 export interface PrestamoDetalle {
@@ -57,7 +58,7 @@ export interface FiltrosHistorial {
 export class PrestamoService {
   private http = inject(HttpClient);
   // ruta crud prestamo (front): aqui estan las llamadas al backend del crud de prestamos
-  private apiUrl = 'http://localhost:8080/api/prestamos';
+  private apiUrl = `${environment.apiUrl}/prestamos`;
 
   /** segundosAtencion (TAP): cuánto tardó el encargado desde que empezó a llenar el formulario (null si no se sabe). */
   registrar(dniPrestatario: string, idLibro: number, segundosAtencion: number | null = null): Observable<Prestamo> {

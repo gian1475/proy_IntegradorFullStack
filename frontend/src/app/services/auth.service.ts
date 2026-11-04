@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface UsuarioActual {
   idUsuario: number;
@@ -28,7 +29,7 @@ const MINUTOS_INACTIVIDAD = 15;
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = `${environment.apiUrl}/auth`;
 
   private sesion: RespuestaLogin | null = this.obtenerSesionGuardada();
   readonly usuarioActual = signal<UsuarioActual | null>(this.sesion?.usuario ?? null);
