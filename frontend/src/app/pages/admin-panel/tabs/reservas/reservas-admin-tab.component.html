@@ -41,7 +41,8 @@
     </div>
   </div>
   <p class="text-body-secondary small">
-    A una reserva pendiente se le puede <strong>cambiar la fecha y la franja de recojo</strong>.
+    A una reserva pendiente se le puede <strong>cambiar la fecha y la franja de recojo</strong>; una pendiente o en cola se puede
+    <strong>cancelar</strong> (el ejemplar vuelve al stock o pasa al siguiente de la cola).
     Las reservas canceladas o vencidas se pueden <strong>eliminar de la base de datos</strong> (eliminación física).
     Las pendientes, las que están en la cola de espera y las atendidas no se pueden eliminar.
   </p>
@@ -83,7 +84,10 @@
                 @if (sePuedeEliminar(r)) {
                   <button class="btn btn-outline-danger btn-sm" (click)="eliminar(r)">Eliminar</button>
                 } @else if (r.estadoReserva === 'pendiente') {
-                  <button class="btn btn-outline-secondary btn-sm" (click)="editarFecha(r)">Cambiar fecha</button>
+                  <button class="btn btn-outline-secondary btn-sm me-1" (click)="editarFecha(r)">Cambiar fecha</button>
+                  <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
+                } @else if (r.estadoReserva === 'en_espera') {
+                  <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
                 } @else {
                   <span class="text-body-secondary">—</span>
                 }

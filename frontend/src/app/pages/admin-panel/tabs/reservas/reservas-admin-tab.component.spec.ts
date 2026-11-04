@@ -33,10 +33,24 @@ describe('pestaña Reservas del admin (RF15 y RF17)', () => {
     return Array.from(tr.querySelectorAll('button')).map(b => b.textContent!.trim());
   }
 
-  it('solo la pendiente tiene "Cambiar fecha"; solo la cancelada, "Eliminar"', () => {
+  it('la pendiente tiene "Cambiar fecha" y "Cancelar"; la cancelada, "Eliminar"', () => {
     const fixture = abrir();
-    expect(botones(fixture, 0)).toEqual(['Cambiar fecha']);
+    expect(botones(fixture, 0)).toEqual(['Cambiar fecha', 'Cancelar']);
     expect(botones(fixture, 1)).toEqual(['Eliminar']);
+  });
+
+  // B1 (RF16 y CU05): el administrador también cancela reservas
+  it('cancelar pide confirmación y manda PUT a /cancelar', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const fixture = abrir();
+
+    fixture.componentInstance.cancelar(pendiente);
+
+    http.expectOne(r => r.method === 'PUT' && r.url === `${API}/7/cancelar`).flush({ mensaje: 'Reserva cancelada correctamente' });
+    http.expectOne(API).flush([{ ...pendiente, estadoReserva: 'cancelada' }, cancelada]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Reserva #7: Reserva cancelada correctamente');
+    vi.restoreAllMocks();
   });
 
   it('cambiar fecha carga la fecha y la franja actuales y guarda con PUT', () => {

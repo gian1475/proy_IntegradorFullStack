@@ -4,6 +4,7 @@ import com.alejandria.biblioteca.dao.ReservaDao;
 import com.alejandria.biblioteca.dao.UsuarioDao;
 import com.alejandria.biblioteca.dto.reserva.ReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaRespuestaDTO;
+import com.alejandria.biblioteca.dto.reserva.ReservaVentanillaDTO;
 import com.alejandria.biblioteca.entity.Libro;
 import com.alejandria.biblioteca.entity.Reserva;
 import com.alejandria.biblioteca.entity.Usuario;
@@ -44,6 +45,30 @@ class ReservaColaEsperaTest {
     }
 
     // ---------- Crear ----------
+
+    // B2 (RF04, actor Encargado): en la ventanilla el encargado reserva con el DNI del prestatario
+    @Test
+    void enVentanillaElEncargadoReservaConElDniDelPrestatario() {
+        prepararCrear(2);
+        when(usuarioDao.findByDni("33333333")).thenReturn(Optional.of(prestatario()));
+
+        ReservaRespuestaDTO r = servicio.crearEnVentanilla(
+                new ReservaVentanillaDTO(" 33333333 ", 10, AHORA.withHour(14).withMinute(30)));
+
+        assertEquals("pendiente", r.estadoReserva());
+        assertEquals(3, r.idPrestatario()); // se reservo a nombre del prestatario, no del encargado
+    }
+
+    @Test
+    void enVentanillaUnDniQueNoExisteDa404() {
+        when(usuarioDao.findByDni("99999999")).thenReturn(Optional.empty());
+
+        NegocioException error = assertThrows(NegocioException.class,
+                () -> servicio.crearEnVentanilla(new ReservaVentanillaDTO("99999999", 10, null)));
+        assertEquals(404, error.getEstado().value());
+        assertEquals("No existe un usuario con ese DNI", error.getMessage());
+        verify(reservaDao, never()).save(any());
+    }
 
     @Test
     void conStockLaReservaApartaUnEjemplar() {

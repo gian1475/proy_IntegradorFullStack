@@ -8,8 +8,8 @@ import { FRANJAS_RECOJO, fechaDelLimite, franjaDelLimite, limiteDeRecojo } from 
 type Filtro = 'todas' | 'eliminables';
 
 /**
- * Pestaña "Reservas" del admin: ver todas, cambiar la fecha y la franja de recojo de una pendiente (RF15)
- * y eliminar físicamente las canceladas o vencidas (RF17).
+ * Pestaña "Reservas" del admin: ver todas, cambiar la fecha y la franja de recojo de una pendiente (RF15),
+ * cancelar una pendiente o en cola (RF16) y eliminar físicamente las canceladas o vencidas (RF17).
  */
 @Component({
   selector: 'app-reservas-admin-tab',
@@ -68,6 +68,19 @@ export class ReservasAdminTabComponent implements OnInit {
         this.mensajeOk.set(`Reserva #${e.idReserva}: nueva fecha de recojo ${e.fecha.split('-').reverse().join('/')} (${e.franja}).`);
         this.cargarReservas();
       },
+      error: err => this.mensajeError.set(mensajeDeError(err))
+    });
+  }
+
+  // reserva cancelar (front, B1): el admin tambien cancela (RF16 y CU05). el ejemplar vuelve al stock
+  // o pasa al primero de la cola; si estaba en la cola, los de atras avanzan
+  cancelar(r: ReservaBackend): void {
+    const que = r.estadoReserva === 'en_espera' ? 'sacar de la cola de espera' : 'cancelar';
+    if (!confirm(`¿${que[0].toUpperCase() + que.slice(1)} la reserva #${r.idReserva} de ${r.nombrePrestatario} ("${r.tituloLibro}")?`)) return;
+    this.mensajeOk.set('');
+    this.mensajeError.set('');
+    this.reservaService.cancelar(r.idReserva).subscribe({
+      next: res => { this.mensajeOk.set(`Reserva #${r.idReserva}: ${res.mensaje}`); this.cargarReservas(); },
       error: err => this.mensajeError.set(mensajeDeError(err))
     });
   }

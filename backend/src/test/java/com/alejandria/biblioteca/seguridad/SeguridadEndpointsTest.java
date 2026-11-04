@@ -119,6 +119,29 @@ class SeguridadEndpointsTest {
     }
 
     @Test
+    void elAdminTambienCancelaReservas() throws Exception {
+        // B1 (RF16 y CU05): los tres perfiles cancelan. una reserva que no existe da 404 (paso el permiso), no 403
+        mvc.perform(put("/api/reservas/999999/cancelar").header("Authorization", token(Rol.ADMINISTRADOR)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void soloElEncargadoReservaEnVentanilla() throws Exception {
+        // B2 (RF04): el encargado reserva a nombre de un prestatario con su DNI
+        String json = """
+                {"dniPrestatario":"12","idLibro":1,"fechaRecojoLimite":"2026-10-30T17:30:00"}
+                """;
+        // con datos validos: el prestatario no tiene permiso (los datos se revisan antes que el permiso del metodo)
+        mvc.perform(post("/api/reservas/ventanilla").header("Authorization", token(Rol.PRESTATARIO))
+                        .contentType(MediaType.APPLICATION_JSON).content(json.replace("\"12\"", "\"33333333\"")))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/reservas/ventanilla").header("Authorization", token(Rol.ENCARGADO))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("El DNI debe tener 8 dígitos"));
+    }
+
+    @Test
     void unPrestatarioNoPuedeVerLosPrestamosDeOtro() throws Exception {
         // el token es del usuario 1; pide los prestamos del usuario 2
         mvc.perform(get("/api/prestamos/prestatario/2").header("Authorization", token(Rol.PRESTATARIO)))

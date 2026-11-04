@@ -34,6 +34,12 @@ export class ReservaService {
     return this.http.post<ReservaBackend>(this.apiUrl, { idLibro, idUsuario, fechaRecojoLimite });
   }
 
+  // reserva ventanilla (front, B2): el encargado reserva a nombre del prestatario con su DNI.
+  // sin stock va null y el prestatario entra a la cola de espera
+  crearEnVentanilla(dniPrestatario: string, idLibro: number, fechaRecojoLimite: string | null): Observable<ReservaBackend> {
+    return this.http.post<ReservaBackend>(`${this.apiUrl}/ventanilla`, { dniPrestatario, idLibro, fechaRecojoLimite });
+  }
+
   getReservasPorUsuario(idUsuario: number): Observable<ReservaBackend[]> {
     return this.http.get<ReservaBackend[]>(`${this.apiUrl}/usuario/${idUsuario}`);
   }

@@ -3,6 +3,7 @@ package com.alejandria.biblioteca.controller;
 import com.alejandria.biblioteca.dto.reserva.ActualizarReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaRespuestaDTO;
+import com.alejandria.biblioteca.dto.reserva.ReservaVentanillaDTO;
 import com.alejandria.biblioteca.exception.NegocioException;
 import com.alejandria.biblioteca.seguridad.Rol;
 import com.alejandria.biblioteca.seguridad.Sesion;
@@ -50,8 +51,16 @@ public class ReservaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.crear(dto));
     }
 
+    // reserva ventanilla (B2): POST /api/reservas/ventanilla, el encargado reserva con el DNI del prestatario
+    @PostMapping("/ventanilla")
+    @RolesAllowed(Rol.ENCARGADO)
+    public ResponseEntity<ReservaRespuestaDTO> crearEnVentanilla(@Valid @RequestBody ReservaVentanillaDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.crearEnVentanilla(dto));
+    }
+
+    // reserva cancelar: los tres perfiles (RF16 y CU05). el prestatario solo las suyas
     @PutMapping("/{id}/cancelar")
-    @RolesAllowed({Rol.ENCARGADO, Rol.PRESTATARIO})
+    @RolesAllowed({Rol.ADMINISTRADOR, Rol.ENCARGADO, Rol.PRESTATARIO})
     public ResponseEntity<Map<String, String>> cancelarReserva(@PathVariable Integer id,
                                                                @AuthenticationPrincipal Sesion sesion) {
         verificarPropietario(sesion, reservaService.obtenerIdPrestatario(id));

@@ -4,6 +4,7 @@ import com.alejandria.biblioteca.dao.ReservaDao;
 import com.alejandria.biblioteca.dao.UsuarioDao;
 import com.alejandria.biblioteca.dto.reserva.ActualizarReservaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaDTO;
+import com.alejandria.biblioteca.dto.reserva.ReservaVentanillaDTO;
 import com.alejandria.biblioteca.dto.reserva.ReservaRespuestaDTO;
 import com.alejandria.biblioteca.entity.Libro;
 import com.alejandria.biblioteca.entity.Reserva;
@@ -88,6 +89,15 @@ public class ReservaService {
         log.info("Reserva #{} creada: libro '{}' para usuario {}, recojo hasta {}",
                 guardada.getIdReserva(), libro.getTitulo(), prestatario.getIdUsuario(), dto.fechaRecojoLimite());
         return ReservaRespuestaDTO.desde(guardada);
+    }
+
+    // reserva ventanilla (B2, RF04): el encargado reserva a nombre del prestatario con su DNI.
+    // se busca al prestatario y se usan las mismas reglas de crear (sancion, 7 dias, horario, cola de espera)
+    @Transactional
+    public ReservaRespuestaDTO crearEnVentanilla(ReservaVentanillaDTO dto) {
+        Usuario prestatario = usuarioDao.findByDni(dto.dniPrestatario().trim())
+                .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "No existe un usuario con ese DNI"));
+        return crear(new ReservaDTO(dto.idLibro(), prestatario.getIdUsuario(), dto.fechaRecojoLimite()));
     }
 
     /** Sin ejemplares: la reserva no aparta nada, queda 'en_espera' con su puesto en la cola y sin fecha de recojo. */
