@@ -72,6 +72,16 @@ public class LibroService {
         return LibroDTO.desde(buscar(idLibro));
     }
 
+    /** Consulta de dos tablas (libro + categoria) para la pestaña "Libros por categoría" del admin. */
+    @Transactional(readOnly = true)
+    public List<com.alejandria.biblioteca.dto.libro.LibroCategoriaDTO> consultarConCategoria(String categoria) {
+        return libroDao.consultarConCategoria(categoria == null ? "" : categoria.trim()).stream()
+                .map(f -> new com.alejandria.biblioteca.dto.libro.LibroCategoriaDTO(
+                        ((Number) f[0]).intValue(), (String) f[1], (String) f[2],
+                        ((Number) f[3]).intValue(), (String) f[4], (String) f[5]))
+                .toList();
+    }
+
     /** Categorías para el formulario de libros. */
     @Transactional(readOnly = true)
     public List<LibroDTO.CategoriaResumen> listarCategorias() {
@@ -116,16 +126,13 @@ public class LibroService {
 
     // ---------- ACTUALIZAR ----------
 
-    // crud libro actualizar: se pueden cambiar los mismos datos del registro (titulo, isbn, editorial,
-    // año, stock, categoria y autores). lo q mas se actualiza es el stock (numero de copias)
+    // crud libro actualizar: el admin SOLO modifica el stock (numero de ejemplares). titulo, isbn, editorial,
+    // año, categoria y autores quedan como se registraron: aunque lleguen en el formulario, se ignoran (11/11)
     @Transactional
     public LibroDTO actualizar(Integer idLibro, LibroFormDTO form) {
         Libro libro = buscar(idLibro);
         if (BAJA.equals(libro.getEstadoLibro())) {
             throw new NegocioException(HttpStatus.CONFLICT, "No se puede editar un libro dado de baja");
-        }
-        if (libroDao.existsByIsbnAndIdLibroNot(form.isbn().trim(), idLibro)) {
-            throw new NegocioException(HttpStatus.CONFLICT, "Ya existe otro libro con ese ISBN");
         }
         // estado del libro: el stock solo llega a 0 con un prestamo, una reserva o una devolucion dañada.
         // si el admin lo bajara a 0 a mano, el libro quedaria 'prestado' sin ningun prestamo
@@ -134,7 +141,7 @@ public class LibroService {
                     "El stock no puede bajar a 0 desde el formulario: los ejemplares salen al prestarlos, reservarlos o devolverlos dañados");
         }
 
-        copiarDatos(form, libro);
+        libro.setStock(form.stock()); // lo unico que se modifica
 
         // cola de espera: si el admin agrega ejemplares y hay prestatarios esperando, primero se reparten a la cola
         int repartidos = 0;

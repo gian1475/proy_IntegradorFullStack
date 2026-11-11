@@ -24,6 +24,15 @@ class LibroDaoTest {
     @Autowired private LibroDao libroDao;
 
     @Test
+    void consultaDeDosTablasLibroYCategoria() {
+        List<Object[]> todas = libroDao.consultarConCategoria("");
+        assertFalse(todas.isEmpty());
+        List<Object[]> tecnologia = libroDao.consultarConCategoria("Tecnología");
+        assertTrue(tecnologia.stream().allMatch(f -> "Tecnología".equals(f[5])));
+        assertTrue(todas.stream().noneMatch(f -> "baja".equals(f[4])));
+    }
+
+    @Test
     void buscaPorTitulo() {
         assertTrue(titulos(libroDao.buscarEnCatalogo("clean")).contains("Clean Code"));
     }

@@ -80,11 +80,20 @@ public interface LibroDao extends JpaRepository<Libro, Integer> {
                  + "GROUP BY c.nombre ORDER BY c.nombre", nativeQuery = true)
     List<Object[]> stockPorCategoria();
 
+    /**
+     * CONSULTA DE DOS TABLAS: libro JOIN categoria (sin los libros dados de baja).
+     * De libro: id_libro, titulo, isbn, stock, estado_libro. De categoria: nombre.
+     * categoria vacia = todas las categorias.
+     */
+    @Query(value = "SELECT l.id_libro, l.titulo, l.isbn, l.stock, l.estado_libro, c.nombre "
+                 + "FROM libro l "
+                 + "JOIN categoria c ON c.id_categoria = l.id_categoria "
+                 + "WHERE l.estado_libro <> 'baja' AND (:categoria = '' OR c.nombre = :categoria) "
+                 + "ORDER BY c.nombre, l.titulo", nativeQuery = true)
+    List<Object[]> consultarConCategoria(@Param("categoria") String categoria);
+
     // ISBN repetido al registrar: SELECT COUNT(*) > 0 FROM libro WHERE isbn = ?
     boolean existsByIsbn(String isbn);
-
-    // ISBN repetido al editar (otro libro con ese ISBN): ... WHERE isbn = ? AND id_libro <> ?
-    boolean existsByIsbnAndIdLibroNot(String isbn, Integer idLibro);
 
     /** Lee el libro bloqueando su fila hasta terminar la transacción, para que dos préstamos a la vez no descuadren el stock. */
     // SQL equivalente: SELECT * FROM libro WHERE id_libro = ? FOR UPDATE (lo comprueba ConcurrenciaStockTest)

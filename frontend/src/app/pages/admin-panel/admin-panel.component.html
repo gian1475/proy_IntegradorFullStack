@@ -10,6 +10,7 @@
       <nav class="nav nav-tabs mb-4">
         <button class="nav-link" [class.active]="pestana() === 'dashboard'" (click)="pestana.set('dashboard')">Dashboard</button>
         <button class="nav-link" [class.active]="pestana() === 'libros'" (click)="pestana.set('libros')">Libros</button>
+        <button class="nav-link" [class.active]="pestana() === 'libroscat'" (click)="pestana.set('libroscat')">Libros por categoría</button>
         <button class="nav-link" [class.active]="pestana() === 'prestamos'" (click)="pestana.set('prestamos')">Préstamos activos</button>
         <button class="nav-link" [class.active]="pestana() === 'historial'" (click)="pestana.set('historial')">Historial</button>
         <button class="nav-link" [class.active]="pestana() === 'reservas'" (click)="pestana.set('reservas')">Reservas</button>
@@ -22,6 +23,7 @@
       @switch (pestana()) {
         @case ('dashboard') { <app-dashboard-tab /> }
         @case ('libros') { <app-libros-tab /> }
+        @case ('libroscat') { <app-libros-categoria-tab /> }
         @case ('prestamos') { <app-prestamos-tab /> }
         @case ('historial') { <app-historial-prestamos /> }
         @case ('reservas') { <app-reservas-admin-tab /> }

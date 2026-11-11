@@ -18,7 +18,7 @@ export interface TipoReporte {
   usaFechas: boolean;
 }
 
-// reportes rf08 (front): los 8 reportes, mismos nombres q en ReporteService del backend
+// reportes rf08 (front): los 9 reportes, mismos nombres q en ReporteService del backend
 export const TIPOS_REPORTE: TipoReporte[] = [
   { valor: 'prestamos', nombre: 'Préstamos', descripcion: 'Todos los préstamos del periodo con prestatario, encargado, libro, fechas y estado.', usaFechas: true },
   { valor: 'devoluciones', nombre: 'Devoluciones', descripcion: 'Libros devueltos en el periodo, a tiempo o con retraso, y su estado físico.', usaFechas: true },
@@ -28,6 +28,7 @@ export const TIPOS_REPORTE: TipoReporte[] = [
   { valor: 'stock', nombre: 'Stock por categoría', descripcion: 'Títulos y ejemplares disponibles de cada categoría en este momento.', usaFechas: false },
   { valor: 'indicadores', nombre: 'Indicadores de gestión', descripcion: 'TAP, PDF, IPI y TIM del periodo, con su línea base y su meta.', usaFechas: true },
   { valor: 'tiempos', nombre: 'Tiempos de préstamo', descripcion: 'Tiempo mínimo, promedio y máximo que estuvieron los libros en sala, por categoría.', usaFechas: true },
+  { valor: 'pordia', nombre: 'Préstamos por día (máx., mín. y promedio)', descripcion: 'Día con más y con menos préstamos, promedio por día y los préstamos de esos días.', usaFechas: true },
 ];
 
 /** Métricas de /api/monitoreo (Spring Boot Actuator + datos del negocio). */
