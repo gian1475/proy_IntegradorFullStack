@@ -1,0 +1,91 @@
+Control de versiones. Este no estará completo porque solamente se les estará pidiendo 2.
+
+
+1 commit para subir el programa relacionadas a la creacion de perfiles o logeo
+1 commit para subir los archivos relacionados al crud de mantenimiento: adicionar, modificar, consultar y eliminar. 
+Con subir se refiere al github
+
+
+"Despliegue(Empaquetamiento (.jar))
+Monitoreo (Índicar la herramienta y metricas indicadas en clase)" es para la ultima evaluacion (no pide pal avance 3)
+
+mostrar el código para ver como han creado estos perfiles. Y como estan utilizando los criterios que se ha establecido para la contraseña.
+La contraseña debe tener minimo 8 posiciones, minimo una letra minuscula, minimo una letra mayuscula, minimo un digito, y un sibolo especial
+
+Autorizacion. Una vez que la persona ingrese, a traves del código ver que es lo que le está permitiendo.
+
+Cuando dice persona se refiere a primer perfil, segundo perfil, primer rol, segundo rol, etc.
+
+De acuerdo al sistema que desarrollamos debes mencionar. Por ejemplo si es sobre ventas, que cosa de la venta van a modificar? Debes mencionar.
+
+Mostrar codigo donde estan consultando una tabla, y de esa tabla que campos o datos se estan mostrando ?Depende todo o una parte.
+
+Y para la consulta de dos tablas, cuales son esas dos tablas y que datos se estan considerando para mostrar de cada tabla.
+
+La eliminación eliminación física: Mostrar el código y ver que está eliminando el registro y para ello van a utilizar el delete en la tabla. 
+
+La eliminación lógica se utiliza el update para cambiar el estado de ese registro. Cuando se hace la eliminación logica, se pasa a inactivo. O puede ser 1 o 0, true o falso, etc, como queramos codificarlo.
+
+Poner bibliografica relacionada al diagrama EDT, al project charter y el Git. Además el profesor vio al github pero no bibliografia del Git.
+
+Preguntas de Lean Canvass
+Esos 3 problemas del diagrama de arboles están relacionados con las causas?
+
+La solucion tiene relación con los objetivos?
+y la solucion tiene que tener algo de relacion con las conclusiones
+
+Las metricas son del capitulo 1? Las metricas son del capitulo 1, no del capitulo 2 recuerden.
+
+Este presupuesto está relacionado con el primer presupuesto? Esta suma debe ser el total del primer presupuesto, se supone.
+
+Sobre el Project Charter, están usando una plantilla diferente. El project charter es un documento/acta de compromiso. Es uno solo. Por que han puesto estas Tablas? Es solo un documento. Corrijan.
+
+Antes del EDT viene el Diagrama de Gantt. Hagan en orden.
+
+
+Sobre el Diagrama de Gantt, esas actividades que han puesto allí, de alguna manera se relaciona con cosas que tú estas haciendo en el proyecto. Pero tambien se debe relacionar con el diagrama EDT.
+TIENES QUE COLOCAR QUE ACTIVIDAD YA SE TERMINO, EL QUE FALTA POR TERMINAR, EL QUE ESTA HACIENDOSE. PUEDE SER POR COLORES O NUMEROS.
+Puedes colocar viñetas por ejem colocar viñeta abajo 100% si ya terminó
+
+Pero su diagrama EDT no tiene la forma de un diagrama. Por ejemplo deben tener 7 casilleros.
+
+Falta colocar en el documento el Anexo de Control de Versiones.
+
+Lo que ustedes deben decir (al momento de exponer):
+
+Ejemplo: 
+"Profesor, hicimos el primer commit y levantamos los programas relacionados al crear perfiles o roles. Y luego hicimos el otro commit y se levantaron los programas/ se subieron los programas relacionados al "CRUD"
+
+Capturar pantalla a los commits que han usado y ponerlos en el documento
+
+
+PREGUNTAS DE CODIGO:
+¿Que parte del código estás creando los dos perfiles? Deben decir uds "Aquí está el primer perfil, y aquí está el segundo perfil"
+¿Cuáles son los perfiles? A ver mencioname cuáles son.
+
+Donde estás creando el administrado? donde estás creando el prestatario? Enseñamelo. DONDE.
+
+Para cerrar la explicacion de "logeo" de la rubrica, van a explicar  "si este es el administrador aqui estamos programando que el puede mirar esta cosa de aqui" "si este es el prestarario, este puede mirar esto" DEBES MOSTRAR EL CODIGO. "La contraseña corresponde a esta parte de aqui"
+
+
+Explicame cómo creas la contraseña? "Ejem el primer criterio es que tenga minimo 8 para adelante. Dicho criterio aquí lo estoy considerando en mi programación"
+
+Pasemos al CRUD
+Tienen que decir "Profesor aquí en esta parte estamos adicionando el libro" (indicar código)
+¿Qué datos estás adicionando del libro? Tú debes explicar:
+"Profesor, del libro estamos adicionando estos datos. Y estos datos lo vamos a adicionar en tal tabla. Y a la hora que vamos a adicionar validamos..."
+
+Explica el codigo de los CRUD.
+
+A la hora que registras, que registras de un libro? Ejemplo de lo que debes decir: aparte del isb, vamos a registrar el ticket, el autor, vamos a registrar el numero de copia que tiene, el idioma en el que está.
+
+Que vas a actualizar? EJem "Vamos a actualizar el número de copiaA"
+
+Que cosa consultas? Los libros que hay? los que han prestado?
+Ejemplo de explicacion:
+"Profesor esta consulta involucra solo una tabla"
+"En esta otra consulta se involucra dos tablas"
+
+Y la eliminacion? Por qué es eliminación lógica? Qué hacen para que sea lógica? Profesor dice que la lógica es cambiar el estado del libro. Pasarlo a una estado por ejemplo "inactivo"
+
+Dodne esta la eliminación física'

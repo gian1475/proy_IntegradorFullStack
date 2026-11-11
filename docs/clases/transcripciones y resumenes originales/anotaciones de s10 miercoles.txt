@@ -1,0 +1,28 @@
+SEMANA 10
+
+Profesor: Las conclusiones tienen que ver con los objetivos específicos. Es decir el primer objetivo específico debe tener su conclusión, el segundo objetivo específico su conclusión, y el tercer objetivo específico su conclusion.
+
+Para sacar la conclusión, ese objetivo específico tiene que haberse desarrollado. 
+
+debido a que la informacion no esta bien organizada, se esta perdiendo datos... entonces el objetivo espeicifo sea, crear y desarrollar una base de datos. Pero en su trabajo debe haberse desarrollado ese objetivo especifico.
+
+Profesor dira: Muy bien, ese objetivo dice que tu tienes que crear una base de datos, entonces en que parte de tu trabajo estás logrando ese objetivo? Nosotros: profesor, en la parte donde fue la parte conceptual, logico, fisico y el diccionario de datos (ir mostrando), y con eso se está consiguiendo el objetivo.
+
+Profesor: Ahora como ya hemos desarrollado viene mi conclusion. Y en que radica la conclusion? La conclusion puedes decir que era lo que ocurrió antes? Y tu puedes escribir "Se ha observado que antes cuando la informacion no estaba organizada se originaba problemas. Esto ha sido superado con la creación de la base de datos porque ahora...."
+
+Cuando expongas, debes mostrar los objetivos específicos antes que expliques las conclusiones
+
+Profesor: Si tu objetivo específico tiene que ver con programación, debes indicarme en qué parte de la programación está.
+
+Ejemplo:
+Si tu objetivo específico es "Automatizar el registro de las entradas y salidas de atún enlatado para reducir los errores asociados al registro manual", entonces debes decir: "En esta parte de la programacion, estoy automatizando el registro de entradas y salidas". Y tambien puedes decir "Aca está la pantalla donde registramos los datos" (muestras las interfaces visuales de las paginas que ya tienes en el documento). Y la salida puede ser la misma pantalla o los reportes. Esto es lo que el profesor quiere escuchar. Puedes mostrar código e interfaz.
+
+NO SAQUES CONCLUSIONES DE ALGO QUE NI HAS HECHO
+
+El profesor: "A ustedes se les ha pedido 6 tipo de reportes anteriormente. Cuando hay una metrica que pide promedio, maximo, minimo (INDICADORES), allí puedo aceptar un dashboard. Para Integrador II piden dashboard trabajando en tiempo real. Pero acá no estamos en eso.
+
+
+RECOMENDACIONES:
+Las recomendaciones son funciones.
+Cuando expliques, no digas toda el parrafo, explica.
+

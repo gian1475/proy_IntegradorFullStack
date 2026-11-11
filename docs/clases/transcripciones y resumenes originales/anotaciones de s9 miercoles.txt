@@ -1,0 +1,44 @@
+SEMANA 9 MIERCOLES
+
+1. Preparar la encuesta del sistema
+Debe dirigirse a las personas que utilizarán nuestra aplicación.
+
+⚠️ El profe aclara que debemos plantearla considerando que el sistema ya está terminado y lo están usando. Las preguntas deben evaluar esa experiencia, no volver a preguntar qué sistema necesitan desarrollar.
+
+2. Organizar las preguntas por temas
+Primero definir qué queremos averiguar y luego agrupar las preguntas. Por ejemplo:
+
+* Diseño y facilidad de uso: interfaces, colores, textos y navegación.
+* Rapidez: cuánto demora en responder o realizar operaciones.
+* Confiabilidad: errores o resultados incorrectos.
+* Seguridad: acceso y permisos.
+* Funcionalidad: si cumple lo que necesita el usuario.
+
+Son ejemplos para orientarnos; debemos adaptarlos a nuestro proyecto.
+
+Podemos incluir preguntas de sí/no, alternativas y preguntas abiertas para que expliquen sus respuestas. En UTP Class dejó tres enlaces de referencia para revisar cómo formularlas.
+
+3. Elaborar el presupuesto del sistema actual
+Presentarlo en una tabla con los costos de desarrollar el proyecto.
+
+Incluir tanto el trabajo del personal —análisis, diseño, programación, pruebas, correcciones, documentación y capacitación— como los recursos utilizados: computadora, energía, herramientas, conectividad e impresiones, según corresponda.
+
+4. Proponer dos funcionalidades futuras
+En las recomendaciones debemos mencionar dos funciones que el sistema todavía no tiene y que podrían incorporarse después.
+
+5. Hacer un segundo presupuesto
+Calcular cuánto costaría desarrollar esas dos funciones: análisis, diseño, programación y demás recursos necesarios. Considerar qué herramientas y equipos ya tenemos disponibles para justificar los costos.
+
+Qué debemos tener preparado
+✅ Encuesta orientada al usuario del sistema terminado.
+✅ Preguntas agrupadas por lo que queremos evaluar.
+✅ Presupuesto del desarrollo actual en tabla.
+✅ Dos funcionalidades futuras recomendadas.
+✅ Presupuesto para implementar esas dos funciones.
+
+Ojo con el ejemplo mostrado: los montos, herramientas y datos del documento de la “Tiendita de Don Pepe” pertenecen a ese proyecto. Nosotros debemos usar los de nuestro sistema.
+
+Fechas y revisión
+📌 La clase corresponde al miércoles 7 de octubre de 2026, semana 9.
+📌 El profe recuerda que los miércoles revisa el avance del proyecto.
+📌 Menciona las recomendaciones para la semana siguiente —semana 10—. En las indicaciones revisadas no queda una fecha y hora exactas de entrega; hay que confirmarlas en UTP Class.
