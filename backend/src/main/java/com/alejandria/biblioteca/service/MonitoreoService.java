@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
@@ -33,19 +32,21 @@ public class MonitoreoService {
     private final SesionService sesionService;
     private final PrestamoDao prestamoDao;
     private final ReservaDao reservaDao;
+    private final HorarioAtencion horario;
 
     public MonitoreoService(MeterRegistry registro, HealthEndpoint healthEndpoint, SesionService sesionService,
-                            PrestamoDao prestamoDao, ReservaDao reservaDao) {
+                            PrestamoDao prestamoDao, ReservaDao reservaDao, HorarioAtencion horario) {
         this.registro = registro;
         this.healthEndpoint = healthEndpoint;
         this.sesionService = sesionService;
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
+        this.horario = horario;
     }
 
     @Transactional
     public MonitoreoDTO obtenerResumen() {
-        prestamoDao.marcarVencidos(LocalDateTime.now());
+        prestamoDao.marcarVencidos(horario.ahora());
 
         // Peticiones HTTP: Actuator mide cada petición con un Timer llamado "http.server.requests"
         Collection<Timer> peticiones = registro.find("http.server.requests").timers();

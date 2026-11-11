@@ -45,4 +45,9 @@ public class Usuario {
         this.contrasena = contrasena;
         this.estado = estado;
     }
+
+    /** "Nombre Apellido": lo usan las pantallas y los reportes (antes se armaba igual en 5 lugares). */
+    public String nombreCompleto() {
+        return nombre + " " + apellido;
+    }
 }

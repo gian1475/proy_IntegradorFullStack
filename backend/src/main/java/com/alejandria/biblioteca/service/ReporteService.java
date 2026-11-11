@@ -61,6 +61,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -133,7 +134,7 @@ public class ReporteService {
     @Transactional(readOnly = true)
     public TablaReporte armar(String tipo, LocalDate desde, LocalDate hasta) {
         RangoFechas rango = new RangoFechas(desde, hasta); // valida q "desde" no sea despues de "hasta"
-        return switch (tipo == null ? "" : tipo) {
+        return switch (Objects.toString(tipo, "")) {
             case "prestamos" -> prestamos(rango);
             case "devoluciones" -> devoluciones(rango);
             case "reservas" -> reservas(rango);
@@ -180,7 +181,7 @@ public class ReporteService {
             boolean enCola = ColaEsperaService.EN_ESPERA.equals(r.getEstadoReserva());
             filas.add(new String[] {
                 String.valueOf(r.getIdReserva()),
-                r.getPrestatario().getNombre() + " " + r.getPrestatario().getApellido(),
+                r.getPrestatario().nombreCompleto(),
                 r.getLibro().getTitulo(),
                 formatear(r.getFechaReserva()),
                 enCola ? "Cuando le toque un ejemplar" : formatear(r.getFechaRecojoLimite()),
@@ -223,7 +224,7 @@ public class ReporteService {
             }
         }
         for (Usuario u : usuarioDao.findByEstadoOrderByApellidoAscNombreAsc("inactivo")) {
-            filas.add(new String[] {"Usuario", u.getDni(), u.getNombre() + " " + u.getApellido(), "-", u.getEstado()});
+            filas.add(new String[] {"Usuario", u.getDni(), u.nombreCompleto(), "-", u.getEstado()});
         }
         return new TablaReporte("Bajas lógicas", rango.texto(), columnas, filas,
                 List.of("Eliminación lógica: estas filas siguen en la base de datos con el estado 'baja', 'anulado' o 'inactivo'.",
@@ -560,11 +561,11 @@ public class ReporteService {
         if (valor instanceof LocalDateTime f) {
             return formatear(f);
         }
-        return valor == null ? "" : valor.toString();
+        return texto(valor);
     }
 
     private String texto(Object valor) {
-        return valor == null ? "" : valor.toString();
+        return Objects.toString(valor, ""); // java.util.Objects: null -> ""
     }
 
     private String formatear(LocalDateTime fecha) {

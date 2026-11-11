@@ -35,7 +35,7 @@ public record ReservaRespuestaDTO(
                 autor,
                 categoria,
                 r.getPrestatario().getIdUsuario(),
-                r.getPrestatario().getNombre() + " " + r.getPrestatario().getApellido(),
+                r.getPrestatario().nombreCompleto(),
                 r.getFechaReserva(),
                 r.getFechaRecojoLimite(),
                 r.getPosicionCola(),

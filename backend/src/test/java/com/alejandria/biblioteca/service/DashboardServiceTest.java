@@ -34,11 +34,15 @@ class DashboardServiceTest {
     @Mock private UsuarioDao usuarioDao;
     @Mock private AuditoriaInventarioDao auditoriaDao;
 
+    /** Un día fijo de febrero: el dashboard tiene que tomar este mes, aunque la prueba se corra otro día. */
+    private static final LocalDateTime AHORA = LocalDateTime.of(2026, 2, 15, 10, 0);
+
     private DashboardService servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new DashboardService(prestamoDao, libroDao, reservaDao, usuarioDao, auditoriaDao);
+        servicio = new DashboardService(prestamoDao, libroDao, reservaDao, usuarioDao, auditoriaDao,
+                HorarioAtencionTest.horario(AHORA));
         when(libroDao.contarPorEstado()).thenReturn(List.of(
                 new Object[] {"disponible", 20L, 45L},
                 new Object[] {"prestado", 3L, 0L},
@@ -61,6 +65,16 @@ class DashboardServiceTest {
         IndicadorDTO tim = indicador(d, "TIM");
         assertEquals(1.0, tim.valor());
         assertTrue(tim.cumpleMeta());
+    }
+
+    @Test
+    void elMesDelDashboardSaleDelRelojDelSistema() {
+        DashboardDTO d = servicio.obtener();
+
+        assertEquals(AHORA, d.generadoEn());
+        verify(prestamoDao).marcarVencidos(AHORA);
+        // febrero completo: del 01/02 a las 00:00 al 01/03 a las 00:00
+        verify(prestamoDao).contarPrestamosEntre(LocalDateTime.of(2026, 2, 1, 0, 0), LocalDateTime.of(2026, 3, 1, 0, 0));
     }
 
     @Test

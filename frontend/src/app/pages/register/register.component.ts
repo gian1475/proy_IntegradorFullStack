@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HeaderComponent } from '../../components/header/header.component';
 import { contrasenaValida, requisitosContrasena } from '../../utils/regla-contrasena';
+import { mensajeDeError } from '../../utils/mensaje-error';
 
 @Component({
   selector: 'app-register',
@@ -81,8 +82,8 @@ export class RegisterComponent {
       },
       error: (err) => {
         this.cargando.set(false);
-        const msg = err.error?.mensaje || 'Error al registrar usuario';
-        this.errorMessage.set(msg);
+        // antes, con el backend caido salia "Error al registrar usuario"; ahora dice que no hay conexion
+        this.errorMessage.set(mensajeDeError(err, 'Error al registrar usuario'));
       }
     });
   }

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { HeaderComponent } from '../../components/header/header.component';
+import { mensajeDeError } from '../../utils/mensaje-error';
 
 @Component({
   selector: 'app-login',
@@ -38,12 +39,7 @@ export class LoginComponent {
       },
       error: (err) => {
         this.cargando.set(false);
-        if (err.status === 0) {
-          this.errorMessage.set('No se pudo conectar con el servidor backend (puerto 8080). Verifica que el backend esté iniciado.');
-        } else {
-          const msg = err.error?.mensaje || 'Credenciales incorrectas';
-          this.errorMessage.set(msg);
-        }
+        this.errorMessage.set(mensajeDeError(err, 'Credenciales incorrectas'));
       }
     });
   }

@@ -36,19 +36,21 @@ public class DashboardService {
     private final ReservaDao reservaDao;
     private final UsuarioDao usuarioDao;
     private final AuditoriaInventarioDao auditoriaDao;
+    private final HorarioAtencion horario;
 
     public DashboardService(PrestamoDao prestamoDao, LibroDao libroDao, ReservaDao reservaDao, UsuarioDao usuarioDao,
-                            AuditoriaInventarioDao auditoriaDao) {
+                            AuditoriaInventarioDao auditoriaDao, HorarioAtencion horario) {
         this.prestamoDao = prestamoDao;
         this.libroDao = libroDao;
         this.reservaDao = reservaDao;
         this.usuarioDao = usuarioDao;
         this.auditoriaDao = auditoriaDao;
+        this.horario = horario;
     }
 
     @Transactional
     public DashboardDTO obtener() {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = horario.ahora(); // la hora de lima del sistema (las pruebas la pueden fijar)
         prestamoDao.marcarVencidos(ahora); // para que "vencidos" esté al día
 
         // el mes actual: desde el día 1 a las 00:00 hasta el día 1 del mes siguiente

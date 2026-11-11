@@ -31,7 +31,7 @@ public record IncidenciaDTO(
         Incidencia i = s.getIncidencia();
         Prestamo p = i.getPrestamo();
         return new IncidenciaDTO(i.getIdIncidencia(), p.getIdPrestamo(),
-                p.getPrestatario().getNombre() + " " + p.getPrestatario().getApellido(), p.getPrestatario().getDni(),
+                p.getPrestatario().nombreCompleto(), p.getPrestatario().getDni(),
                 p.getLibro().getTitulo(), i.getTipoIncidencia(), i.getDescripcion(), i.getFechaIncidencia(),
                 i.getEstadoIncidencia(), s.getIdSancion(), s.getTipoSancion(), s.getMonto(), s.getDescripcion(),
                 s.getFechaInicio(), s.getFechaFin(), s.getEstadoSancion());

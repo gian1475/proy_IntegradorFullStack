@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 
 /** Reglas sobre quién puede pedir libros (la usan préstamos, reservas e incidencias). */
 @Service
@@ -43,7 +42,7 @@ public class PrestatarioService {
         if (!"activo".equals(usuario.getEstado())) {
             throw new NegocioException(HttpStatus.CONFLICT, "El prestatario está " + usuario.getEstado());
         }
-        if (prestamoDao.tieneSancionActiva(usuario.getIdUsuario(), LocalDate.now())) {
+        if (prestamoDao.tieneSancionActiva(usuario.getIdUsuario(), horario.ahora().toLocalDate())) {
             throw new NegocioException(HttpStatus.CONFLICT, "El prestatario tiene una sanción activa");
         }
     }

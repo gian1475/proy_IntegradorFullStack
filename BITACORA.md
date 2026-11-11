@@ -1203,6 +1203,29 @@ Las pruebas nuevas comprueban comportamiento que ya existía, así que pasaron a
 
 ---
 
+## Depuración y limpieza (04/11) ✅
+
+Revisión de todo el código buscando errores, código repetido y código muerto. **No hay métodos sin uso** en los DAO, en los servicios del backend ni en los servicios del frontend; las librerías ya se usan donde corresponde. Se arreglaron 5 cosas chicas:
+
+| # | Qué pasaba | Qué se hizo | Archivos |
+|---|---|---|---|
+| 1 | 🐞 Con el backend caído (apagado o Render "dormido"), el **registro** mostraba "Error al registrar usuario" en vez de decir que no hay conexión. El login sí lo manejaba, pero repitiendo a mano lo de `mensajeDeError` | Login y registro usan `mensajeDeError(err, textoPorDefecto)` (nuevo segundo parámetro opcional) | `utils/mensaje-error.ts`, `login.component.ts`, `register.component.ts` |
+| 2 | El mensaje sin conexión decía "(puerto 8080)": en Render el puerto es otro | `MENSAJE_SIN_CONEXION`: "No se pudo conectar con el servidor. Verifique que el sistema esté iniciado e intente de nuevo." | `utils/mensaje-error.ts` |
+| 3 | `PrestatarioService` (sanción activa), `DashboardService` (el mes) y `MonitoreoService` (marcar vencidos) leían la hora de la PC (`LocalDate.now()`), mientras el resto usa el reloj del sistema (`HorarioAtencion.ahora()`), que las pruebas pueden fijar. No fallaba en uso real (la JVM está en hora de Lima), pero era inconsistente y esas partes no se podían probar con una fecha fija | Los tres reciben `HorarioAtencion` y piden `horario.ahora()` | `PrestatarioService`, `DashboardService`, `MonitoreoService` |
+| 4 | `getNombre() + " " + getApellido()` escrito en 5 lugares | `Usuario.nombreCompleto()` | `entity/Usuario.java`, `AuditoriaDTO`, `IncidenciaDTO`, `ReservaRespuestaDTO`, `ReporteService` |
+| 5 | `valor == null ? "" : valor.toString()` a mano en `ReporteService` | `Objects.toString(valor, "")`, de Java | `ReporteService` (3 lugares) |
+
+**Primero la prueba** (todas en rojo antes del cambio):
+- 3: `PrestatarioServiceTest` (+1, la sanción se revisa con la fecha del reloj fijo), `DashboardServiceTest` (+1, con el reloj en febrero el dashboard toma febrero y marca los vencidos con esa hora) y `MonitoreoServiceTest` (+1, marca los vencidos con la hora del reloj; el estado de salud se simula con `IndicatedHealthDescriptor`, porque en Spring Boot 4 `HealthDescriptor` es una interfaz sellada que Mockito no puede simular).
+- 4: [UsuarioTest](backend/src/test/java/com/alejandria/biblioteca/entity/UsuarioTest.java) (1, nuevo).
+- 1 y 2: [mensaje-error.spec.ts](frontend/src/app/utils/mensaje-error.spec.ts) (3, nuevo): sin conexión (y sin nombrar un puerto), con el mensaje del backend y con el texto por defecto de cada pantalla.
+- 5 no cambia el comportamiento: lo cubren `ReporteServiceTest` y `ReporteBdTest`.
+- Total: **306 del backend y 76 del frontend**, todas pasan contra Neon (04/11). El build del frontend sale sin avisos.
+
+**No se recomendó:** MapStruct (librería nueva para poco ahorro), file-saver (solo 8 líneas) y partir `user-catalog` (no ahorra líneas y es riesgoso antes de la sustentación).
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1286,6 +1309,7 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 - [x] Commits del 27/10 en la rama `claude/lucid-galileo-7xcs2c`: `bec3b25` (RF que funcionaban en parte) y `a2fb017` (stock 0)
 - [x] Ejecutar `database/migraciones/migracion_03_reserva_cola.sql` en Neon y correr `./mvnw test` contra Neon (27/10: 158 pruebas, todas pasan)
 - [x] Commits del 27/10 (noche): hora de Lima, base de datos y documentación. La rama `claude/lucid-galileo-7xcs2c` pasó a `main` con un commit de unión (`git merge --no-ff`, igual que "Create a merge commit" de GitHub), así que `bec3b25` y `a2fb017` conservan su código
+- [x] Tercer avance en GitHub (04/11): `9f2e698`, junto con los commits del 03/11 y el merge `5c76d16`
 - [ ] 🔴 Actualizar el informe con la sección 7 de `PLAN_INFORME.md`
 
 ## Capturas para el anexo
@@ -1376,7 +1400,7 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 11 | B4: terminal con `ConcurrenciaStockTest` en verde (y opcional: el rojo sin el `@Lock`) | ⬜ |
 | 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Falta Firefox** (tómenla en su PC) | 🟡 |
 | 11 | B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen | ⬜ |
-| 11 | Terminal con `./mvnw test` → **302** y `npx ng test --watch=false` → **73** (reemplaza a la de 285) | ⬜ |
+| 11 | Terminal con `./mvnw test` → **306** y `npx ng test --watch=false` → **76** (reemplaza a la de 285) | ⬜ |
 | 12 | D20: terminal con `HorarioAtencionTest` en verde (8 pruebas, incluidas las 2 de la medianoche) y el código de `limitarAlCierre(inicio, limite)` | ⬜ |
 | 12 | D14: `LibroDao` con el comentario del SQL equivalente encima de `buscarPorAutor` | ⬜ |
 | 12 | D8: terminal de `./mvnw test` con los nombres de las pruebas con tildes ("Actualización de reservas") | ⬜ |

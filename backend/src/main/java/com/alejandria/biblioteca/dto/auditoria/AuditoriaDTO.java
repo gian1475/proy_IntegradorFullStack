@@ -19,6 +19,6 @@ public record AuditoriaDTO(
     public static AuditoriaDTO desde(AuditoriaInventario a) {
         return new AuditoriaDTO(a.getIdAuditoria(), a.getLibro().getIdLibro(), a.getLibro().getTitulo(),
                 a.getLibro().getIsbn(), a.getFechaAuditoria(), a.getStockSistema(), a.getConteoFisico(), a.coincide(),
-                a.getAdministrador().getNombre() + " " + a.getAdministrador().getApellido());
+                a.getAdministrador().nombreCompleto());
     }
 }

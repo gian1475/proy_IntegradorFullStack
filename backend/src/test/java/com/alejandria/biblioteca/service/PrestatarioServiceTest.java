@@ -40,6 +40,18 @@ class PrestatarioServiceTest {
         valeria = new Usuario(5, "Valeria", "Flores", "73456783", "valeria@x.pe", "x", "suspendido");
     }
 
+    // la sancion se revisa con la fecha del reloj del sistema (HorarioAtencion), no con la de la PC:
+    // asi las pruebas pueden fijar el dia (aqui el 03/11/2026, aunque se corra otro dia)
+    @Test
+    void laSancionSeRevisaConLaFechaDelRelojDelSistema() {
+        valeria.setEstado("activo");
+        when(usuarioDao.esPrestatario(5)).thenReturn(true);
+
+        servicio.validarHabilitado(valeria);
+
+        verify(prestamoDao).tieneSancionActiva(5, AHORA.toLocalDate());
+    }
+
     @Test
     void laSuspensionQueTerminoSeCumpleYElPrestatarioVuelveAActivo() {
         Sancion s = suspensionDe(valeria, AHORA.minusHours(14)); // termino ayer a las 20:00
