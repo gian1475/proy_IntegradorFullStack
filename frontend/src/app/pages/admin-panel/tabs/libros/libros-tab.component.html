@@ -11,19 +11,19 @@
     <div class="row g-3 mb-3">
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="titulo">Título</label>
-        <input class="form-control" id="titulo" name="titulo" maxlength="150" [(ngModel)]="form.titulo" />
+        <input class="form-control" id="titulo" name="titulo" [disabled]="idEditando() !== null" maxlength="150" [(ngModel)]="form.titulo" />
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="isbn">ISBN</label>
-        <input class="form-control" id="isbn" name="isbn" maxlength="20" [(ngModel)]="form.isbn" />
+        <input class="form-control" id="isbn" name="isbn" [disabled]="idEditando() !== null" maxlength="20" [(ngModel)]="form.isbn" />
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="editorial">Editorial</label>
-        <input class="form-control" id="editorial" name="editorial" maxlength="100" [(ngModel)]="form.editorial" />
+        <input class="form-control" id="editorial" name="editorial" [disabled]="idEditando() !== null" maxlength="100" [(ngModel)]="form.editorial" />
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="anio">Año de publicación</label>
-        <input class="form-control" id="anio" name="anio" type="number" min="1000" max="2100" [(ngModel)]="form.anioPublicacion" />
+        <input class="form-control" id="anio" name="anio" [disabled]="idEditando() !== null" type="number" min="1000" max="2100" [(ngModel)]="form.anioPublicacion" />
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="stock">Stock (ejemplares disponibles)</label>
@@ -39,7 +39,7 @@
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="categoria">Categoría</label>
-        <select class="form-select" id="categoria" name="categoria" [(ngModel)]="form.idCategoria">
+        <select class="form-select" id="categoria" name="categoria" [disabled]="idEditando() !== null" [(ngModel)]="form.idCategoria">
           <option [ngValue]="null">Seleccione</option>
           @for (c of categorias(); track c.idCategoria) {
             <option [ngValue]="c.idCategoria">{{ c.nombre }}</option>
@@ -48,7 +48,7 @@
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="autores">Autores (Ctrl + clic para varios)</label>
-        <select class="form-select" id="autores" name="autores" multiple [(ngModel)]="form.idsAutores">
+        <select class="form-select" id="autores" name="autores" multiple [disabled]="idEditando() !== null" [(ngModel)]="form.idsAutores">
           @for (a of autores(); track a.idAutor) {
             <option [ngValue]="a.idAutor">{{ a.nombre }} {{ a.apellido }}</option>
           }
@@ -58,6 +58,7 @@
     <div class="d-flex flex-wrap gap-2">
       <button type="submit" class="btn btn-primary btn-sm">{{ idEditando() === null ? 'Registrar' : 'Guardar cambios' }}</button>
       @if (idEditando() !== null) {
+        <small class="form-text align-self-center w-100 order-first mb-1">Al editar solo se modifica el <strong>stock</strong>; los demás datos quedan como se registraron.</small>
         <button type="button" class="btn btn-outline-secondary btn-sm" (click)="cancelarEdicion()">Cancelar</button>
       }
     </div>

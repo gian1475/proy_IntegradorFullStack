@@ -143,6 +143,7 @@ public class ReporteService {
             case "stock" -> stockPorCategoria();
             case "indicadores" -> indicadores(rango);
             case "tiempos" -> tiempos(rango);
+            case "pordia" -> prestamosPorDia(rango);
             default -> throw new NegocioException(HttpStatus.BAD_REQUEST, "Tipo de reporte no válido");
         };
     }
@@ -249,8 +250,16 @@ public class ReporteService {
         }
         filas.add(new String[] {"Total", String.valueOf(totales[0]), String.valueOf(totales[1]),
                                 String.valueOf(totales[2]), String.valueOf(totales[3])});
+        // detalle que sustenta los totales: cada libro (sin los de baja) con su categoria, stock y estado
+        filas.add(new String[] {"", "", "", "", ""});
+        filas.add(new String[] {"DETALLE POR LIBRO", "Título", "Ejemplares disponibles", "ISBN", "Estado"});
+        for (Libro l : libroDao.findByEstadoLibroNotOrderByTitulo("baja")) {
+            filas.add(new String[] {l.getCategoria() == null ? "-" : l.getCategoria().getNombre(), l.getTitulo(),
+                                    String.valueOf(l.getStock()), l.getIsbn(), l.getEstadoLibro()});
+        }
         return new TablaReporte("Stock por categoría", "Al " + formatear(LocalDateTime.now()), columnas, filas,
-                List.of("Muestra el stock de este momento: no depende del rango de fechas."));
+                List.of("Muestra el stock de este momento: no depende del rango de fechas.",
+                        "Debajo de los totales está el detalle por libro: la suma de sus ejemplares da el total."));
     }
 
     // reporte indicadores: los 4 del apartado 1.2.2 calculados con los prestamos del rango. sin datos -> "Sin dato"
@@ -299,6 +308,46 @@ public class ReporteService {
                                 duracion(sumaMinutos / cantidadTotal), duracion(maximoTotal)});
         return new TablaReporte("Tiempos de préstamo", rango.texto(), columnas, filas,
                 List.of("Tiempo desde que se entrega el libro hasta que se devuelve. Solo cuenta los préstamos devueltos."));
+    }
+
+    // reporte por dia (R4 maximo, minimo y promedio): cuantos prestamos hubo cada dia del rango (sin anulados),
+    // el dia con mas, el dia con menos y el promedio por dia. debajo, los prestamos de esos dias para verificarlos
+    private TablaReporte prestamosPorDia(RangoFechas rango) {
+        java.util.TreeMap<LocalDate, List<ReportePrestamoDTO>> porDia = new java.util.TreeMap<>();
+        for (ReportePrestamoDTO p : prestamoDao.listarParaReporte(rango.inicio(), rango.fin())) {
+            if ("anulado".equals(p.estadoPrestamo())) continue;
+            porDia.computeIfAbsent(p.fechaPrestamo().toLocalDate(), d -> new ArrayList<>()).add(p);
+        }
+        String[] columnas = {"Sección", "Fecha", "Préstamos del día", "N°", "Prestatario", "Libro", "Inicio", "Estado"};
+        List<String[]> filas = new ArrayList<>();
+        DateTimeFormatter dia = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        if (porDia.isEmpty()) {
+            filas.add(new String[] {"Sin préstamos en el periodo", "", "0", "", "", "", "", ""});
+            return new TablaReporte("Préstamos por día (máximo, mínimo y promedio)", rango.texto(), columnas, filas, List.of());
+        }
+        for (var e : porDia.entrySet()) {
+            filas.add(new String[] {"Préstamos por día", e.getKey().format(dia), String.valueOf(e.getValue().size()), "", "", "", "", ""});
+        }
+        var max = porDia.entrySet().stream().max(java.util.Comparator.comparingInt(e -> e.getValue().size())).orElseThrow();
+        var min = porDia.entrySet().stream().min(java.util.Comparator.comparingInt(e -> e.getValue().size())).orElseThrow();
+        int total = porDia.values().stream().mapToInt(List::size).sum();
+        double promedio = (double) total / porDia.size();
+        filas.add(new String[] {"MÁXIMO (día con más préstamos)", max.getKey().format(dia), String.valueOf(max.getValue().size()), "", "", "", "", ""});
+        filas.add(new String[] {"MÍNIMO (día con menos préstamos)", min.getKey().format(dia), String.valueOf(min.getValue().size()), "", "", "", "", ""});
+        filas.add(new String[] {"PROMEDIO por día con préstamos", porDia.size() + " días", String.format(Locale.US, "%.2f", promedio), "", "", "", "", ""});
+        agregarDetalleDia(filas, "Detalle del día MÁXIMO", max.getKey().format(dia), max.getValue());
+        agregarDetalleDia(filas, "Detalle del día MÍNIMO", min.getKey().format(dia), min.getValue());
+        return new TablaReporte("Préstamos por día (máximo, mínimo y promedio)", rango.texto(), columnas, filas,
+                List.of("Total de préstamos del periodo (sin anulados): " + total + ".",
+                        "Promedio = total / días que tuvieron al menos un préstamo.",
+                        "Las filas de detalle permiten contar a mano los préstamos del día máximo y del mínimo."));
+    }
+
+    private void agregarDetalleDia(List<String[]> filas, String seccion, String fecha, List<ReportePrestamoDTO> prestamos) {
+        for (ReportePrestamoDTO p : prestamos) {
+            filas.add(new String[] {seccion, fecha, "", String.valueOf(p.idPrestamo()), p.prestatario(), p.tituloLibro(),
+                                    formatear(p.fechaPrestamo()), p.estadoPrestamo()});
+        }
     }
 
     // ---------- EXCEL con Apache POI ----------

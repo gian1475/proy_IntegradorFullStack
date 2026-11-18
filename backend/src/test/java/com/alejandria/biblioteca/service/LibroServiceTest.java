@@ -126,7 +126,6 @@ class LibroServiceTest {
         Libro libro = libro("prestado");
         libro.setStock(0); // sus ejemplares estan prestados
         when(libroDao.findById(10)).thenReturn(Optional.of(libro));
-        when(categoriaDao.findById(4)).thenReturn(Optional.of(new Categoria(4, "Tecnología", null)));
         when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertEquals("prestado", servicio.actualizar(10, formulario(0)).estadoLibro());
@@ -152,7 +151,6 @@ class LibroServiceTest {
         Libro libro = libro("prestado");
         libro.setStock(0);
         when(libroDao.findById(10)).thenReturn(Optional.of(libro));
-        when(categoriaDao.findById(4)).thenReturn(Optional.of(new Categoria(4, "Tecnología", null)));
         when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
         when(colaEspera.asignarAlSiguiente(10)).thenReturn(true, false); // hay 1 persona en la cola
 
@@ -207,7 +205,6 @@ class LibroServiceTest {
         Libro libro = libro("mantenimiento");
         libro.setStock(0);
         when(libroDao.findById(10)).thenReturn(Optional.of(libro));
-        when(categoriaDao.findById(4)).thenReturn(Optional.of(new Categoria(4, "Tecnología", null)));
         when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
 
         LibroFormDTO form = formulario(1); // el ejemplar ya se reparó
@@ -217,6 +214,27 @@ class LibroServiceTest {
 
     private LibroFormDTO formulario(int stock) {
         return new LibroFormDTO("Clean Code", "9780132350884", 2008, "Prentice Hall", stock, 4, null);
+    }
+
+    @Test
+    void alEditarSoloSeModificaElStock() {
+        Libro libro = libro("disponible");
+        libro.setIsbn("9780132350884");
+        libro.setEditorial("Prentice Hall");
+        libro.setAnioPublicacion(2008);
+        when(libroDao.findById(10)).thenReturn(Optional.of(libro));
+        when(libroDao.save(any(Libro.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // llegan otros datos en el formulario, pero solo debe cambiar el stock
+        LibroFormDTO form = new LibroFormDTO("Otro titulo", "1111111111", 1999, "Otra editorial", 5, 2, null);
+        servicio.actualizar(10, form);
+
+        assertEquals(5, libro.getStock());
+        assertEquals("Clean Code", libro.getTitulo());
+        assertEquals("9780132350884", libro.getIsbn());
+        assertEquals("Prentice Hall", libro.getEditorial());
+        assertEquals(2008, libro.getAnioPublicacion());
+        verify(categoriaDao, never()).findById(any());
     }
 
     private Libro libro(String estado) {

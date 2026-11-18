@@ -25,7 +25,7 @@ class ReporteBdTest {
     @Autowired private ReporteService reporteService;
 
     @ParameterizedTest
-    @ValueSource(strings = {"prestamos", "devoluciones", "reservas", "incidencias", "bajas", "stock", "indicadores", "tiempos"})
+    @ValueSource(strings = {"prestamos", "devoluciones", "reservas", "incidencias", "bajas", "stock", "indicadores", "tiempos", "pordia"})
     void cadaReporteSeArmaConYSinFechas(String tipo) {
         TablaReporte todas = reporteService.armar(tipo, null, null);
         TablaReporte delMes = reporteService.armar(tipo, LocalDate.now().withDayOfMonth(1), LocalDate.now());

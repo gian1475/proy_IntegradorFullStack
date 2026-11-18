@@ -1,0 +1,56 @@
+@if (mensajeError()) {
+  <div class="alert alert-danger">{{ mensajeError() }}</div>
+}
+
+<section class="card card-body mb-4">
+  <h2 class="h6 fw-bold text-primary mb-1">Libros por categoría</h2>
+  <p class="small text-body-secondary mb-3">
+    Consulta de dos tablas: <strong>libro</strong> (título, ISBN, stock, estado) +
+    <strong>categoria</strong> (nombre), unidas por <code>libro.id_categoria = categoria.id_categoria</code>.
+    No incluye los libros dados de baja.
+  </p>
+
+  <div class="d-flex flex-wrap gap-2 align-items-end mb-3">
+    <div>
+      <label class="form-label small mb-1" for="filtroCategoria">Categoría</label>
+      <select id="filtroCategoria" class="form-select form-select-sm" [(ngModel)]="categoria" (ngModelChange)="consultar()">
+        <option value="">Todas</option>
+        @for (c of categorias(); track c.idCategoria) {
+          <option [value]="c.nombre">{{ c.nombre }}</option>
+        }
+      </select>
+    </div>
+    <span class="small text-body-secondary">{{ libros().length }} libros</span>
+  </div>
+
+  @if (libros().length === 0) {
+    <div class="text-center text-body-secondary py-4">No hay libros en esta categoría.</div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Título <span class="text-body-secondary fw-normal">(libro)</span></th>
+            <th>ISBN <span class="text-body-secondary fw-normal">(libro)</span></th>
+            <th>Stock <span class="text-body-secondary fw-normal">(libro)</span></th>
+            <th>Estado <span class="text-body-secondary fw-normal">(libro)</span></th>
+            <th>Categoría <span class="text-body-secondary fw-normal">(categoria)</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of libros(); track l.idLibro) {
+            <tr>
+              <td>{{ l.idLibro }}</td>
+              <td>{{ l.titulo }}</td>
+              <td>{{ l.isbn }}</td>
+              <td>{{ l.stock }}</td>
+              <td>{{ l.estadoLibro }}</td>
+              <td>{{ l.categoria }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

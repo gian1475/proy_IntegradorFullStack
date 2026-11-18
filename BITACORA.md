@@ -1226,6 +1226,23 @@ Revisión de todo el código buscando errores, código repetido y código muerto
 
 ---
 
+## Revisión del avance (11/11/2026, 09:24)
+
+Antes de la revisión del profe se cruzó lo pedido en la clase del 09/11 (búsqueda, consulta, eliminación lógica y física, y los 6 reportes) con el sistema. Guía para la demo: [docs/GUIA_REVISION_11_NOV.md](docs/GUIA_REVISION_11_NOV.md).
+
+| Qué faltaba | Qué se hizo | Archivos |
+|---|---|---|
+| ⚠️ **Faltaba una consulta de DOS tablas en las categorías.** El profe pide una consulta de **solo 2 tablas** (no 3 o más). "Préstamos activos" e "Historial" unen 3 o 4 tablas, y "Stock por categoría" (libro + categoria) es un **reporte**, no una consulta | Pestaña nueva del admin **"Libros por categoría"**: `libro JOIN categoria` (sin los de baja), con filtro por categoría. Cada columna dice de qué tabla sale: de `libro` salen título, ISBN, stock y estado; de `categoria`, el nombre. Endpoint `GET /api/libros-por-categoria?categoria=` (admin y encargado) | `LibroDao.consultarConCategoria`, `LibroService`, `CatalogoController`, `dto/libro/LibroCategoriaDTO.java`, `tabs/libros-categoria/` (nuevo), `admin-panel` |
+| Reporte de **máximo, mínimo y promedio** sin los registros que lo sustentan | Reporte nuevo **"Préstamos por día"** (`pordia`): préstamos de cada día, día con más, día con menos, promedio por día y el detalle de los préstamos de esos dos días (sin anulados) | `ReporteService.prestamosPorDia`, `reporte.service.ts` |
+| Al **editar un libro** el admin podía cambiar todo (título, ISBN, editorial, año, categoría, autores) | **Pedido del profe (11/11): al editar solo se modifica el stock.** En el formulario, los demás campos salen bloqueados (`[disabled]`) con un aviso. En el backend, `actualizar` solo copia `form.stock()`: aunque alguien mande otros datos por Postman, se ignoran. Se quitó `existsByIsbnAndIdLibroNot`, que quedó sin uso | `LibroService.actualizar`, `LibroDao`, `libros-tab.component.html`, `LibroServiceTest.alEditarSoloSeModificaElStock` (nueva) |
+| Reporte de **stock** solo con totales | Debajo de los totales, el detalle por libro (categoría, título, ejemplares, ISBN, estado) | `ReporteService.stockPorCategoria` |
+
+**Pruebas:** `LibroDaoTest.consultaDeDosTablasLibroYCategoria` (nueva, contra Neon) y `ReporteBdTest` con `pordia`: pasan. Total de reportes: 9.
+
+**Ojo:** "Clean Code" ya no está en el catálogo de Neon (dado de baja o borrado), por eso fallan 3 pruebas viejas de `LibroDaoTest` que lo buscan. No es un error del código: hay que reactivar el libro o cambiar el título en esas pruebas.
+
+---
+
 ## Revisión de la bitácora contra el plan del informe (17/11) ✅
 
 Antes de empezar a cambiar la vAlpha, se comparó esta bitácora con `PLAN_INFORME.md` y con el texto de la vAlpha. **No se tocó el código ni el informe**: solo los dos archivos de registro.
