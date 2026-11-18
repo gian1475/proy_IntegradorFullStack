@@ -8,7 +8,7 @@ Sirve para preparar la sustentación: cada integrante debe poder explicar cualqu
 ## Cómo levantar el proyecto
 
 1. **Credenciales de la BD**: crear `backend/.env` (copiar de [backend/.env.example](backend/.env.example)) y completar URL, usuario y contraseña de Neon. Este archivo **no se sube a GitHub**.
-2. **Base de datos**: si la BD de Neon se creó con una versión anterior del script, ejecutar en el SQL Editor de Neon las migraciones que falten (carpeta `database/migraciones/`), en orden (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`, `migracion_04_quitar_fk_hibernate.sql`). Para tener los libros y los movimientos de la demo, ejecutar `database/datos_demo.sql`. Todos se pueden ejecutar más de una vez. (En Neon ya están las migraciones 01 y 02 y los libros, al 21/10, y la 03, la 04 y los movimientos desde el 27/10.)
+2. **Base de datos**: si la BD de Neon se creó con una versión anterior del script, ejecutar en el SQL Editor de Neon las migraciones que falten (carpeta `database/migraciones/`), en orden (`migracion_01_prestamo.sql`, `migracion_02_sancion_monto.sql`, `migracion_03_reserva_cola.sql`, `migracion_04_quitar_fk_hibernate.sql`, `migracion_05_tap_ipi.sql`). **Sin la 05 el backend no arranca** (`ddl-auto=validate` no encuentra `prestamo.inicio_atencion` ni `auditoria_inventario`). Para tener los libros y los movimientos de la demo, ejecutar `database/datos_demo.sql`. Todos se pueden ejecutar más de una vez. (En Neon ya están las migraciones 01 y 02 y los libros, al 21/10; la 03, la 04 y los movimientos desde el 27/10, y la 05 desde el 03/11.)
 3. **Backend** (desde la carpeta `backend/`, porque ahí busca el `.env`):
    ```
    cd backend
@@ -1226,6 +1226,88 @@ Revisión de todo el código buscando errores, código repetido y código muerto
 
 ---
 
+## Revisión de la bitácora contra el plan del informe (17/11) ✅
+
+Antes de empezar a cambiar la vAlpha, se comparó esta bitácora con `PLAN_INFORME.md` y con el texto de la vAlpha. **No se tocó el código ni el informe**: solo los dos archivos de registro.
+
+**Resultado:** todo lo de la bitácora hasta el 04/11 ya tenía su tarea en el plan (I68 a I74). Faltaban 4 cosas, que quedaron en la tarea nueva **I75**:
+
+| Qué faltaba | Dónde va en el informe |
+|---|---|
+| Los commits del 04/11 y el 10/11 (`f353508`, `729b6f6`, `91f8ece`, `58920cd`). Además, la lista de commits estaba repartida en tres tareas: ahora hay una sola tabla con las fechas de Lima | Anexo E |
+| `Prototipo_Sistema/` (exportación de Pencil con 7 pantallas navegables) | 3.2 (decide el equipo) |
+| El párrafo de CORS todavía dice solo `http://localhost:4200`; desde B5 se configura con `app.cors.origenes` | 2.1.4.6 |
+| El Anexo F dice que el frontend se abre con `npm start` en el puerto 4200; desde B5 el `.jar` trae las pantallas (puerto 8080) | Anexo F y Figura 104 |
+
+**Datos viejos que se corrigieron:**
+- `PLAN_INFORME.md`:
+  - los Anexos A, B y C tenían versiones viejas (Hibernate 7.4.5, Validator 9.1.3, Lombok 1.18.46: se comprobaron en el `.jar` 7.4.13, 9.1.5 y 1.18.48), 205/24 pruebas y CORS solo `localhost:4200`;
+  - la Tabla 34 decía "al 03/11" (sus números son del 04/11);
+  - el Gantt cortaba en la semana 12 o 13 (ahora es la semana de la entrega);
+  - el merge `5c76d16` figuraba sin subir;
+  - el ejemplo de TDD decía "D15", y hay dos D15 distintos en esta bitácora.
+- Esta bitácora:
+  - "Cómo levantar el proyecto" no nombraba la migración 05, sin la cual el backend no arranca;
+  - "Pendientes generales" todavía decía "informe V8";
+  - 4 capturas de terminal con totales viejos de pruebas quedaron marcadas como "ya no sirve".
+
+**Fechas de los commits:** `git log` muestra los commits de la nube en hora UTC. En hora de Lima, los de RF12 a TAP e IPI son del **02/11 por la noche** (21:17 a 21:57) y los de B1 a B9, del 03/11. En esta bitácora esa sesión figura como "03/11". En el Anexo E se usa la fecha de cada commit en hora de Lima.
+
+---
+
+## Informe vBeta con control de cambios (17/11) ✅
+
+El equipo pidió que Claude aplique en el informe todo lo de `PLAN_INFORME.md` (antes el informe lo redactaba solo el equipo). Resultado: [docs/ProyectoFinal_Integrador_vBeta.docx](docs/ProyectoFinal_Integrador_vBeta.docx). **La vAlpha no se tocó.**
+
+- **Con control de cambios de Word** (autor "Claude"): cada frase cambiada se ve tachada y con el texto nuevo. Son unos 200 reemplazos, 90 filas de tabla y 27 párrafos nuevos (I69 a I75, I73 e I74.3).
+- **Se rehicieron con los datos del código:**
+  - la Tabla 34 (306 y 76 pruebas), la 35 de permisos y la 36 de librerías (versiones comprobadas en el `.jar`);
+  - las filas nuevas de las Tablas 32, 47, 51, 52 y 58 (todos los commits del 27/10 al 10/11, con fecha de Lima) y del Anexo G;
+  - el Gantt, recalculado con las horas de la EDT (92 %, como propuesta).
+- **Tablas nuevas:**
+  - casos de prueba de caja negra (19 casos, sin "Resultado obtenido": lo llena el equipo);
+  - la tabla `auditoria_inventario` en el diccionario.
+  - Sus títulos usan el mismo campo SEQ de Word, así que se renumeran con F9. Las menciones a tablas en el texto se corrigieron con la numeración nueva.
+- **Se repuso la "Conclusión general"**, que la vAlpha había borrado (se recuperó de la V8 en git y se actualizó).
+- **22 comentarios de Word** marcan lo que no se puede hacer desde el código: figuras para rehacer o agregar, la ecuación de 2.2.6 y los pasos finales (F9, aceptar los cambios).
+- **Cómo se hizo:** un script de Python (lxml) que desarma la vAlpha, cambia cada frase marcándola con `w:del` y `w:ins`, y la vuelve a armar. Se validó con el validador de la skill de Word: todas las validaciones pasan, cada cambio está marcado y no se perdió ninguna imagen. No hay LibreOffice en la PC, así que no se vio en PDF: **hay que abrirla en Word y revisarla**.
+- **Lo que falta (equipo):** I76 de `PLAN_INFORME.md`.
+
+---
+
+## Caja negra, figuras y capturas (17/11, noche) ✅
+
+**Sistema usado:** el `.jar` armado con el código de GitHub (`origin/main` = `4742236`, del 11/11), compilado en una copia aparte (`git worktree` en una carpeta temporal), porque la copia local estaba un commit atrás y tenía cambios sin commit. Contra Neon y con el horario de prueba `APP_HORARIO_APERTURA=00:00` y `APP_HORARIO_CIERRE=23:59`, porque fue de noche (el código no cambia).
+
+**⚠️ Para el equipo:**
+- La copia local de `main` está **un commit atrás** de GitHub (`4742236`). Antes de hacer `git pull`, guarden o hagan commit de los cambios locales: `BITACORA.md` cambió en los dos lados.
+- El commit `4742236` dice que 3 pruebas viejas de `LibroDaoTest` fallan porque "Clean Code" ya no está en Neon.
+
+**Casos de caja negra (Tabla 35 de la vBeta):** se probaron los 19 por la pantalla con Chrome automatizado (puppeteer-core en una carpeta temporal, fuera del proyecto).
+- Todos cumplen.
+- CP04 rechaza la contraseña con "La contraseña no cumple los requisitos de seguridad".
+- CP19 lo frena el frontend con "Escriba cuántos ejemplares contó (0 o más)".
+- Las capturas están en [docs/capturas/2026-11-17/caja-negra/](docs/capturas/2026-11-17/caja-negra/).
+
+**Datos que quedaron en Neon (son de la prueba):**
+- préstamos #330 a #334 (devueltos al final);
+- #332 *El contrato social* devuelto dañado (el admin repuso el stock a 1);
+- incidencias #145 (Valeria, daño + suspensión cancelada) y #146 (pepe grillo, retraso + multa pagada);
+- reservas #107 a #109 (canceladas);
+- la reserva #23 eliminada (CP18);
+- dos conteos de auditoría (Core Java coincide, Sapiens no) y el TAP de los préstamos hechos por la pantalla.
+- Diego quedó bloqueado 15 minutos (CP02) y se desbloquea solo.
+
+**Observación (no se cambió el código):** `GET /api/libros` no vence las reservas: el catálogo puede mostrar un libro "reservado" con stock 0 aunque su reserva ya venció, hasta la siguiente operación con reservas o préstamos (pasó con *Cien Años de Soledad*).
+
+**Figuras:**
+- **Código:** se armaron desde los archivos reales, con sus números de línea.
+- **Diagramas:** se dibujaron con HTML y SVG (sin herramientas externas).
+- **Pantallas:** son capturas del sistema.
+- Todo está en [docs/capturas/2026-11-17/figuras/](docs/capturas/2026-11-17/figuras/). Detalle en I77 de `PLAN_INFORME.md`.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1300,9 +1382,9 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 
 Lo que falta está separado en dos archivos locales (no se suben a GitHub):
 - [PLAN_CODIGO.md](PLAN_CODIGO.md): errores, reglas, eliminación física, limpieza y sustentación (se trabaja con Claude Code).
-- [PLAN_INFORME.md](PLAN_INFORME.md): correcciones del documento, con el diccionario de datos ya corregido y los datos del código para redactar (se trabaja junto con el informe V8, `docs/Avance_III_IntegradorV8_corregido.docx`).
+- [PLAN_INFORME.md](PLAN_INFORME.md): correcciones del documento, con el diccionario de datos ya corregido y los datos del código para redactar (se trabaja junto con el informe vAlpha, `docs/ProyectoFinal_Integrador_vAlpha.docx`, desde el 10/11; antes la V8).
 
-Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan en la sección 6 de `PLAN_INFORME.md`, y el detalle de lo que hay que reescribir en la sección 7. Los dos planes se actualizaron el 27/10.
+Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan en la sección 6 de `PLAN_INFORME.md`, y el detalle de lo que hay que reescribir en la sección 7. Los dos planes se actualizaron el 27/10. El 17/11 se comparó esta bitácora con `PLAN_INFORME.md` (ver "Revisión de la bitácora contra el plan del informe").
 
 - [x] Commit del login (`44597ad`), del CRUD (`263c935`) y de librerías (`f15dd2a`)
 - [x] Prioridad 5: `.jar`, README y comentario de `123456`
@@ -1310,7 +1392,8 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 - [x] Ejecutar `database/migraciones/migracion_03_reserva_cola.sql` en Neon y correr `./mvnw test` contra Neon (27/10: 158 pruebas, todas pasan)
 - [x] Commits del 27/10 (noche): hora de Lima, base de datos y documentación. La rama `claude/lucid-galileo-7xcs2c` pasó a `main` con un commit de unión (`git merge --no-ff`, igual que "Create a merge commit" de GitHub), así que `bec3b25` y `a2fb017` conservan su código
 - [x] Tercer avance en GitHub (04/11): `9f2e698`, junto con los commits del 03/11 y el merge `5c76d16`
-- [ ] 🔴 Actualizar el informe con la sección 7 de `PLAN_INFORME.md`
+- [x] 10/11 (el equipo): depuración del 04/11 (`729b6f6`), informe vAlpha (`91f8ece`) y prototipo de Pencil en `Prototipo_Sistema/` + resúmenes de clases en `docs/clases/` (`58920cd`)
+- [ ] 🔴 Actualizar el informe con la sección 7 de `PLAN_INFORME.md` (orden al inicio del plan; la última tarea es I75)
 
 ## Capturas para el anexo
 
@@ -1341,12 +1424,12 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 4 | PDF descargado y abierto | ⬜ |
 | 4 | Pestaña Monitoreo del admin con las métricas | ✅ `admin-monitoreo.png` |
 | 4 | Navegador en `http://localhost:8081/actuator/health` (db: UP) | ⬜ |
-| 4 | Terminal con `./mvnw test` → 160 pruebas, BUILD SUCCESS | ⬜ |
+| 4 | ~~Terminal con `./mvnw test` → 160 pruebas, BUILD SUCCESS~~ | ➖ ya no sirve: la reemplaza la de 306 y 76 (prioridad 11) |
 | 6 | Código de `BibliotecaApplication.fijarZonaHoraria` y `ZonaHorariaTest` pasando (hora de Lima) | ⬜ |
 | 5 | Dashboard del admin (ya está en `docs/capturas/admin-dashboard.png`) | ✅ |
 | 5 | Alertas del encargado (ya está en `docs/capturas/encargado-alertas-15min.png`) | ✅ |
 | 5 | Catálogo con portadas reales (ya está en `docs/capturas/prestatario-catalogo.png`) | ✅ |
-| 5 | Terminal con `npx ng test --watch=false` → 24 pruebas del frontend (eran 16 hasta el 02/11) | ⬜ |
+| 5 | ~~Terminal con `npx ng test --watch=false` → 24 pruebas del frontend (eran 16 hasta el 02/11)~~ | ➖ ya no sirve: la reemplaza la de 306 y 76 (prioridad 11) |
 | 5 | Encargado: préstamos activos con una fila amarilla (por vencer) y una roja (vencida) y los avisos arriba | ⬜ |
 | 5 | Encargado: modal de devolución con "Dañado" y el aviso de mantenimiento; admin: el libro en `mantenimiento` | 🟡 el modal: `encargado-devolucion-danado.png` (el libro en mantenimiento: en vivo) |
 | 5 | Prestatario → Mis Préstamos (uno activo y uno devuelto), junto al código de `buscarPorPrestatario` | ✅ `prestatario-mis-prestamos.png` (el código: captura aparte) |
@@ -1381,14 +1464,14 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 7 | Código: `SeguridadConfig` + `FiltroToken` y un controller con `@RolesAllowed` y `@AuthenticationPrincipal` | ⬜ |
 | 7 | Código: un DTO con anotaciones (`RegistroDTO`) y la respuesta 400 "El DNI debe tener 8 dígitos" (Postman, DevTools o el registro) | ⬜ |
 | 7 | Código: una entidad con `@Getter @Setter` (Lombok) | ⬜ |
-| 7 | Terminal con `./mvnw test` → 205 pruebas, BUILD SUCCESS (reemplaza a la de 160) | ⬜ |
+| 7 | ~~Terminal con `./mvnw test` → 205 pruebas, BUILD SUCCESS (reemplaza a la de 160)~~ | ➖ ya no sirve: la reemplaza la de 306 y 76 (prioridad 11) |
 | 9 | RF12/RF13: pestaña **Usuarios** con la tabla (prestatarios y encargados, uno `inactivo` con "Reactivar") — reemplaza a `admin-encargados.png` | ⬜ `admin-usuarios.png` |
 | 9 | RF12: formulario "Editar encargado" con el turno, y el mensaje "El DNI ya se encuentra registrado" al poner el DNI de otro | ⬜ `admin-usuario-editar.png`, `admin-usuario-dni-repetido.png` |
 | 9 | RF13: confirmación de "Dar de baja", el mensaje de éxito con el estado `inactivo` y el rechazo "tiene un libro prestado" | ⬜ `admin-usuario-baja.png`, `admin-usuario-baja-rechazada.png` (cambia datos: en la demo) |
 | 9 | RF13: el usuario dado de baja intenta entrar → "El usuario se encuentra inactivo" | ⬜ `login-usuario-inactivo.png` |
 | 9 | Reporte de bajas lógicas con el usuario `inactivo` | ⬜ |
 | 9 | Código: `UsuarioService.darDeBaja` y `UsuarioController` (`DELETE` que no borra) | ⬜ |
-| 9 | Terminal con `./mvnw test` → **265** pruebas y `npx ng test --watch=false` → **62** pruebas (reemplaza a las de 232 y 38) | ⬜ |
+| 9 | ~~Terminal con `./mvnw test` → **265** pruebas y `npx ng test --watch=false` → **62** pruebas (reemplaza a las de 232 y 38)~~ | ➖ ya no sirve: la reemplaza la de 306 y 76 (prioridad 11) |
 | 10 | RF15: "Mis Reservas" → modal "Cambiar fecha de recojo" y la tarjeta con la nueva fecha; admin → Reservas → "Cambiar fecha" | ⬜ `prestatario-cambiar-fecha.png`, `admin-reserva-cambiar-fecha.png` |
 | 10 | TAP: registrar un préstamo en vivo y el dashboard con el TAP del mes | ⬜ `admin-dashboard-tap-ipi.png` |
 | 10 | IPI: pestaña Auditoría con el IPI del mes, un conteo que coincide y otro que no (mensaje "NO coincide…") | ⬜ `admin-auditoria-ipi.png` |
@@ -1400,12 +1483,13 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 11 | B4: terminal con `ConcurrenciaStockTest` en verde (y opcional: el rojo sin el `@Lock`) | ⬜ |
 | 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Falta Firefox** (tómenla en su PC) | 🟡 |
 | 11 | B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen | ⬜ |
-| 11 | Terminal con `./mvnw test` → **306** y `npx ng test --watch=false` → **76** (reemplaza a la de 285) | ⬜ |
+| 11 | Terminal con `./mvnw test` → **306** y `npx ng test --watch=false` → **76** (reemplaza a todas las anteriores: 160, 205, 265 y 285) | ⬜ |
+| 11 | Anexo F (I75.4): el sistema abierto en `http://localhost:8080` desde el `.jar` único, sin `npm start` (reemplaza a la Figura 104) | ⬜ |
 | 12 | D20: terminal con `HorarioAtencionTest` en verde (8 pruebas, incluidas las 2 de la medianoche) y el código de `limitarAlCierre(inicio, limite)` | ⬜ |
 | 12 | D14: `LibroDao` con el comentario del SQL equivalente encima de `buscarPorAutor` | ⬜ |
 | 12 | D8: terminal de `./mvnw test` con los nombres de las pruebas con tildes ("Actualización de reservas") | ⬜ |
 | 13 | Semana 13: `AuthServiceLoginTest` en verde (5) y el código de una prueba (`conLaContrasenaIncorrectaNoEntra`) | ⬜ |
 | 13 | Semana 13: `ValidacionDtoTest` en verde (31), con los métodos de rangos (`laSuspensionRechazaMenosDe1OMasDe30Dias`) | ⬜ |
 | 13 | Semana 13: una prueba de integración con la BD en verde (`UsuarioBdTest` o `ConcurrenciaStockTest`) | ⬜ |
-| 13 | Casos de prueba funcionales (I73): una captura por mensaje (CP01 a CP18) | ⬜ |
+| 13 | Casos de prueba funcionales (I73, Tabla 35 de la vBeta): una captura por mensaje (CP01 a CP19) | ⬜ |
 | 13 | GitHub: la lista de commits con el **tercer commit** (para el Anexo E) | ⬜ |
