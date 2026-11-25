@@ -33,7 +33,6 @@ neon.json
 docs/Avance II Integrador (1).pdf
 docs/Avance_III_IntegradorV2.pdf
 docs/*.txt
-docs/clases/*.txt
 
 # Claude Code
 CLAUDE.md

@@ -234,6 +234,7 @@ public class PrestamoService {
             libroService.reponerStock(prestamo.getLibro().getIdLibro());
         }
         prestamo.setEstadoPrestamo("anulado"); // eliminacion logica: aqui cambia el estado
+        prestamo.setFechaAnulacion(horario.ahora()); // para filtrar el reporte de bajas logicas por periodo
         prestamoDao.save(prestamo);
         log.info("Préstamo #{} anulado (eliminación lógica)", idPrestamo);
     }

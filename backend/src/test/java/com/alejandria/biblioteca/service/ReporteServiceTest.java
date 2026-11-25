@@ -167,28 +167,58 @@ class ReporteServiceTest {
     }
 
     @Test
-    void lasBajasLogicasJuntanLibrosPrestamosAnuladosYUsuariosInactivos() {
+    void lasBajasLogicasSonUnListadoNumeradoPorFechaConElTotalAlFinal() {
         Libro deBaja = new Libro();
         deBaja.setIsbn("9780000000001");
         deBaja.setTitulo("Libro viejo");
         deBaja.setEstadoLibro("baja");
-        LocalDateTime inicio = LocalDateTime.of(2026, 10, 28, 9, 0);
+        deBaja.setFechaBaja(LocalDateTime.of(2026, 11, 25, 11, 0));
+        LocalDateTime inicio = LocalDateTime.of(2026, 11, 25, 9, 0);
         when(libroDao.findByEstadoLibroOrderByTitulo("baja")).thenReturn(List.of(deBaja));
-        when(prestamoDao.listarParaReporte(any(), any())).thenReturn(List.of(
-            new ReportePrestamoDTO(1, "Juan Estudiante", "33333333", "Carlos Librero", "Clean Code",
-                    inicio, inicio.plusHours(3), null, false, null, "anulado"),
-            new ReportePrestamoDTO(2, "Juan Estudiante", "33333333", "Carlos Librero", "Clean Code",
-                    inicio, inicio.plusHours(3), null, false, null, "activo") // este no es una baja
-        ));
-        when(usuarioDao.findByEstadoOrderByApellidoAscNombreAsc("inactivo"))
-                .thenReturn(List.of(usuario("Pedro", "Antiguo", "55555555", "inactivo")));
+        when(prestamoDao.listarAnulados(any(), any())).thenReturn(List.<Object[]>of(
+            new Object[] {7, "Juan Estudiante", "Clean Code", inicio, inicio.plusMinutes(5)}));
+        Usuario inactivo = usuario("Pedro", "Antiguo", "55555555", "inactivo");
+        inactivo.setFechaBaja(LocalDateTime.of(2026, 11, 25, 12, 0));
+        when(usuarioDao.findByEstadoOrderByApellidoAscNombreAsc("inactivo")).thenReturn(List.of(inactivo));
 
-        List<String[]> filas = servicio.armar("bajas", null, null).filas();
+        TablaReporte tabla = servicio.armar("bajas", LocalDate.of(2026, 11, 25), LocalDate.of(2026, 11, 25));
 
-        assertEquals(3, filas.size());
-        assertEquals("Libro", filas.get(0)[0]);
-        assertEquals("Préstamo", filas.get(1)[0]);
-        assertEquals("Usuario", filas.get(2)[0]);
+        // numerado del 1 al 3 y ordenado por la fecha de baja: préstamo (9:05), libro (11:00), usuario (12:00)
+        assertEquals(3, tabla.filas().size());
+        assertEquals("1", tabla.filas().get(0)[0]);
+        assertEquals("Préstamo", tabla.filas().get(0)[1]);
+        assertEquals("2", tabla.filas().get(1)[0]);
+        assertEquals("Libro", tabla.filas().get(1)[1]);
+        assertEquals("3", tabla.filas().get(2)[0]);
+        assertEquals("Usuario", tabla.filas().get(2)[1]);
+        assertEquals("25/11/2026 11:00", tabla.filas().get(1)[4]);
+        assertEquals("3 registros eliminados de manera lógica (1 libro, 1 préstamo anulado y 1 usuario inactivo).",
+                tabla.pie().get(0));
+    }
+
+    @Test
+    void lasBajasLogicasSeFiltranPorLaFechaDeBaja() {
+        Libro deAyer = new Libro();
+        deAyer.setIsbn("9780000000002");
+        deAyer.setTitulo("Dado de baja ayer");
+        deAyer.setEstadoLibro("baja");
+        deAyer.setFechaBaja(LocalDateTime.of(2026, 11, 24, 18, 0));
+        Libro sinFecha = new Libro(); // dado de baja antes de la migración 06
+        sinFecha.setIsbn("9780000000003");
+        sinFecha.setTitulo("Baja antigua");
+        sinFecha.setEstadoLibro("baja");
+        when(libroDao.findByEstadoLibroOrderByTitulo("baja")).thenReturn(List.of(deAyer, sinFecha));
+        when(prestamoDao.listarAnulados(any(), any())).thenReturn(List.of());
+        when(usuarioDao.findByEstadoOrderByApellidoAscNombreAsc("inactivo")).thenReturn(List.of());
+
+        TablaReporte hoy = servicio.armar("bajas", LocalDate.of(2026, 11, 25), LocalDate.of(2026, 11, 25));
+        TablaReporte todas = servicio.armar("bajas", null, null);
+
+        assertEquals(0, hoy.filas().size());
+        assertTrue(hoy.pie().get(0).startsWith("0 registros eliminados"));
+        assertTrue(hoy.notas().stream().anyMatch(n -> n.startsWith("1 libro o usuario")));
+        assertEquals(2, todas.filas().size()); // sin fechas salen todas, también las que no tienen fecha
+        assertEquals("Sin fecha", todas.filas().get(0)[4]);
     }
 
     @Test

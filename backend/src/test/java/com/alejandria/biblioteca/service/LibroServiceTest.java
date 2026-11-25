@@ -34,10 +34,12 @@ class LibroServiceTest {
     @Mock private ColaEsperaService colaEspera;
 
     private LibroService servicio;
+    private static final java.time.LocalDateTime AHORA = java.time.LocalDateTime.of(2026, 11, 25, 10, 0);
 
     @BeforeEach
     void preparar() {
-        servicio = new LibroService(libroDao, categoriaDao, autorDao, prestamoDao, reservaDao, colaEspera);
+        servicio = new LibroService(libroDao, categoriaDao, autorDao, prestamoDao, reservaDao, colaEspera,
+                HorarioAtencionTest.horario(AHORA));
     }
 
     @Test

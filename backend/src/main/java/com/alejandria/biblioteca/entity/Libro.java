@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -42,6 +43,10 @@ public class Libro {
 
     @Column(name = "estado_libro", nullable = false, length = 20)
     private String estadoLibro = "disponible";
+
+    /** Migración 06: cuándo se dio de baja (eliminación lógica). Null si nunca se dio de baja. */
+    @Column(name = "fecha_baja")
+    private LocalDateTime fechaBaja;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

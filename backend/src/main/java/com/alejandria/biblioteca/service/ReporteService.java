@@ -213,26 +213,81 @@ public class ReporteService {
         return new TablaReporte("Incidencias y sanciones", rango.texto(), columnas, filas, List.of());
     }
 
-    // reporte bajas logicas: libros 'baja', prestamos 'anulado' y usuarios 'inactivo' (las filas siguen en la bd)
+    // una fila del reporte de bajas antes de numerarla (para ordenarlas por la fecha de baja)
+    private record Baja(LocalDateTime fecha, String tipo, String codigo, String detalle, String estado) {}
+
+    // reporte bajas logicas: listado numerado (como una lista de asistencia) de los libros 'baja', prestamos
+    // 'anulado' y usuarios 'inactivo' dados de baja en el periodo, por su fecha de baja (migracion 06).
+    // las filas siguen en la bd. al final dice cuantos registros se eliminaron de manera logica
     private TablaReporte bajas(RangoFechas rango) {
-        String[] columnas = {"Tipo", "Código", "Detalle", "Fecha del préstamo", "Estado"};
-        List<String[]> filas = new ArrayList<>();
+        boolean sinFiltro = rango.desde() == null && rango.hasta() == null;
+        List<Baja> bajas = new ArrayList<>();
+        int sinFecha = 0; // bajas de antes de la migracion 06: no tienen fecha y no se pueden ubicar en un periodo
+
         for (Libro l : libroDao.findByEstadoLibroOrderByTitulo("baja")) {
-            filas.add(new String[] {"Libro", l.getIsbn(), l.getTitulo(), "-", l.getEstadoLibro()});
-        }
-        for (ReportePrestamoDTO p : prestamoDao.listarParaReporte(rango.inicio(), rango.fin())) {
-            if ("anulado".equals(p.estadoPrestamo())) {
-                filas.add(new String[] {"Préstamo", "N° " + p.idPrestamo(), p.tituloLibro() + " - " + p.prestatario(),
-                                        formatear(p.fechaPrestamo()), p.estadoPrestamo()});
+            if (l.getFechaBaja() == null) {
+                sinFecha++;
+                if (sinFiltro) bajas.add(new Baja(null, "Libro", l.getIsbn(), l.getTitulo(), l.getEstadoLibro()));
+            } else if (dentroDe(rango, l.getFechaBaja())) {
+                bajas.add(new Baja(l.getFechaBaja(), "Libro", l.getIsbn(), l.getTitulo(), l.getEstadoLibro()));
             }
         }
-        for (Usuario u : usuarioDao.findByEstadoOrderByApellidoAscNombreAsc("inactivo")) {
-            filas.add(new String[] {"Usuario", u.getDni(), u.nombreCompleto(), "-", u.getEstado()});
+        for (Object[] p : prestamoDao.listarAnulados(rango.inicio(), rango.fin())) {
+            bajas.add(new Baja(aFecha(p[4]), "Préstamo", "N° " + p[0],
+                    p[2] + " - " + p[1] + " (prestado el " + fechaDe(p[3]) + ")", "anulado"));
         }
-        return new TablaReporte("Bajas lógicas", rango.texto(), columnas, filas,
-                List.of("Eliminación lógica: estas filas siguen en la base de datos con el estado 'baja', 'anulado' o 'inactivo'.",
-                        "La base de datos no guarda la fecha en que se dio de baja un libro o un usuario: se listan todos. "
-                        + "El rango de fechas solo filtra los préstamos anulados (por la fecha del préstamo)."));
+        for (Usuario u : usuarioDao.findByEstadoOrderByApellidoAscNombreAsc("inactivo")) {
+            if (u.getFechaBaja() == null) {
+                sinFecha++;
+                if (sinFiltro) bajas.add(new Baja(null, "Usuario", u.getDni(), u.nombreCompleto(), u.getEstado()));
+            } else if (dentroDe(rango, u.getFechaBaja())) {
+                bajas.add(new Baja(u.getFechaBaja(), "Usuario", u.getDni(), u.nombreCompleto(), u.getEstado()));
+            }
+        }
+
+        // de la mas antigua a la mas reciente; las que no tienen fecha van primero
+        bajas.sort(java.util.Comparator.comparing(Baja::fecha, java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder())));
+
+        String[] columnas = {"N°", "Tipo", "Código", "Detalle", "Fecha de baja", "Estado"};
+        List<String[]> filas = new ArrayList<>();
+        int numero = 1;
+        for (Baja b : bajas) {
+            filas.add(new String[] {String.valueOf(numero++), b.tipo(), b.codigo(), b.detalle(),
+                                    b.fecha() == null ? "Sin fecha" : formatear(b.fecha()), b.estado()});
+        }
+
+        long libros = bajas.stream().filter(b -> "Libro".equals(b.tipo())).count();
+        long prestamos = bajas.stream().filter(b -> "Préstamo".equals(b.tipo())).count();
+        long usuarios = bajas.stream().filter(b -> "Usuario".equals(b.tipo())).count();
+        String total = bajas.size() == 1 ? "1 registro eliminado de manera lógica"
+                                         : bajas.size() + " registros eliminados de manera lógica";
+        List<String> pie = List.of(total + " (" + cantidad(libros, "libro", "libros") + ", "
+                + cantidad(prestamos, "préstamo anulado", "préstamos anulados") + " y "
+                + cantidad(usuarios, "usuario inactivo", "usuarios inactivos") + ").");
+
+        List<String> notas = new ArrayList<>();
+        notas.add("Eliminación lógica: estas filas siguen en la base de datos con el estado 'baja', 'anulado' o 'inactivo'.");
+        notas.add("Se filtra por la fecha de baja: la de la baja del libro o del usuario, o la de la anulación del préstamo.");
+        if (sinFecha > 0 && !sinFiltro) {
+            notas.add(cantidad(sinFecha, "libro o usuario", "libros o usuarios") + " de baja desde antes del 25/11/2026 "
+                    + "no tienen fecha registrada y solo aparecen en el reporte sin fechas.");
+        }
+        return new TablaReporte("Bajas lógicas", rango.texto(), columnas, filas, notas, pie);
+    }
+
+    private static boolean dentroDe(RangoFechas rango, LocalDateTime fecha) {
+        return !fecha.isBefore(rango.inicio()) && fecha.isBefore(rango.fin());
+    }
+
+    private static String cantidad(long n, String singular, String plural) {
+        return n + " " + (n == 1 ? singular : plural);
+    }
+
+    private static LocalDateTime aFecha(Object valor) {
+        if (valor instanceof Timestamp t) {
+            return t.toLocalDateTime();
+        }
+        return valor instanceof LocalDateTime f ? f : null;
     }
 
     // reporte stock: titulos y ejemplares disponibles de cada categoria (sin los dados de baja). es una foto de ahora
@@ -395,6 +450,20 @@ public class ReporteService {
                 }
             }
 
+            // pie debajo de la tabla, con una fila en blanco antes
+            if (!tabla.pie().isEmpty()) {
+                numFila++;
+                Font negritaPie = libro.createFont();
+                negritaPie.setBold(true);
+                CellStyle estiloPie = libro.createCellStyle();
+                estiloPie.setFont(negritaPie);
+                for (String linea : tabla.pie()) {
+                    Cell celda = hoja.createRow(numFila++).createCell(0);
+                    celda.setCellValue(linea);
+                    celda.setCellStyle(estiloPie);
+                }
+            }
+
             for (int i = 0; i < tabla.columnas().length; i++) {
                 hoja.autoSizeColumn(i);
             }
@@ -451,6 +520,14 @@ public class ReporteService {
             }
 
             documento.add(pdfTabla);
+
+            // pie debajo de la tabla (ej. "8 registros eliminados de manera logica"), en negrita
+            com.lowagie.text.Font fuentePie = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, COLOR_MARRON);
+            for (String linea : tabla.pie()) {
+                Paragraph parrafo = new Paragraph(linea, fuentePie);
+                parrafo.setSpacingBefore(8);
+                documento.add(parrafo);
+            }
         } catch (DocumentException e) {
             throw new NegocioException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo generar el PDF");
         } finally {

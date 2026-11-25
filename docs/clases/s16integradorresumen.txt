@@ -1,0 +1,119 @@
+**Curso Integrador I — Sistemas y Software**  
+**Profesor: Hernán Robalino Gómez**
+
+La sesión aborda el monitoreo de aplicaciones, la revisión de los reportes de la semana 16 y la preparación para la evaluación final. También explica los tipos de mantenimiento, aunque aclara que no solicita evidencias de mantenimiento para este proyecto.
+
+**1. Qué es el monitoreo de una aplicación**
+
+Monitorear consiste en observar cómo se comporta una aplicación mientras se ejecuta, utilizando herramientas que recopilan datos automáticamente.
+
+El profesor recalca que **no basta con que el programa funcione**: también importa cómo utiliza la memoria, el procesador y otros recursos.
+
+Por eso, el monitoreo se relaciona con las **pruebas no funcionales de rendimiento**. Estas permiten identificar consumo excesivo de recursos, interrupciones y otros problemas que afectan la calidad del sistema.
+
+**2. Qué son los logs y para qué sirven**
+
+Los **logs** son registros de eventos que ocurren durante la ejecución de un sistema. Pueden contener:
+
+- Mensajes de error.
+- Actividades de los usuarios.
+- Eventos de la aplicación.
+- Información sobre rendimiento.
+- La fecha y hora en que ocurrió un evento.
+
+Ayudan a reconstruir lo sucedido, encontrar anomalías y localizar las causas de una falla.
+
+Entre sus beneficios se mencionan la centralización de información, la respuesta más rápida a incidentes y la automatización del seguimiento. También existen dificultades: grandes cantidades de datos, formatos distintos e información dispersa entre sistemas.
+
+**3. Herramientas de monitoreo**
+
+El profesor presenta distintas herramientas y recursos de consulta. Entre los ejemplos aparecen **Java VisualVM, NetBeans Profiler y Zabbix**, además de otras soluciones comerciales.
+
+**No impone una única herramienta.** Cada grupo debe elegir una que sea compatible con su aplicación y permita obtener las métricas solicitadas. Si utiliza un lenguaje diferente de Java, debe buscar una alternativa adecuada para esa tecnología.
+
+También recomienda revisar tutoriales para aprender a configurar e interpretar la herramienta elegida.
+
+**4. Qué deben presentar del monitoreo**
+
+Este es el punto principal para la entrega. En los **anexos del informe** deben incluir:
+
+1. **El nombre de la herramienta utilizada.**
+2. **Una captura de pantalla completa con las métricas.**
+3. **La explicación de las métricas y de los valores obtenidos.**
+
+Las tres métricas que pide son:
+
+| Métrica | Qué permite observar |
+|---|---|
+| **Memoria** | Cuánta memoria utiliza la aplicación. |
+| **CPU** | Cómo utiliza los recursos del procesador. |
+| **Subprocesos o hilos** | La actividad de los hilos de ejecución que muestra la herramienta. |
+
+La herramienta debe estar funcionando **al mismo tiempo que la aplicación**. Además, tienen que utilizar el sistema: registrar, consultar, eliminar, generar reportes y realizar sus operaciones habituales.
+
+Dejar la aplicación abierta sin hacer nada aporta poca información sobre su comportamiento durante el uso.
+
+**La captura por sí sola no basta.** El profesor puede preguntar qué significa un valor mostrado. Deben conocer la métrica, su unidad y lo que representa en su aplicación.
+
+Para la siguiente clase del miércoles espera que ya hayan seleccionado la herramienta y realizado el monitoreo.
+
+**5. Reportes correspondientes a la semana 16**
+
+El profesor continúa con la prueba del sistema: ingresar con un usuario, ejecutar operaciones y terminar generando los reportes.
+
+Los tres reportes adicionales del cronograma son:
+
+- **Máximos, mínimos y promedios:** mostrar estos valores para un periodo definido, según la información del proyecto.
+- **Registros eliminados:** mostrar los registros eliminados lógicamente, incluyendo los que se eliminen durante la demostración.
+- **Ingresos, utilidad o stock:** presentar la información que corresponda al tipo de sistema desarrollado.
+
+Por ejemplo, puede pedir que registren una venta y después generen un reporte que la incluya. También puede solicitar que eliminen lógicamente un registro y comprueben que aparezca entre los eliminados.
+
+La finalidad es demostrar que **los reportes utilizan y reflejan los datos actuales del sistema**.
+
+**6. Tipos de mantenimiento**
+
+Se revisan cuatro tipos:
+
+| Tipo | Finalidad |
+|---|---|
+| **Preventivo** | Realizar acciones planificadas para evitar fallas. |
+| **Correctivo** | Reparar errores o fallas que ya ocurrieron. |
+| **Predictivo** | Anticipar problemas mediante patrones, datos y monitoreo. |
+| **Evolutivo** | Mejorar o adaptar el sistema a nuevas necesidades. |
+
+El profesor aclara que **no exige evidencias de mantenimiento para esta entrega**, porque los grupos todavía están terminando sus aplicaciones. Presentarlo únicamente como teoría no demostraría que realmente se hizo mantenimiento.
+
+Relaciona las mejoras futuras con las recomendaciones sobre cómo podría evolucionar el sistema.
+
+**7. Indicaciones para la evaluación final**
+
+- **Semana 17:** se realizará la evaluación del proyecto, según el horario asignado en el cronograma.
+- **Semana 18:** revisará el documento y confirmará la nota. No debe entenderse como una ampliación para dejar pendiente la demostración del sistema.
+- Deben mostrar el **tercer commit relacionado con los programas que generan los reportes** y su publicación en GitHub.
+- Deben completar el despliegue: requisitos del servidor y del cliente, recursos necesarios y las capturas solicitadas anteriormente.
+- Deben actualizar la bibliografía y corregir las observaciones recibidas.
+- Deben estar preparados para explicar lo presentado, especialmente el despliegue, las métricas y los resultados.
+
+El profesor señala que, al completar el monitoreo, queda cubierto ese apartado de los anexos; después corresponde mejorar y corregir lo ya solicitado.
+
+**8. Lista para organizar el trabajo del grupo**
+
+- Elegir y configurar la herramienta de monitoreo.
+- Usar la aplicación mientras se registran las métricas.
+- Capturar memoria, CPU y subprocesos o hilos.
+- Explicar los valores obtenidos.
+- Completar los tres reportes de la semana 16.
+- Comprobar los reportes con operaciones nuevas.
+- Verificar el tercer commit y GitHub.
+- Completar las evidencias del despliegue.
+- Actualizar bibliografía y resolver observaciones.
+- Confirmar el horario de evaluación del grupo.
+
+**Tramos útiles de la grabación**
+
+- **25–37 minutos:** monitoreo y logs.
+- **44–64 minutos:** herramientas, métricas y evidencias solicitadas.
+- **65–72 minutos:** reportes de la semana 16.
+- **73–80 minutos:** mantenimiento y aclaración de que no se exige como evidencia.
+- **80–94 minutos:** evaluación final, documento y pendientes.

@@ -53,4 +53,8 @@ public class Prestamo {
 
     @Column(name = "estado_prestamo", nullable = false, length = 20)
     private String estadoPrestamo = "activo";
+
+    /** Migración 06: cuándo se anuló (eliminación lógica). Null si no está anulado. */
+    @Column(name = "fecha_anulacion")
+    private LocalDateTime fechaAnulacion;
 }

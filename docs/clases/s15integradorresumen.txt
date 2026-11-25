@@ -1,0 +1,115 @@
+**Curso Integrador I — Sistemas y Software**  
+**Profesor: Hernán Robalino Gómez**
+
+La sesión consistió principalmente en revisar los avances de los grupos. El profesor comprobó el funcionamiento de aplicaciones de ventas y reservas médicas, y señaló qué faltaba para cumplir las indicaciones de la semana 15.
+
+**1. Despliegue de la aplicación**
+
+El despliegue consiste en preparar la aplicación para su distribución y ejecución. El profesor pide documentar:
+
+- Qué componentes o requisitos deben existir en el **servidor**.
+- Qué necesita el **cliente** para utilizar el sistema.
+- Cómo se empaqueta y distribuye la aplicación.
+
+Para el ejemplo trabajado en Java, se revisa el empaquetado en un archivo **.jar**. Si el grupo utiliza otro lenguaje o tecnología, puede presentar una solución equivalente, pero debe explicar cómo cumple el mismo propósito.
+
+También recuerda que solicitó **dos capturas de pantalla completas**, con fecha y hora visibles:
+
+- Una que muestre el empaquetado y los elementos de distribución indicados en el material de clase.
+- Otra que muestre el contenido extraído del paquete.
+
+No basta con colocar cualquier captura: debe demostrar lo solicitado y seguir las indicaciones del material y del video de referencia.
+
+**2. Qué significa realizar una prueba del sistema**
+
+La prueba debe demostrar un proceso completo, desde que un usuario inicia sesión hasta que obtiene el resultado final.
+
+Antes de comenzar, el grupo debe indicar **qué usuario utilizará y con qué rol o perfil ingresará**, porque las funciones disponibles dependen de sus permisos.
+
+Por ejemplo, en un sistema de ventas:
+
+**Iniciar sesión → seleccionar productos → registrar la venta → emitir el comprobante en PDF.**
+
+En un sistema de citas:
+
+**Ingresar como paciente → reservar una cita → generar el documento individual de la reserva.**
+
+La demostración queda incompleta si el grupo registra la operación, pero todavía no puede emitir el documento correspondiente.
+
+**3. Los tres reportes revisados en esta sesión**
+
+| Reporte | Qué debe demostrar |
+|---|---|
+| **De una operación individual** | El resultado de una venta, reserva u otra operación concreta. |
+| **Por fechas** | Las operaciones realizadas dentro del periodo seleccionado. |
+| **De indicadores** | Los resultados de los indicadores definidos en el capítulo 1 del proyecto. |
+
+El profesor recuerda varias veces que **los reportes solicitados deben generarse en PDF**. Una exportación a Excel no sustituye esa indicación.
+
+En el caso de las citas médicas, aclara que el paciente necesita un documento de **su propia cita**. Un listado general de todas las reservas no cumple la misma función.
+
+**4. Cómo comprobar que los reportes funcionan**
+
+No basta con abrir un reporte que ya tenía información. El profesor pide registrar datos nuevos y comprobar que los resultados cambien.
+
+En las demostraciones solicita, por ejemplo:
+
+- Registrar una venta y verificar que aparezca al consultar el periodo correspondiente.
+- Crear una cita de una especialidad y volver a generar el reporte para comprobar que aumente su cantidad.
+- Revisar que los documentos incluyan los datos necesarios, como la identificación del paciente.
+
+La idea es verificar que **el reporte refleje las operaciones reales del sistema y se actualice correctamente**.
+
+**5. Indicadores del proyecto**
+
+Los indicadores implementados deben guardar relación con los que aparecen en el **capítulo 1 del informe**. El profesor pide mostrar ese capítulo y contrastarlo con los reportes de la aplicación.
+
+Durante una revisión recuerda que había solicitado **cuatro indicadores**. Por eso, cada grupo debe revisar que su implementación corresponda con lo pedido y con su propio documento.
+
+Entre los ejemplos mostrados por los estudiantes aparecen:
+
+- Cantidad de citas por especialidad.
+- Porcentaje de citas atendidas.
+- Tiempo de atención.
+- Transacciones por periodo.
+- Variación porcentual de ventas.
+
+Estos son ejemplos de distintos proyectos; **no significa que todos los grupos deban utilizar los mismos indicadores**.
+
+**6. Eliminación lógica y eliminación física**
+
+El profesor también explica la diferencia:
+
+- **Eliminación lógica:** el registro permanece en la base de datos, pero cambia su estado, por ejemplo, de activo a inactivo.
+- **Eliminación física:** el registro se borra de la tabla.
+
+Por lo tanto, ocultar un registro en la interfaz no demuestra, por sí solo, que haya sido eliminado físicamente.
+
+**7. Preparación para la evaluación final**
+
+El profesor recuerda que deben revisar el cronograma y cumplir lo solicitado para cada semana.
+
+En el cronograma mostrado aparecen presentaciones finales para el **30 de noviembre y el 2 de diciembre de 2026**, con horarios por grupo. Cada equipo debe verificar cuál le corresponde.
+
+También aclara que agregar funciones adicionales está permitido, pero **esas funciones no reemplazan los requisitos pendientes**. Primero deben completar lo solicitado.
+
+Al final señala que, en esta revisión, se está trabajando hasta los **tres primeros reportes** y que los restantes corresponden a la siguiente semana.
+
+**8. Lista práctica para preparar la entrega**
+
+- Documentar los requisitos del servidor y del cliente.
+- Preparar las dos capturas completas del despliegue.
+- Identificar el usuario y el perfil para la demostración.
+- Ejecutar un proceso completo sin dejar pasos pendientes.
+- Emitir el comprobante individual en PDF.
+- Generar el reporte por fechas.
+- Generar los reportes de los indicadores del capítulo 1.
+- Registrar datos nuevos y verificar que los reportes se actualicen.
+- Corregir documentos con datos incompletos.
+- Confirmar la fecha y el horario asignados al grupo.
+
+**Tramos útiles para volver a revisar**
+
+- **40–50 minutos:** despliegue, capturas y prueba completa del sistema.
+- **68–81 minutos:** revisión del sistema de citas y sus reportes.
+- **87–98 minutos:** revisión del sistema de ventas, reportes por fechas e indicadores.

@@ -1,0 +1,118 @@
+Pruebas de software y preparación del proyecto final
+====================================================
+
+Resumen de la clase del 9 de noviembre de 2026
+
+La clase explicó cómo organizar las pruebas del sistema y precisó qué se revisará en
+consultas, eliminaciones y reportes. El profesor relacionó la teoría con la ejecución
+del proyecto y pidió contar con datos registrados para comprobar sus resultados.
+
+El plan de pruebas
+------------------
+
+Es un documento que define qué se probará, cómo se hará, quién será responsable, qué
+recursos se necesitarán y qué resultado permitirá aceptar cada prueba. Ayuda a detectar
+errores antes de entregar el sistema. El plan completo se presentó como orientación
+teórica para organizar el trabajo.
+
+Pruebas mencionadas en clase
+----------------------------
+
+  - Funcionales o de caja negra. Se ingresan valores y se compara la salida con el
+    resultado esperado, observando el comportamiento de la aplicación.
+
+  - De integración. Se comprueba cómo trabajan juntos los componentes, por ejemplo, el
+    programa y la base de datos al guardar información.
+
+  - De sistema. Se evalúa el proceso completo desde su inicio hasta su finalización. En
+    el proyecto se venían realizando pruebas de funciones concretas e integración.
+
+Ocho pasos para elaborar el plan
+--------------------------------
+
+  1. Comprender los objetivos a partir de requisitos, casos de uso y especificaciones.
+  2. Determinar las funciones que se probarán y los componentes afectados.
+  3. Elegir la estrategia y los tipos de pruebas que se aplicarán.
+  4. Definir criterios de inicio, aceptación, suspensión y reanudación.
+  5. Preparar el entorno de hardware, software y datos de prueba.
+  6. Asignar el personal y considerar la capacitación necesaria.
+  7. Elegir una metodología y procedimientos acordes con el desarrollo.
+  8. Organizar tareas, responsables, cronograma, riesgos y respuestas previstas.
+
+Seguridad y documentación de las pruebas
+----------------------------------------
+
+Se presentó el pentesting como un ataque controlado para identificar vulnerabilidades y
+evaluar las defensas del sistema. La inyección SQL se explicó como la introducción de
+instrucciones mediante entradas de la aplicación que pueden alterar sus consultas y
+afectar la confidencialidad, la autenticación y la integridad de los datos.
+
+También se mostraron plantillas de casos de prueba con datos del proyecto, condiciones
+previas, pasos, entradas, resultados esperados, resultados reales y observaciones. Estos
+registros permiten explicar qué se probó y cuál fue el resultado.
+
+Búsqueda consulta y reporte
+---------------------------
+
+Para la evaluación, el profesor hizo estas distinciones.
+
+  - Búsqueda. Localizar un elemento concreto, por ejemplo, ingresar el código de un
+    producto y recuperar sus datos.
+
+  - Consulta. Mostrar un conjunto de registros. Se debe explicar la tabla utilizada y
+    los campos presentados. Se pidió demostrar una consulta de una tabla y otra que
+    combine dos tablas, identificando los datos que aporta cada una.
+
+  - Reporte. Presentar información organizada con un propósito y formato propios. Se
+    mostraron ejemplos como tickets, boletas y facturas, y un recurso sobre
+    JasperReports y Maven para generar reportes.
+
+El profesor permitió elegir la herramienta de reportes que mejor se ajuste al proyecto.
+También mencionó los tableros con indicadores como una presentación orientada al
+análisis estadístico.
+
+Cómo comprobar las eliminaciones
+--------------------------------
+
+La eliminación lógica conserva el registro y cambia su estado, por ejemplo, de activo a
+inactivo. Ese estado debe ser considerado por el resto del programa para excluir el
+registro de las operaciones habituales. Puede conservarse para consultas o reportes de
+eliminados.
+
+La eliminación física borra el registro de la tabla. Se pidió implementar y demostrar
+ambas operaciones, explicando su efecto en los datos. Durante la revisión se ejecutará
+el programa para comprobar el comportamiento.
+
+Los seis reportes solicitados
+-----------------------------
+
+Los reportes deben adaptarse al negocio del sistema y sustentarse con los datos
+registrados.
+
+  - Operación principal. Una venta, alquiler, movimiento de inventario u otra actividad
+    central del proyecto.
+
+  - Por fechas. Mostrar las operaciones de un intervalo seleccionado.
+
+  - Por indicadores. Presentar los indicadores definidos en el capítulo 1.
+
+  - Máximo mínimo y promedio. Calcular esos valores y mostrar la información que permita
+    verificarlos. Por ejemplo, el día con más alquileres junto con sus registros.
+
+  - Registros eliminados. Listar los dados de baja mediante eliminación lógica y
+    permitir comprobar cuáles son.
+
+  - Ingresos utilidad o stock. Mostrar los valores correspondientes al proyecto y los
+    datos que sustentan los totales.
+
+Indicaciones para las siguientes revisiones
+-------------------------------------------
+
+La semana 14 se centra en consultas y eliminaciones. Se anunció el despliegue para la
+semana 15 y el monitoreo para la semana 16. Además, queda el tercer commit,
+correspondiente al código que genera los reportes.
+
+El profesor reiteró que se completen la bibliografía y las correcciones de las semanas 4
+y 8, y que se prepare el material de sustentación. Para las demostraciones, pidió una
+base de datos con registros suficientes para probar filtros por fechas, cálculos y
+resultados.

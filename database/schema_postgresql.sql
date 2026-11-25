@@ -29,6 +29,7 @@ CREATE TABLE usuario (
     correo          VARCHAR(100) NOT NULL,
     contrasena      VARCHAR(255) NOT NULL,
     estado          VARCHAR(20)  NOT NULL,
+    fecha_baja      TIMESTAMP    NULL,          -- migración 06: cuándo pasó a 'inactivo'
     CONSTRAINT uq_usuario_dni UNIQUE (dni),
     CONSTRAINT uq_usuario_correo UNIQUE (correo),
     CONSTRAINT chk_usuario_estado 
@@ -91,6 +92,7 @@ CREATE TABLE libro (
     editorial           VARCHAR(100) NOT NULL,
     stock               INTEGER      NOT NULL DEFAULT 0 CHECK (stock >= 0),
     estado_libro        VARCHAR(20)  NOT NULL,
+    fecha_baja          TIMESTAMP    NULL,      -- migración 06: cuándo se dio de baja
     CONSTRAINT uq_libro_isbn UNIQUE (isbn),
     CONSTRAINT fk_libro_categoria 
         FOREIGN KEY (id_categoria) REFERENCES categoria(id_categoria)
@@ -129,7 +131,8 @@ CREATE TABLE prestamo (
     ampliado                     BOOLEAN NOT NULL DEFAULT FALSE,
     estado_fisico_devolucion     VARCHAR(20) NULL,
     estado_prestamo              VARCHAR(20) NOT NULL,
-    CONSTRAINT fk_prestamo_prestatario 
+    fecha_anulacion              TIMESTAMP NULL,  -- migración 06: cuándo se anuló
+    CONSTRAINT fk_prestamo_prestatario
         FOREIGN KEY (id_prestatario) REFERENCES prestatario(id_usuario)
         ON DELETE RESTRICT
         ON UPDATE CASCADE,

@@ -64,6 +64,22 @@ public interface PrestamoDao extends JpaRepository<Prestamo, Integer> {
     List<ReportePrestamoDTO> buscarHistorial(@Param("dni") String dni, @Param("libro") String libro,
                                              @Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 
+    /**
+     * Reporte de bajas lógicas: préstamos anulados en el rango, por la fecha de anulación (migración 06).
+     * Los anulados antes de la migración no la tienen: para ellos se usa la fecha del préstamo.
+     * Cada fila: id, prestatario, título del libro, fecha del préstamo y fecha de anulación (o la del préstamo).
+     */
+    // reporte bajas logicas: consulta de tres tablas (prestamo, usuario y libro), solo los 'anulado' del periodo
+    @Query("SELECT p.idPrestamo, CONCAT(u.nombre, ' ', u.apellido), l.titulo, p.fechaPrestamo, "
+         + "  COALESCE(p.fechaAnulacion, p.fechaPrestamo) "
+         + "FROM Prestamo p "
+         + "JOIN p.prestatario u "
+         + "JOIN p.libro l "
+         + "WHERE p.estadoPrestamo = 'anulado' "
+         + "  AND COALESCE(p.fechaAnulacion, p.fechaPrestamo) >= :desde "
+         + "  AND COALESCE(p.fechaAnulacion, p.fechaPrestamo) < :hasta")
+    List<Object[]> listarAnulados(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+
     /** Reporte de préstamos: la misma consulta del historial, solo con el rango de fechas. */
     // reporte prestamos: esta consulta es la q usan el excel (poi), el pdf (openpdf) y el csv
     default List<ReportePrestamoDTO> listarParaReporte(LocalDateTime desde, LocalDateTime hasta) {

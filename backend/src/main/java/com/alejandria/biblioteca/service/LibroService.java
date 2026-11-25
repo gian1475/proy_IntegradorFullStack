@@ -32,15 +32,18 @@ public class LibroService {
     private final PrestamoDao prestamoDao;
     private final ReservaDao reservaDao;
     private final ColaEsperaService colaEspera;
+    private final HorarioAtencion horario; // la hora de Lima para la fecha de baja (migración 06)
 
     public LibroService(LibroDao libroDao, CategoriaDao categoriaDao, AutorDao autorDao,
-                        PrestamoDao prestamoDao, ReservaDao reservaDao, ColaEsperaService colaEspera) {
+                        PrestamoDao prestamoDao, ReservaDao reservaDao, ColaEsperaService colaEspera,
+                        HorarioAtencion horario) {
         this.libroDao = libroDao;
         this.categoriaDao = categoriaDao;
         this.autorDao = autorDao;
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
         this.colaEspera = colaEspera;
+        this.horario = horario;
     }
 
     // ---------- CONSULTAR ----------
@@ -187,6 +190,7 @@ public class LibroService {
             throw new NegocioException(HttpStatus.CONFLICT, "El libro tiene prestatarios en la cola de espera");
         }
         libro.setEstadoLibro(BAJA); // eliminacion logica: aqui cambia el estado
+        libro.setFechaBaja(horario.ahora()); // para filtrar el reporte de bajas logicas por periodo
         libroDao.save(libro);
     }
 

@@ -49,7 +49,8 @@ class UsuarioGestionServiceTest {
     @BeforeEach
     void preparar() {
         servicio = new UsuarioService(usuarioDao, prestamoDao, reservaDao, reservaService, sancionDao, sesionService, limitador,
-                new BCryptPasswordEncoder()); // D28
+                new BCryptPasswordEncoder(), // D28
+                HorarioAtencionTest.horario(java.time.LocalDateTime.of(2026, 11, 25, 10, 0)));
     }
 
     private Usuario usuario(int id, String estado) {

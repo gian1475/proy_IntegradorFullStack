@@ -49,10 +49,13 @@ public class UsuarioService {
     private final SesionService sesionService;
     private final LimitadorIntentosLogin limitador;
     private final PasswordEncoder passwordEncoder; // bcrypt (D28): el @Bean de SeguridadConfig
+    private final HorarioAtencion horario; // la hora de Lima para la fecha de baja (migración 06)
 
     public UsuarioService(UsuarioDao usuarioDao, PrestamoDao prestamoDao, ReservaDao reservaDao,
                           ReservaService reservaService, SancionDao sancionDao, SesionService sesionService,
-                          LimitadorIntentosLogin limitador, PasswordEncoder passwordEncoder) {
+                          LimitadorIntentosLogin limitador, PasswordEncoder passwordEncoder,
+                          HorarioAtencion horario) {
+        this.horario = horario;
         this.usuarioDao = usuarioDao;
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
@@ -183,6 +186,7 @@ public class UsuarioService {
         }
 
         usuario.setEstado(INACTIVO);
+        usuario.setFechaBaja(horario.ahora()); // para filtrar el reporte de bajas logicas por periodo
         usuarioDao.save(usuario);
         sesionService.cerrarSesionesDe(idUsuario);
 
@@ -201,6 +205,7 @@ public class UsuarioService {
 
         boolean suspendido = Rol.PRESTATARIO.equals(perfil) && sancionDao.tieneSuspensionActiva(idUsuario);
         usuario.setEstado(suspendido ? "suspendido" : "activo");
+        usuario.setFechaBaja(null); // ya no es una baja: sale del reporte
         usuarioDao.save(usuario);
 
         log.info("Usuario #{} reactivado por el admin: estado '{}'", idUsuario, usuario.getEstado());

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "usuario")
 // lombok: @Getter y @Setter crean al compilar el get y el set de cada campo; @NoArgsConstructor, el constructor vacio q pide JPA
@@ -35,6 +37,10 @@ public class Usuario {
 
     @Column(name = "estado", nullable = false, length = 20)
     private String estado = "activo";
+
+    /** Migración 06: cuándo se dio de baja (estado 'inactivo'). Al reactivarlo vuelve a null. */
+    @Column(name = "fecha_baja")
+    private LocalDateTime fechaBaja;
 
     public Usuario(Integer idUsuario, String nombre, String apellido, String dni, String correo, String contrasena, String estado) {
         this.idUsuario = idUsuario;

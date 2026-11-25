@@ -317,6 +317,7 @@ class PrestamoServiceTest {
         servicio.anular(1);
 
         assertEquals("anulado", p.getEstadoPrestamo());
+        assertEquals(AHORA, p.getFechaAnulacion()); // migración 06: para el reporte de bajas por periodo
         verify(prestamoDao, never()).delete(any());
         verify(libroService).reponerStock(10);
     }
