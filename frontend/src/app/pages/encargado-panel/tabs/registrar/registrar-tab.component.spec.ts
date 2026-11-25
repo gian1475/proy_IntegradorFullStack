@@ -70,6 +70,24 @@ describe('Registrar préstamo: tiempo de atención (TAP)', () => {
     expect(http.expectOne(`${API}/prestamos`).request.body.segundosAtencion).toBe(30);
   });
 
+  // semana 15: la prueba completa termina con el documento de la operación (el comprobante del préstamo en PDF)
+  it('después de registrar ofrece descargar el comprobante de ese préstamo', () => {
+    const fixture = abrir();
+    const c = fixture.componentInstance;
+    escribirDni(fixture);
+    c.idLibroSeleccionado = 10;
+    c.registrarPrestamo();
+    http.expectOne(`${API}/prestamos`).flush(prestamo);
+    http.expectOne(`${API}/libros`).flush([]);
+    fixture.detectChanges();
+
+    const boton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent!.trim() === 'Descargar comprobante (PDF)')!;
+    boton.click();
+
+    expect(http.expectOne(`${API}/prestamos/50/comprobante`).request.responseType).toBe('blob');
+  });
+
   it('si viene de "Entregar" una reserva, cuenta desde que se abre el formulario', () => {
     TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(RegistrarTabComponent);

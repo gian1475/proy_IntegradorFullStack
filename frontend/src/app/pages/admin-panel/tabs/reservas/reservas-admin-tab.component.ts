@@ -85,6 +85,13 @@ export class ReservasAdminTabComponent implements OnInit {
     });
   }
 
+  // constancia reserva (front, semana 15): el admin descarga el pdf de cualquier reserva
+  descargarConstancia(idReserva: number): void {
+    this.reservaService.descargarConstancia(idReserva).subscribe({
+      error: err => this.mensajeError.set(mensajeDeError(err, 'No se pudo descargar la constancia'))
+    });
+  }
+
   // eliminacion fisica (front): boton eliminar, borra la reserva de la bd (no se puede deshacer)
   eliminar(r: ReservaBackend): void {
     if (!confirm(`¿Eliminar la reserva #${r.idReserva} de "${r.tituloLibro}"? Se borrará definitivamente de la base de datos.`)) return;

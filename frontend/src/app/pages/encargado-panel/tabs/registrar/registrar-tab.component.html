@@ -1,5 +1,11 @@
 @if (mensajeOk()) {
-  <div class="alert alert-success">{{ mensajeOk() }}</div>
+  <div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span>{{ mensajeOk() }}</span>
+    <!-- comprobante (semana 15): el documento de la operacion recien registrada -->
+    @if (ultimoPrestamo(); as id) {
+      <button type="button" class="btn btn-success btn-sm" (click)="descargarComprobante(id)">Descargar comprobante (PDF)</button>
+    }
+  </div>
 }
 @if (mensajeError()) {
   <div class="alert alert-danger">{{ mensajeError() }}</div>

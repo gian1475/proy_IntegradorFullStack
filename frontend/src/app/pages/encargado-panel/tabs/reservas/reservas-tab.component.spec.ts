@@ -40,11 +40,29 @@ describe('Reservas pendientes del encargado (RF04 y RF16)', () => {
     http.expectOne(`${API}/libros`).flush(libros);
   }
 
-  it('la pendiente y la de la cola tienen "Cancelar"', () => {
+  it('la pendiente y la de la cola tienen "Cancelar" y "Constancia"', () => {
     const fixture = abrir();
     const filas: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('tbody tr'));
     const textos = filas.map(f => Array.from(f.querySelectorAll('button')).map(b => b.textContent!.trim()));
-    expect(textos).toEqual([['Entregar', 'Cancelar'], ['Cancelar']]);
+    expect(textos).toEqual([['Entregar', 'Cancelar', 'Constancia'], ['Cancelar', 'Constancia']]);
+  });
+
+  // semana 15: después de reservar en la ventanilla, el encargado le entrega la constancia en PDF al prestatario
+  it('después de reservar en ventanilla ofrece descargar la constancia', () => {
+    const fixture = abrir();
+    const c = fixture.componentInstance;
+    c.dni = '73456783';
+    c.idLibro = 3;
+    c.reservarEnVentanilla();
+    http.expectOne(`${API}/reservas/ventanilla`).flush({ ...pendiente, idReserva: 9 });
+    recargar();
+    fixture.detectChanges();
+
+    const boton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent!.trim() === 'Descargar constancia (PDF)')!;
+    boton.click();
+
+    expect(http.expectOne(`${API}/reservas/9/constancia`).request.responseType).toBe('blob');
   });
 
   it('cancelar pide confirmación y manda PUT a /cancelar', () => {

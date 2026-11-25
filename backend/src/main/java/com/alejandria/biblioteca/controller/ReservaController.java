@@ -7,10 +7,14 @@ import com.alejandria.biblioteca.dto.reserva.ReservaVentanillaDTO;
 import com.alejandria.biblioteca.exception.NegocioException;
 import com.alejandria.biblioteca.seguridad.Rol;
 import com.alejandria.biblioteca.seguridad.Sesion;
+import com.alejandria.biblioteca.service.ComprobanteService;
 import com.alejandria.biblioteca.service.ReservaService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +27,11 @@ import java.util.Map;
 public class ReservaController {
 
     private final ReservaService reservaService;
+    private final ComprobanteService comprobanteService;
 
-    public ReservaController(ReservaService reservaService) {
+    public ReservaController(ReservaService reservaService, ComprobanteService comprobanteService) {
         this.reservaService = reservaService;
+        this.comprobanteService = comprobanteService;
     }
 
     // permisos admin / permisos encargado: ellos ven todas las reservas, el prestatario no
@@ -76,6 +82,20 @@ public class ReservaController {
                                                  @AuthenticationPrincipal Sesion sesion) {
         verificarPropietario(sesion, reservaService.obtenerIdPrestatario(id));
         return reservaService.actualizar(id, dto);
+    }
+
+    /** Constancia de la reserva en PDF (reporte de una operación, semana 15). */
+    // constancia reserva: GET /api/reservas/{id}/constancia. los tres perfiles; el prestatario solo las suyas
+    @GetMapping("/{id}/constancia")
+    @RolesAllowed({Rol.ADMINISTRADOR, Rol.ENCARGADO, Rol.PRESTATARIO})
+    public ResponseEntity<byte[]> constancia(@PathVariable Integer id, @AuthenticationPrincipal Sesion sesion) {
+        verificarPropietario(sesion, reservaService.obtenerIdPrestatario(id));
+        // ContentDisposition de Spring arma la cabecera q le dice al navegador "descarga este archivo con este nombre"
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("constancia_reserva_" + id + ".pdf").build().toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(comprobanteService.constanciaReserva(id));
     }
 
     // eliminacion fisica: DELETE /api/reservas/{id}, solo el admin (RF17).

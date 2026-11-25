@@ -31,6 +31,8 @@ export class ReservasTabComponent implements OnInit {
   readonly mensajeOk = signal('');
   readonly mensajeError = signal('');
   readonly cargando = signal(false);
+  /** N° de la reserva recién hecha en ventanilla, para descargar su constancia (null = ninguna). */
+  readonly ultimaReserva = signal<number | null>(null);
 
   // reservar en ventanilla
   readonly libros = signal<LibroBackend[]>([]);
@@ -93,6 +95,7 @@ export class ReservasTabComponent implements OnInit {
         this.mensajeOk.set(r.estadoReserva === 'en_espera'
           ? `Sin ejemplares: ${r.nombrePrestatario} entró a la cola de espera (puesto ${r.posicionCola}) de "${r.tituloLibro}".`
           : `Reserva #${r.idReserva} registrada para ${r.nombrePrestatario}: "${r.tituloLibro}".`);
+        this.ultimaReserva.set(r.idReserva); // aparece el boton "Descargar constancia (PDF)"
         this.dni = '';
         this.idLibro = null;
         this.cargar();
@@ -112,8 +115,16 @@ export class ReservasTabComponent implements OnInit {
     });
   }
 
+  // constancia reserva (front, semana 15): el pdf de una reserva (pendiente o en la cola)
+  descargarConstancia(idReserva: number): void {
+    this.reservaService.descargarConstancia(idReserva).subscribe({
+      error: (err: HttpErrorResponse) => this.mensajeError.set(mensajeDeError(err, 'No se pudo descargar la constancia'))
+    });
+  }
+
   private limpiarMensajes(): void {
     this.mensajeOk.set('');
     this.mensajeError.set('');
+    this.ultimaReserva.set(null);
   }
 }

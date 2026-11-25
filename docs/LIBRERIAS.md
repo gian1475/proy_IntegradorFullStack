@@ -20,7 +20,7 @@ Sirve para la sección de librerías del informe (semana 10) y para la sustentac
 | **Google Guava** ⭐ | 33.4.8 | Backend | Bloqueo de 15 min después de 3 intentos fallidos de login; sesiones que vencen a los 15 min sin actividad | `seguridad/LimitadorIntentosLogin.java`, `service/SesionService.java` |
 | **Apache POI** ⭐ | 5.4.1 | Backend | Reportes en Excel (.xlsx) | `service/ReporteService.java` |
 | **Apache Commons CSV** ⭐ | 1.14.0 | Backend | Reportes en CSV e importación de libros desde CSV | `service/ReporteService.java` |
-| OpenPDF | 2.0.3 | Backend | Reportes en PDF | `service/ReporteService.java` |
+| OpenPDF | 2.0.3 | Backend | Reportes en PDF, comprobante del préstamo y constancia de la reserva | `service/ReporteService.java`, `service/ComprobanteService.java` |
 | **Logback** ⭐ | 1.5.38 | Backend | Archivo de registro `backend/logs/biblioteca.log` | `logback-spring.xml` y cada `log.info/warn` |
 | Spring Boot Actuator | 4.1.2 | Backend | Monitoreo: salud, memoria, CPU, peticiones, conexiones | `application.properties`, `service/MonitoreoService.java` |
 | Angular | 22 | Frontend | Las pantallas (componentes, rutas, guards, signals) | `frontend/src/app/` |
@@ -155,12 +155,14 @@ Lombok trabaja **al compilar**: el `.class` tiene los métodos como si los hubi�
 
 ### Apache POI ⭐, OpenPDF y Apache Commons CSV ⭐
 
-**Para qué:** los 8 reportes del RF08 en Excel, PDF y CSV, y la importación de libros desde CSV.
+**Para qué:** los 9 reportes del RF08 en Excel, PDF y CSV, y la importación de libros desde CSV. Desde el 24/11 (semana 15), OpenPDF también arma el **comprobante de un préstamo** y la **constancia de una reserva** (el reporte de una operación).
 
 **Dónde:** [`ReporteService`](../backend/src/main/java/com/alejandria/biblioteca/service/ReporteService.java). Cada reporte se arma una sola vez como `TablaReporte` (título, columnas, filas) y después:
 - **Apache POI** (`XSSFWorkbook`) la convierte en `.xlsx`, con el encabezado en color.
 - **OpenPDF** (`Document`, `PdfPTable`) la convierte en PDF.
 - **Commons CSV** (`CSVPrinter`) la convierte en CSV; y `CSVParser` lee el CSV de libros (acepta `,` o `;`).
+
+El comprobante y la constancia están en [`ComprobanteService`](../backend/src/main/java/com/alejandria/biblioteca/service/ComprobanteService.java): una hoja A5 con una tabla de dos columnas (dato | valor) hecha con `Document` y `PdfPTable` de OpenPDF. Las pruebas leen el texto del PDF con `PdfTextExtractor`, que también viene en OpenPDF (no se agregó ninguna librería).
 
 ### Logback ⭐
 
@@ -175,6 +177,8 @@ Lombok trabaja **al compilar**: el `.class` tiene los métodos como si los hubi�
 **Dónde:** corre en el puerto **8081** y solo responde desde la misma PC: `http://localhost:8081/actuator/health`, `/info` y `/metrics`. El admin ve un resumen en la pestaña Monitoreo (`MonitoreoService`).
 
 **RNF03 (desde el 03/11):** Micrometer, que viene con Actuator, también cuenta cuántas peticiones respondieron en **2 segundos o menos** (`management.metrics.distribution.slo.http.server.requests=2s` en `application.properties`). `MonitoreoService.porcentajeHasta` calcula el porcentaje y la pestaña Monitoreo dice si cumple la meta del 95 %. No se agregó ninguna librería.
+
+**JConsole (desde el 24/11, semana 16):** no es una librería ni parte del sistema: es una herramienta que **viene con el JDK** (`jconsole.exe`, en la carpeta `bin` del JDK). Se abre en el servidor, se conecta al proceso del `.jar` y grafica en el tiempo la memoria, el CPU y los hilos mientras se usa el sistema, que es lo que pidió el profe. Paso a paso y explicación de cada métrica: [MONITOREO.md](MONITOREO.md).
 
 ### Spring Data JPA + driver de PostgreSQL
 

@@ -17,6 +17,7 @@
             <th>Inicio</th>
             <th>Hora límite</th>
             <th>Estado</th>
+            <th>Comprobante</th>
           </tr>
         </thead>
         <tbody>
@@ -28,6 +29,10 @@
               <td>{{ p.fechaPrestamo | date: 'dd/MM HH:mm' }}</td>
               <td>{{ p.fechaDevolucionPrevista | date: 'dd/MM HH:mm' }}</td>
               <td><span class="badge" [class]="p.estadoPrestamo">{{ p.estadoPrestamo }}</span></td>
+              <td>
+                <button class="btn btn-outline-secondary btn-sm" title="Descargar el comprobante en PDF"
+                        (click)="descargarComprobante(p.idPrestamo)">PDF</button>
+              </td>
             </tr>
           }
         </tbody>

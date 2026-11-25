@@ -71,7 +71,8 @@ import java.util.Set;
  * - Commons CSV también importa libros desde un CSV.
  */
 // reportes rf08: prestamos, devoluciones, reservas, incidencias y sanciones, bajas logicas, stock por categoria,
-// indicadores y tiempos (minimo, promedio, maximo). todos con rango de fechas y en excel, pdf o csv
+// indicadores, tiempos (minimo, promedio, maximo) y prestamos por dia. todos con rango de fechas y en excel, pdf o csv.
+// el comprobante de UNA operacion (un prestamo o una reserva) esta en ComprobanteService
 @Service
 public class ReporteService {
 
@@ -81,8 +82,9 @@ public class ReporteService {
         "N°", "Prestatario", "DNI", "Encargado", "Libro", "Inicio", "Hora límite",
         "Devolución", "Ampliado", "Estado físico", "Estado"
     };
-    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final Color COLOR_MARRON = new Color(133, 77, 14); // mismo color del sistema (#854d0e)
+    // sin "private": ComprobanteService (mismo paquete) usa el mismo formato y el mismo color en sus pdf
+    static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    static final Color COLOR_MARRON = new Color(133, 77, 14); // mismo color del sistema (#854d0e)
     private static final String SIN_DATO = "Sin dato";
 
     /** Columnas que debe tener el CSV de libros (la primera fila del archivo). */
@@ -130,7 +132,7 @@ public class ReporteService {
 
     // ---------- Los reportes (RF08) ----------
 
-    /** Arma la tabla del reporte. tipo: prestamos, devoluciones, reservas, incidencias, bajas, stock, indicadores o tiempos. */
+    /** Arma la tabla del reporte. tipo: prestamos, devoluciones, reservas, incidencias, bajas, stock, indicadores, tiempos o pordia. */
     @Transactional(readOnly = true)
     public TablaReporte armar(String tipo, LocalDate desde, LocalDate hasta) {
         RangoFechas rango = new RangoFechas(desde, hasta); // valida q "desde" no sea despues de "hasta"

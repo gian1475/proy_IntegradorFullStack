@@ -8,11 +8,15 @@ import com.alejandria.biblioteca.dto.reporte.ReportePrestamoDTO;
 import com.alejandria.biblioteca.exception.NegocioException;
 import com.alejandria.biblioteca.seguridad.Rol;
 import com.alejandria.biblioteca.seguridad.Sesion;
+import com.alejandria.biblioteca.service.ComprobanteService;
 import com.alejandria.biblioteca.service.PrestamoService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -28,9 +32,11 @@ import java.util.Map;
 public class PrestamoController {
 
     private final PrestamoService prestamoService;
+    private final ComprobanteService comprobanteService;
 
-    public PrestamoController(PrestamoService prestamoService) {
+    public PrestamoController(PrestamoService prestamoService, ComprobanteService comprobanteService) {
         this.prestamoService = prestamoService;
+        this.comprobanteService = comprobanteService;
     }
 
     /** ADICIONAR: el encargado que registra se toma de la sesión, no del formulario. */
@@ -79,6 +85,23 @@ public class PrestamoController {
     @RolesAllowed({Rol.ENCARGADO, Rol.ADMINISTRADOR})
     public PrestamoDTO obtener(@PathVariable Integer id) {
         return prestamoService.obtener(id);
+    }
+
+    /** Comprobante del préstamo en PDF (reporte de una operación, semana 15). */
+    // comprobante prestamo: GET /api/prestamos/{id}/comprobante. los tres perfiles; el prestatario solo los suyos
+    @GetMapping("/{id}/comprobante")
+    @RolesAllowed({Rol.ENCARGADO, Rol.ADMINISTRADOR, Rol.PRESTATARIO})
+    public ResponseEntity<byte[]> comprobante(@PathVariable Integer id, @AuthenticationPrincipal Sesion sesion) {
+        // permisos prestatario: igual q en "Mis prestamos", no puede pedir el de otro (403)
+        if (Rol.PRESTATARIO.equals(sesion.rol()) && !sesion.idUsuario().equals(prestamoService.obtenerIdPrestatario(id))) {
+            throw new NegocioException(HttpStatus.FORBIDDEN, "Solo puede descargar el comprobante de sus propios préstamos");
+        }
+        // ContentDisposition de Spring arma la cabecera q le dice al navegador "descarga este archivo con este nombre"
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("comprobante_prestamo_" + id + ".pdf").build().toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(comprobanteService.comprobantePrestamo(id));
     }
 
     /** ACTUALIZAR: ampliar la hora límite (una sola vez). */

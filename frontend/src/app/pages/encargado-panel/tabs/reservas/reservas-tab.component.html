@@ -1,5 +1,11 @@
 @if (mensajeOk()) {
-  <div class="alert alert-success">{{ mensajeOk() }}</div>
+  <div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span>{{ mensajeOk() }}</span>
+    <!-- constancia (semana 15): la reserva recien hecha en ventanilla, para entregarla al prestatario -->
+    @if (ultimaReserva(); as id) {
+      <button type="button" class="btn btn-success btn-sm" (click)="descargarConstancia(id)">Descargar constancia (PDF)</button>
+    }
+  </div>
 }
 @if (mensajeError()) {
   <div class="alert alert-danger">{{ mensajeError() }}</div>
@@ -77,7 +83,9 @@
               <td>{{ r.fechaRecojoLimite | date: 'dd/MM HH:mm' }}</td>
               <td class="text-nowrap">
                 <button class="btn btn-primary btn-sm me-1" (click)="entregar.emit(r)">Entregar</button>
-                <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
+                <button class="btn btn-outline-danger btn-sm me-1" (click)="cancelar(r)">Cancelar</button>
+                <button class="btn btn-outline-secondary btn-sm" title="Descargar la constancia en PDF"
+                        (click)="descargarConstancia(r.idReserva)">Constancia</button>
               </td>
             </tr>
           }
@@ -111,7 +119,11 @@
               <td>{{ r.posicionCola }}</td>
               <td>{{ r.nombrePrestatario }}</td>
               <td>{{ r.fechaReserva | date: 'dd/MM HH:mm' }}</td>
-              <td><button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button></td>
+              <td class="text-nowrap">
+                <button class="btn btn-outline-danger btn-sm me-1" (click)="cancelar(r)">Cancelar</button>
+                <button class="btn btn-outline-secondary btn-sm" title="Descargar la constancia en PDF"
+                        (click)="descargarConstancia(r.idReserva)">Constancia</button>
+              </td>
             </tr>
           }
         </tbody>

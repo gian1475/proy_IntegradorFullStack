@@ -33,10 +33,22 @@ describe('pestaña Reservas del admin (RF15 y RF17)', () => {
     return Array.from(tr.querySelectorAll('button')).map(b => b.textContent!.trim());
   }
 
-  it('la pendiente tiene "Cambiar fecha" y "Cancelar"; la cancelada, "Eliminar"', () => {
+  it('la pendiente tiene "Cambiar fecha" y "Cancelar"; la cancelada, "Eliminar"; todas, "Constancia"', () => {
     const fixture = abrir();
-    expect(botones(fixture, 0)).toEqual(['Cambiar fecha', 'Cancelar']);
-    expect(botones(fixture, 1)).toEqual(['Eliminar']);
+    expect(botones(fixture, 0)).toEqual(['Cambiar fecha', 'Cancelar', 'Constancia']);
+    expect(botones(fixture, 1)).toEqual(['Eliminar', 'Constancia']);
+  });
+
+  // semana 15: el admin descarga la constancia en PDF de cualquier reserva
+  it('"Constancia" pide el PDF de esa reserva', () => {
+    const fixture = abrir();
+    const tr = fixture.nativeElement.querySelectorAll('tbody tr')[1] as HTMLElement;
+    const boton = Array.from(tr.querySelectorAll('button')).find(b => b.textContent!.trim() === 'Constancia')!;
+
+    boton.click();
+
+    const req = http.expectOne(`${API}/8/constancia`);
+    expect(req.request.responseType).toBe('blob');
   });
 
   // B1 (RF16 y CU05): el administrador también cancela reservas

@@ -24,6 +24,8 @@ export class RegistrarTabComponent implements OnInit {
 
   readonly mensajeOk = signal('');
   readonly mensajeError = signal('');
+  /** N° del préstamo recién registrado, para descargar su comprobante (null = ninguno). */
+  readonly ultimoPrestamo = signal<number | null>(null);
 
   readonly libros = signal<LibroBackend[]>([]);
   // consulta disponibilidad (RF03): el encargado busca el libro por titulo, autor, categoria o isbn
@@ -82,12 +84,20 @@ export class RegistrarTabComponent implements OnInit {
         const ajustado = new Date(p.fechaDevolucionPrevista).getTime() < tresHoras;
         this.mensajeOk.set(`Préstamo #${p.idPrestamo} registrado. Hora límite: ${this.formatearHora(p.fechaDevolucionPrevista)}`
           + (ajustado ? ' (ajustada a la hora de cierre de la biblioteca)' : ''));
+        this.ultimoPrestamo.set(p.idPrestamo); // aparece el boton "Descargar comprobante (PDF)"
         this.dniPrestatario = '';
         this.idLibroSeleccionado = null;
         this.inicioAtencion = null; // el siguiente prestamo cuenta desde cero
         this.cargarLibros();
       },
       error: err => this.mostrarError(err)
+    });
+  }
+
+  // comprobante prestamo (front, semana 15): el pdf del prestamo recien registrado, para entregarlo al prestatario
+  descargarComprobante(idPrestamo: number): void {
+    this.prestamoService.descargarComprobante(idPrestamo).subscribe({
+      error: err => this.mensajeError.set(mensajeDeError(err, 'No se pudo descargar el comprobante'))
     });
   }
 
@@ -98,6 +108,7 @@ export class RegistrarTabComponent implements OnInit {
   private limpiarMensajes(): void {
     this.mensajeOk.set('');
     this.mensajeError.set('');
+    this.ultimoPrestamo.set(null);
   }
 
   private mostrarError(err: HttpErrorResponse): void {

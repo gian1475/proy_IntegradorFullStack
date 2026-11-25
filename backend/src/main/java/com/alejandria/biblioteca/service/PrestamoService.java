@@ -147,6 +147,12 @@ public class PrestamoService {
         return PrestamoDTO.desde(buscar(idPrestamo));
     }
 
+    /** Dueño del préstamo: un prestatario solo descarga el comprobante de los suyos. Si no existe, 404. */
+    @Transactional(readOnly = true)
+    public Integer obtenerIdPrestatario(Integer idPrestamo) {
+        return buscar(idPrestamo).getPrestatario().getIdUsuario();
+    }
+
     // ---------- ACTUALIZAR ----------
 
     /** Amplía la hora límite. Solo una vez y solo si el préstamo no está vencido. */

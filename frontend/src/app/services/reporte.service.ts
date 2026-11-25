@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { guardarArchivo } from '../utils/descarga';
 
 export interface ResultadoImportacion {
   creados: number;
@@ -106,7 +107,7 @@ export class ReporteService {
     if (hasta) params = params.set('hasta', hasta);
     const hoy = new Date().toISOString().slice(0, 10);
     return this.http.get(`${this.apiUrl}/${tipo}/${formato}`, { params, responseType: 'blob' }).pipe(
-      tap(archivo => this.guardarArchivo(archivo, `reporte_${tipo}_${hoy}.${EXTENSIONES[formato]}`))
+      tap(archivo => guardarArchivo(archivo, `reporte_${tipo}_${hoy}.${EXTENSIONES[formato]}`))
     );
   }
 
@@ -125,13 +126,4 @@ export class ReporteService {
     return this.http.get<Dashboard>(`${environment.apiUrl}/dashboard`);
   }
 
-  /** Crea un enlace temporal y lo "clickea" para que el navegador descargue el archivo. */
-  private guardarArchivo(archivo: Blob, nombre: string): void {
-    const url = URL.createObjectURL(archivo);
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.download = nombre;
-    enlace.click();
-    URL.revokeObjectURL(url);
-  }
 }

@@ -109,6 +109,13 @@ export class ActivosTabComponent implements OnInit, OnDestroy {
     });
   }
 
+  // comprobante prestamo (front, semana 15): el pdf de ese prestamo
+  descargarComprobante(idPrestamo: number): void {
+    this.prestamoService.descargarComprobante(idPrestamo).subscribe({
+      error: err => this.mensajeError.set(mensajeDeError(err, 'No se pudo descargar el comprobante'))
+    });
+  }
+
   private formatearHora(fecha: string): string {
     return horaCorta(fecha); // formatDate de angular (utils/fechas.ts)
   }

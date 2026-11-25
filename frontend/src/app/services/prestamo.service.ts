@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { guardarArchivo } from '../utils/descarga';
 
 /** Préstamo con nombre del prestatario y título del libro (consulta con JOIN). */
 export interface PrestamoDetalle {
@@ -92,5 +93,12 @@ export class PrestamoService {
 
   anular(idPrestamo: number): Observable<{ mensaje: string }> {
     return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/${idPrestamo}`);
+  }
+
+  // comprobante prestamo (front, semana 15): el pdf de un prestamo. lo usan el encargado, el admin y el prestatario
+  descargarComprobante(idPrestamo: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${idPrestamo}/comprobante`, { responseType: 'blob' }).pipe(
+      tap(archivo => guardarArchivo(archivo, `comprobante_prestamo_${idPrestamo}.pdf`))
+    );
   }
 }

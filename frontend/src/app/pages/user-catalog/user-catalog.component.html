@@ -149,6 +149,9 @@
                     <button class="btn-cancel" (click)="abrirModalCancelar(reserva)">
                       {{ reserva.enCola ? 'Salir de la cola' : 'Cancelar' }}
                     </button>
+                    <!-- constancia (semana 15): el documento de SU reserva en PDF -->
+                    <button class="btn-constancia" title="Descargar la constancia en PDF"
+                            (click)="descargarConstancia(reserva.idReserva)">Constancia</button>
                   </div>
                 </div>
               </article>
@@ -198,6 +201,7 @@
                   <th>Ampliado</th>
                   <th>Estado del libro</th>
                   <th>Estado</th>
+                  <th>Comprobante</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,6 +215,10 @@
                     <td>{{ p.ampliado ? 'Sí' : 'No' }}</td>
                     <td>{{ p.estadoFisicoDevolucion ?? '-' }}</td>
                     <td><span class="estado" [class]="p.estadoPrestamo">{{ p.estadoPrestamo }}</span></td>
+                    <td>
+                      <button class="btn-pdf" title="Descargar el comprobante en PDF"
+                              (click)="descargarComprobante(p.idPrestamo)">PDF</button>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -292,7 +300,13 @@
           Acércate a la fecha y hora elegida para recoger el libro en sala de lectura.
         </p>
         <div class="modal-actions-row">
-          <button class="btn-single-modal" (click)="cerrarModalReservaRealizada()">Volver</button>
+          <!-- constancia (semana 15): el documento de la reserva recien hecha -->
+          @if (reservaCreada(); as id) {
+            <button class="btn-cancel-modal" (click)="descargarConstancia(id)">Descargar constancia (PDF)</button>
+            <button class="btn-confirm-modal" (click)="cerrarModalReservaRealizada()">Volver</button>
+          } @else {
+            <button class="btn-single-modal" (click)="cerrarModalReservaRealizada()">Volver</button>
+          }
         </div>
       </div>
     </div>
@@ -313,7 +327,12 @@
           un ejemplar y te toque, verás hasta cuándo puedes recogerlo.
         </p>
         <div class="modal-actions-row">
-          <button class="btn-single-modal" (click)="cerrarModalEnCola()">Volver</button>
+          @if (reservaCreada(); as id) {
+            <button class="btn-cancel-modal" (click)="descargarConstancia(id)">Descargar constancia (PDF)</button>
+            <button class="btn-confirm-modal" (click)="cerrarModalEnCola()">Volver</button>
+          } @else {
+            <button class="btn-single-modal" (click)="cerrarModalEnCola()">Volver</button>
+          }
         </div>
       </div>
     </div>

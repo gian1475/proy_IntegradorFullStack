@@ -48,4 +48,11 @@ export class HistorialPrestamosComponent implements OnInit {
     this.filtros = { dni: '', libro: '', desde: '', hasta: '' };
     this.buscar();
   }
+
+  // comprobante prestamo (front, semana 15): el pdf de cualquier prestamo del historial (encargado y admin)
+  descargarComprobante(idPrestamo: number): void {
+    this.prestamoService.descargarComprobante(idPrestamo).subscribe({
+      error: (err: HttpErrorResponse) => this.mensajeError.set(mensajeDeError(err, 'No se pudo descargar el comprobante'))
+    });
+  }
 }

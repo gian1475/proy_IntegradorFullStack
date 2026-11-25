@@ -39,11 +39,52 @@ describe('Mis Reservas del prestatario (RF15)', () => {
     return fixture;
   }
 
-  it('solo la reserva con fecha de recojo tiene "Cambiar fecha"', () => {
+  it('solo la reserva con fecha de recojo tiene "Cambiar fecha"; las dos tienen "Constancia"', () => {
     const fixture = abrir();
     const tarjetas: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.book-card'));
     const textos = tarjetas.map(t => Array.from(t.querySelectorAll('button')).map(b => b.textContent!.trim()));
-    expect(textos).toEqual([['Cambiar fecha', 'Cancelar'], ['Salir de la cola']]);
+    expect(textos).toEqual([['Cambiar fecha', 'Cancelar', 'Constancia'], ['Salir de la cola', 'Constancia']]);
+  });
+
+  // semana 15: "el paciente necesita el documento de su propia cita": el prestatario descarga la constancia de SU reserva
+  it('"Constancia" pide el PDF de su reserva', () => {
+    const fixture = abrir();
+    const tarjeta = fixture.nativeElement.querySelectorAll('.book-card')[1] as HTMLElement;
+    Array.from(tarjeta.querySelectorAll('button')).find(b => b.textContent!.trim() === 'Constancia')!.click();
+
+    expect(http.expectOne(`${API}/reservas/8/constancia`).request.responseType).toBe('blob');
+  });
+
+  it('al terminar de reservar ofrece descargar la constancia de esa reserva', () => {
+    const fixture = abrir();
+    const c = fixture.componentInstance;
+    c.confirmarReserva({ id: 3, title: 'Rayuela', author: '', allAuthors: '', category: '', isbn: '1', coverImage: '',
+                         stock: 2, estado: 'disponible' });
+    http.expectOne(r => r.method === 'POST' && r.url === `${API}/reservas`).flush({ ...reserva, idReserva: 9 });
+    http.match(r => r.method === 'GET').forEach(r => r.flush([]));
+    fixture.detectChanges();
+
+    const boton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent!.trim() === 'Descargar constancia (PDF)')!;
+    boton.click();
+
+    expect(http.expectOne(`${API}/reservas/9/constancia`).request.responseType).toBe('blob');
+  });
+
+  it('Mis Préstamos tiene el comprobante en PDF de cada préstamo', () => {
+    const base = { idPrestatario: 5, idEncargado: 2, idLibro: 3, fechaPrestamo: '2026-10-20T10:00:00',
+                   fechaDevolucionPrevista: '2026-10-20T13:00:00', fechaDevolucionReal: null, ampliado: false,
+                   estadoFisicoDevolucion: null, estadoPrestamo: 'activo' };
+    const fixture = abrir([{ ...base, idPrestamo: 4 }]);
+    fixture.componentInstance.selectMenu('prestamos');
+    http.match(r => r.url.includes('/prestamos')).forEach(r => r.flush([{ ...base, idPrestamo: 4 }]));
+    fixture.detectChanges();
+
+    const boton = Array.from(fixture.nativeElement.querySelectorAll('.tabla-prestamos button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent!.trim() === 'PDF')!;
+    boton.click();
+
+    expect(http.expectOne(`${API}/prestamos/4/comprobante`).request.responseType).toBe('blob');
   });
 
   it('cambiar fecha abre con la fecha y la franja actuales y guarda con PUT', () => {

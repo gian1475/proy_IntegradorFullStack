@@ -80,7 +80,7 @@
                 }
               </td>
               <td><span class="badge" [class]="r.estadoReserva">{{ r.estadoReserva }}</span></td>
-              <td>
+              <td class="text-nowrap">
                 @if (sePuedeEliminar(r)) {
                   <button class="btn btn-outline-danger btn-sm" (click)="eliminar(r)">Eliminar</button>
                 } @else if (r.estadoReserva === 'pendiente') {
@@ -88,9 +88,10 @@
                   <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
                 } @else if (r.estadoReserva === 'en_espera') {
                   <button class="btn btn-outline-danger btn-sm" (click)="cancelar(r)">Cancelar</button>
-                } @else {
-                  <span class="text-body-secondary">—</span>
                 }
+                <!-- constancia (semana 15): el pdf de cualquier reserva -->
+                <button class="btn btn-outline-secondary btn-sm ms-1" title="Descargar la constancia en PDF"
+                        (click)="descargarConstancia(r.idReserva)">Constancia</button>
               </td>
             </tr>
           }

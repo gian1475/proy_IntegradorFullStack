@@ -75,6 +75,8 @@ export class UserCatalogComponent implements OnInit {
   readonly franjas = FRANJAS_RECOJO;
   /** Puesto en la cola cuando la reserva entró a la cola de espera (RF04). */
   readonly modalEnCola = signal<number | null>(null);
+  /** N° de la reserva recién hecha, para descargar su constancia desde el modal (semana 15). */
+  readonly reservaCreada = signal<number | null>(null);
 
   fechaSeleccionada: string = this.hoy();
   horarioSeleccionado: string = '08:30 - 11:30';
@@ -252,6 +254,7 @@ export class UserCatalogComponent implements OnInit {
     this.reservaService.crearReserva(book.id, usuario.idUsuario, fechaRecojoLimite).subscribe({
       next: reserva => {
         this.modalConfiguracion.set(null);
+        this.reservaCreada.set(reserva.idReserva); // el modal ofrece "Descargar constancia (PDF)"
         if (reserva.estadoReserva === 'en_espera') {
           this.modalEnCola.set(reserva.posicionCola);
         } else {
@@ -304,6 +307,20 @@ export class UserCatalogComponent implements OnInit {
 
   cerrarModalCanceladaExitosa(): void {
     this.modalCanceladaExitosa.set(false);
+  }
+
+  // constancia reserva (front, semana 15): el pdf de SU reserva (el backend no deja pedir la de otro: 403)
+  descargarConstancia(idReserva: number): void {
+    this.reservaService.descargarConstancia(idReserva).subscribe({
+      error: (err: HttpErrorResponse) => alert(mensajeDeError(err, 'No se pudo descargar la constancia'))
+    });
+  }
+
+  // comprobante prestamo (front, semana 15): el pdf de SU prestamo, desde "Mis Préstamos"
+  descargarComprobante(idPrestamo: number): void {
+    this.prestamoService.descargarComprobante(idPrestamo).subscribe({
+      error: (err: HttpErrorResponse) => alert(mensajeDeError(err, 'No se pudo descargar el comprobante'))
+    });
   }
 
   // reserva actualizar (front, RF15): se abre con la fecha y la franja q tiene ahora

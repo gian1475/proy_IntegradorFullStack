@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { guardarArchivo } from '../utils/descarga';
 
 export interface ReservaBackend {
   idReserva: number;
@@ -62,5 +63,12 @@ export class ReservaService {
   // eliminacion fisica (front): DELETE, la reserva se borra de la bd. solo el admin y solo canceladas o vencidas
   eliminar(idReserva: number): Observable<{ mensaje: string }> {
     return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/${idReserva}`);
+  }
+
+  // constancia reserva (front, semana 15): el pdf de una reserva. el prestatario las suyas; el admin y el encargado todas
+  descargarConstancia(idReserva: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${idReserva}/constancia`, { responseType: 'blob' }).pipe(
+      tap(archivo => guardarArchivo(archivo, `constancia_reserva_${idReserva}.pdf`))
+    );
   }
 }

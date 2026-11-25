@@ -58,6 +58,8 @@
                           [disabled]="p.ampliado || p.estadoPrestamo !== 'activo' || p.alerta.tipo === 'vencido'">Ampliar</button>
                   <button class="btn btn-primary btn-sm" (click)="abrirDevolucion(p)">Devolver</button>
                   <button class="btn btn-outline-danger btn-sm" (click)="anular(p)">Anular</button>
+                  <button class="btn btn-outline-secondary btn-sm" title="Descargar el comprobante en PDF"
+                          (click)="descargarComprobante(p.idPrestamo)">Comprobante</button>
                 </div>
               </td>
             </tr>

@@ -53,6 +53,7 @@
             <th>Ampliado</th>
             <th>Estado físico</th>
             <th>Estado</th>
+            <th>Comprobante</th>
           </tr>
         </thead>
         <tbody>
@@ -69,6 +70,10 @@
               <td>{{ p.ampliado ? 'Sí' : 'No' }}</td>
               <td>{{ p.estadoFisicoDevolucion ?? '-' }}</td>
               <td><span class="badge" [class]="p.estadoPrestamo">{{ p.estadoPrestamo }}</span></td>
+              <td>
+                <button class="btn btn-outline-secondary btn-sm" title="Descargar el comprobante en PDF"
+                        (click)="descargarComprobante(p.idPrestamo)">PDF</button>
+              </td>
             </tr>
           }
         </tbody>
