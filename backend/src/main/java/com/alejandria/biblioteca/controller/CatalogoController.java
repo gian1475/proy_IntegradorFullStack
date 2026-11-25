@@ -5,6 +5,7 @@ import com.alejandria.biblioteca.dto.libro.LibroDTO;
 import com.alejandria.biblioteca.seguridad.Rol;
 import jakarta.annotation.security.RolesAllowed;
 import com.alejandria.biblioteca.service.LibroService;
+import com.alejandria.biblioteca.service.ReservaService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,15 +16,18 @@ import java.util.List;
 public class CatalogoController {
 
     private final LibroService libroService;
+    private final ReservaService reservaService;
 
-    public CatalogoController(LibroService libroService) {
+    public CatalogoController(LibroService libroService, ReservaService reservaService) {
         this.libroService = libroService;
+        this.reservaService = reservaService;
     }
 
     // CONSULTA DE DOS TABLAS: GET /api/libros-por-categoria?categoria=Novela (vacio = todas). libro JOIN categoria
     @GetMapping("/libros-por-categoria")
     @RolesAllowed({Rol.ADMINISTRADOR, Rol.ENCARGADO})
     public List<LibroCategoriaDTO> librosPorCategoria(@RequestParam(defaultValue = "") String categoria) {
+        reservaService.liberarVencidas(); // D26: stock y estado al dia
         return libroService.consultarConCategoria(categoria);
     }
 

@@ -26,5 +26,8 @@ RUN mvn -q -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=backend /app/backend/target/biblioteca-alejandria.jar app.jar
+# D25: dentro de un contenedor Java usa por defecto solo 1/4 de la memoria para el heap (en Render, 512 MB = 128 MB)
+#      y el sistema ya usa unos 240 MB al arrancar. Con MaxRAMPercentage=75 el heap puede llegar a 3/4 (unos 384 MB);
+#      el resto queda para las clases, los hilos y el sistema operativo. Ver docs/MONITOREO.md
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]

@@ -9,6 +9,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -31,6 +35,17 @@ class DespliegueTest {
         mvc.perform(get(ruta))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));
+    }
+
+    // D25: en un contenedor (Render, 512 MB) java toma por defecto solo 1/4 de la memoria para el heap (~128 MB),
+    // y el sistema ya usa unos 240 MB al arrancar. el Dockerfile tiene q darle mas (MaxRAMPercentage)
+    @Test
+    void elDockerfileLeDaAJavaLaMayorParteDeLaMemoriaDelContenedor() throws Exception {
+        String dockerfile = Files.readString(Path.of("..", "Dockerfile")); // las pruebas corren dentro de backend/
+        String entrada = dockerfile.lines().filter(l -> l.startsWith("ENTRYPOINT")).findFirst().orElseThrow();
+        assertTrue(entrada.contains("\"-XX:MaxRAMPercentage=75\""), "ENTRYPOINT: " + entrada);
+        assertTrue(entrada.indexOf("MaxRAMPercentage") < entrada.indexOf("-jar"),
+                "la opcion de java va antes de -jar (despues seria un argumento del sistema)");
     }
 
     @Test

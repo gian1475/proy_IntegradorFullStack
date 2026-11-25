@@ -1,5 +1,6 @@
 package com.alejandria.biblioteca.dao;
 
+import com.alejandria.biblioteca.entity.Autor;
 import com.alejandria.biblioteca.entity.Libro;
 import org.hibernate.Hibernate;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * Consulta de disponibilidad (RF03) contra la BD real (Neon), con los libros de la carga inicial.
@@ -32,21 +34,43 @@ class LibroDaoTest {
         assertTrue(todas.stream().noneMatch(f -> "baja".equals(f[4])));
     }
 
+    // D24: estas tres pruebas buscaban "Clean Code", pero ese libro se dio de baja en Neon (en una demo) y
+    // fallaban. Ahora eligen de la BD un libro que siga en el catalogo: no dependen de un titulo fijo
+
     @Test
     void buscaPorTitulo() {
-        assertTrue(titulos(libroDao.buscarEnCatalogo("clean")).contains("Clean Code"));
+        Libro libro = unLibroDelCatalogo();
+        // solo una parte del titulo y en minusculas: "La Ciudad y los Perros" se encuentra con "la ciu"
+        String parte = libro.getTitulo().toLowerCase().substring(0, Math.min(6, libro.getTitulo().length()));
+        assertTrue(titulos(libroDao.buscarEnCatalogo(parte)).contains(libro.getTitulo()));
     }
 
     @Test
     void buscaPorCodigoIsbnConOSinGuiones() {
-        assertTrue(titulos(libroDao.buscarEnCatalogo("9780132350884")).contains("Clean Code"));
-        assertTrue(titulos(libroDao.buscarEnCatalogo("978-0132350884")).contains("Clean Code"));
+        Libro libro = unLibroDelCatalogo();
+        String isbn = libro.getIsbn().replace("-", "");
+        String conGuion = isbn.substring(0, 3) + "-" + isbn.substring(3); // 9788432221026 -> 978-8432221026
+        assertTrue(titulos(libroDao.buscarEnCatalogo(isbn)).contains(libro.getTitulo()));
+        assertTrue(titulos(libroDao.buscarEnCatalogo(conGuion)).contains(libro.getTitulo()));
     }
 
     @Test
     void buscaPorAutor() {
-        assertTrue(titulos(libroDao.buscarEnCatalogo("robert martin")).contains("Clean Code"));
-        assertTrue(titulos(libroDao.buscarEnCatalogo("vargas llosa")).contains("La Ciudad y los Perros"));
+        Libro libro = unLibroDelCatalogo();
+        Autor autor = libro.getAutores().iterator().next();
+        String nombreYApellido = (autor.getNombre() + " " + autor.getApellido()).toLowerCase(); // ej. "mario vargas llosa"
+        assertTrue(titulos(libroDao.buscarEnCatalogo(nombreYApellido)).contains(libro.getTitulo()));
+    }
+
+    // eliminacion logica: el libro dado de baja sigue en la bd, pero la busqueda del catalogo no lo devuelve
+    // (es lo que paso con "Clean Code")
+    @Test
+    void unLibroDadoDeBajaNoSaleAunqueSeBusqueSuIsbn() {
+        List<Libro> deBaja = libroDao.findByEstadoLibroOrderByTitulo("baja");
+        assumeFalse(deBaja.isEmpty(), "La BD no tiene libros dados de baja");
+        Libro libro = deBaja.get(0);
+        assertTrue(libroDao.buscarEnCatalogo(libro.getIsbn()).stream()
+                .noneMatch(l -> l.getIdLibro().equals(libro.getIdLibro())));
     }
 
     @Test
@@ -101,5 +125,13 @@ class LibroDaoTest {
 
     private List<String> titulos(List<Libro> libros) {
         return libros.stream().map(Libro::getTitulo).toList();
+    }
+
+    /** El primer libro del catálogo (no dado de baja) que tenga autor e ISBN. Se elige en cada corrida. */
+    private Libro unLibroDelCatalogo() {
+        return libroDao.findByEstadoLibroNotOrderByTitulo("baja").stream()
+                .filter(l -> !l.getAutores().isEmpty() && l.getIsbn() != null && l.getIsbn().length() > 3)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("La BD no tiene libros con autor en el catálogo"));
     }
 }

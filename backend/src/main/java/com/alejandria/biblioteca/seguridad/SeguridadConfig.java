@@ -36,8 +36,9 @@ public class SeguridadConfig {
         this.origenesFrontend = origenesFrontend;
     }
 
+    // D27: los metodos @Bean no necesitan ser public: Spring los llama igual (aviso de VS Code)
     @Bean
-    public SecurityFilterChain cadenaDeFiltros(HttpSecurity http, SesionService sesionService) throws Exception {
+    SecurityFilterChain cadenaDeFiltros(HttpSecurity http, SesionService sesionService) throws Exception {
         return http
                 // la api usa un token en el header, no cookies: no hace falta la proteccion csrf
                 .csrf(AbstractHttpConfigurer::disable)
@@ -57,7 +58,7 @@ public class SeguridadConfig {
 
     // cors: solo el frontend propio (localhost:4200, o el q diga app.cors.origenes) puede llamar a la api
     @Bean
-    public CorsConfigurationSource configuracionCors() {
+    CorsConfigurationSource configuracionCors() {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(origenesFrontend);
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

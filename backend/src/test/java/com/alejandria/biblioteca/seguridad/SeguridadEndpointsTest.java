@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -220,6 +221,17 @@ class SeguridadEndpointsTest {
                         .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.mensaje").value("El tipo de incidencia debe ser retraso, daño o pérdida"));
+    }
+
+    // D27: @RequestParam ya no repite "archivo". si el campo no llegara al metodo, la respuesta seria otra
+    // ("Required part 'archivo' is not present"); con el archivo vacio llega y responde el mensaje propio
+    @Test
+    void laImportacionDeCsvRecibeElCampoArchivo() throws Exception {
+        mvc.perform(multipart("/api/reportes/libros/csv")
+                        .file(new MockMultipartFile("archivo", "libros.csv", "text/csv", new byte[0]))
+                        .header("Authorization", token(Rol.ADMINISTRADOR)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("Seleccione un archivo CSV"));
     }
 
     @Test

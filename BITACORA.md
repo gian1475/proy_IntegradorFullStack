@@ -1239,7 +1239,7 @@ Antes de la revisión del profe se cruzó lo pedido en la clase del 09/11 (búsq
 
 **Pruebas:** `LibroDaoTest.consultaDeDosTablasLibroYCategoria` (nueva, contra Neon) y `ReporteBdTest` con `pordia`: pasan. Total de reportes: 9.
 
-**Ojo:** "Clean Code" ya no está en el catálogo de Neon (dado de baja o borrado), por eso fallan 3 pruebas viejas de `LibroDaoTest` que lo buscan. No es un error del código: hay que reactivar el libro o cambiar el título en esas pruebas.
+**Ojo:** "Clean Code" ya no está en el catálogo de Neon (dado de baja o borrado), por eso fallan 3 pruebas viejas de `LibroDaoTest` que lo buscan. No es un error del código: hay que reactivar el libro o cambiar el título en esas pruebas. **Arreglado el 24/11 (D24):** ver "Pruebas de la búsqueda sin depender de un título fijo".
 
 ---
 
@@ -1315,13 +1315,121 @@ El equipo pidió que Claude aplique en el informe todo lo de `PLAN_INFORME.md` (
 - dos conteos de auditoría (Core Java coincide, Sapiens no) y el TAP de los préstamos hechos por la pantalla.
 - Diego quedó bloqueado 15 minutos (CP02) y se desbloquea solo.
 
-**Observación (no se cambió el código):** `GET /api/libros` no vence las reservas: el catálogo puede mostrar un libro "reservado" con stock 0 aunque su reserva ya venció, hasta la siguiente operación con reservas o préstamos (pasó con *Cien Años de Soledad*).
+**Observación (no se cambió el código):** `GET /api/libros` no vence las reservas: el catálogo puede mostrar un libro "reservado" con stock 0 aunque su reserva ya venció, hasta la siguiente operación con reservas o préstamos (pasó con *Cien Años de Soledad*). **Arreglado el 24/11 (D26).**
 
 **Figuras:**
 - **Código:** se armaron desde los archivos reales, con sus números de línea.
 - **Diagramas:** se dibujaron con HTML y SVG (sin herramientas externas).
 - **Pantallas:** son capturas del sistema.
 - Todo está en [docs/capturas/2026-11-17/figuras/](docs/capturas/2026-11-17/figuras/). Detalle en I77 de `PLAN_INFORME.md`.
+
+---
+
+## Semana 15: comprobante del préstamo y constancia de la reserva en PDF (24/11) ✅
+
+**Por qué:** en la semana 15 el profe pidió tres reportes en PDF: el de **una operación individual**, uno por fechas y uno de indicadores. El sistema tenía los 9 reportes, pero todos eran **listados** por fechas: no había un documento de una sola operación. El profe lo explicó con un ejemplo: "el paciente necesita el documento de **su propia** cita; un listado general no cumple". Resumen de la clase en `docs/clases/s15integradorresumen.txt`; tareas C30, C31 y D23 de `PLAN_CODIGO.md`.
+
+**Qué se hizo:**
+
+| Qué | Cómo | Archivos |
+|---|---|---|
+| **Comprobante del préstamo** (C30) | PDF de media hoja (A5) con el N° del préstamo, el prestatario y su DNI, el libro y su ISBN, el encargado, el inicio, la hora límite, si se amplió, la devolución ("Pendiente" si el libro sigue en sala), el estado físico y el estado. Al final, una nota que depende del estado: en curso recuerda las reglas (3 h, cierre a las 20:00, ampliación); anulado dice que es una eliminación lógica; devuelto dice que el préstamo terminó | `service/ComprobanteService.java` (nuevo) |
+| **Constancia de la reserva** (C31) | El mismo diseño: prestatario, DNI, libro, ISBN, fecha de la reserva, estado y "Recoger hasta". Si la reserva está en la cola, muestra el puesto en lugar de la fecha | `ComprobanteService.constanciaReserva` |
+| Endpoints | `GET /api/prestamos/{id}/comprobante` y `GET /api/reservas/{id}/constancia`. Los pueden usar **los tres perfiles**; el prestatario **solo los suyos** (si pide el de otro, 403, con la misma regla de "Mis préstamos" y las reservas). Si no existe, 404. La cabecera de descarga la arma `ContentDisposition`, de Spring | `PrestamoController`, `ReservaController`, `PrestamoService.obtenerIdPrestatario` |
+| Pantallas | **Comprobante:** después de registrar el préstamo ("Descargar comprobante (PDF)"), en Préstamos activos del encargado y del admin, en el Historial (los dos perfiles) y en Mis Préstamos. **Constancia:** después de reservar (prestatario, también en la cola, y encargado en ventanilla), en Mis Reservas y en la pestaña Reservas del encargado y del admin | `registrar-tab`, `activos-tab`, `historial-prestamos`, `prestamos-tab` (admin), `user-catalog`, `reservas-tab`, `reservas-admin-tab` |
+| La descarga en el frontend | Estaba dentro de `ReporteService`. Ahora es `guardarArchivo` en `utils/descarga.ts` y la usan los reportes, los comprobantes y las constancias (sin copiar el código) | `utils/descarga.ts` (nuevo), `reporte.service.ts`, `prestamo.service.ts`, `reserva.service.ts` |
+| D23 | Los comentarios de `ReporteController` y `ReporteService` decían 8 tipos de reporte: son 9 (faltaba `pordia`) | `ReporteController`, `ReporteService` |
+| Estilos del prestatario | Al agregar los botones, el LESS de `user-catalog` pasó el límite de 12 kB por componente (aviso del build, por 573 bytes). Se sacó el bloque `.card-action` del anidado: el CSS ya no repite 6 clases delante de cada botón. Se ve igual y el build volvió a salir **sin avisos** | `user-catalog.component.less` |
+
+**Sin librerías nuevas:** el PDF lo arma **OpenPDF**, que ya se usaba en los reportes, y las pruebas leen el texto del PDF con `PdfTextExtractor`, que viene en OpenPDF. Se usan el mismo color marrón y el mismo formato de fecha de los reportes (`ReporteService.COLOR_MARRON` y `FORMATO_FECHA`, que dejaron de ser `private`). Va en una clase aparte para no agrandar más `ReporteService`, que es de listados (la S de SOLID).
+
+**Primero la prueba** (todas en rojo antes del código):
+- [ComprobanteServiceTest](backend/src/test/java/com/alejandria/biblioteca/service/ComprobanteServiceTest.java) (8): lee el texto del PDF y revisa los datos del préstamo en curso, devuelto, anulado y vencido, la reserva pendiente y la que está en la cola, y el 404.
+- [ComprobanteEndpointsTest](backend/src/test/java/com/alejandria/biblioteca/seguridad/ComprobanteEndpointsTest.java) (9, contra Neon, solo lee): 401 sin sesión; el encargado y el admin descargan (`application/pdf` y el nombre del archivo); el prestatario descarga **el suyo**; con el de otro, 403; un id que no existe, 404.
+- Frontend: [descarga.spec.ts](frontend/src/app/utils/descarga.spec.ts) (3) y 6 más en las pantallas: el botón después de registrar y de reservar, y los botones de las tablas. Tres pruebas que contaban los botones de las reservas se actualizaron para incluir "Constancia".
+- **Resultado:**
+  - backend: **326** pruebas, pasan 323. Las 3 que fallan son las de `LibroDaoTest` que buscan "Clean Code", que ya no está en Neon (anotado el 11/11; **no es de este cambio**);
+  - frontend: **85**, todas pasan;
+  - `ng build`: sin avisos.
+- **Se vio el PDF de verdad:** un comprobante (préstamo #334) y una constancia (reserva #109) generados con datos de Neon. Se ven las tildes, la tabla y el color.
+
+**Informe:** I79.2 de `PLAN_INFORME.md`.
+
+---
+
+## Pruebas de la búsqueda sin depender de un título fijo (24/11, D24) ✅
+
+**Qué pasaba:** desde el 11/11 fallaban 3 pruebas de `LibroDaoTest` (`buscaPorTitulo`, `buscaPorAutor` y `buscaPorCodigoIsbnConOSinGuiones`), así que la suite completa nunca salía en verde. Si el profe pide correr las pruebas, se ve rojo.
+
+**Por qué:** las tres buscaban el libro "Clean Code". Se consultó Neon (solo lectura): el libro **sigue en la base de datos, pero dado de baja** (`estado_libro = 'baja'`, eliminación lógica, seguramente en una demo). El sistema hace lo correcto, porque un libro dado de baja no sale en el catálogo. Lo que fallaba era la prueba, que dependía de un título fijo.
+
+**Qué se hizo** (solo en la prueba; el código del sistema y Neon no cambian):
+- Las tres pruebas eligen en cada corrida un libro que **siga en el catálogo** y lo buscan:
+  - por una parte de su título, en minúsculas;
+  - por su ISBN, con y sin guion;
+  - por el nombre y el apellido de su autor.
+- Siguen probando lo mismo, pero ya no se rompen si en una demo se da de baja un libro.
+- **Prueba nueva:** `unLibroDadoDeBajaNoSaleAunqueSeBusqueSuIsbn` deja escrito lo que pasó con "Clean Code": aunque se busque su ISBN exacto, un libro dado de baja no aparece.
+- Archivo: [LibroDaoTest](backend/src/test/java/com/alejandria/biblioteca/dao/LibroDaoTest.java). Marcador: `D24`.
+
+**Resultado:** backend **327 pruebas, todas pasan** contra Neon (0 fallas, 0 saltadas); frontend **85**, todas pasan.
+
+---
+
+## Semana 16: monitoreo con JConsole, guía y medición de referencia (24/11) ✅
+
+**Por qué:** en la semana 16 el profe pidió, para los anexos: el nombre de la herramienta de monitoreo, una captura completa con **memoria, CPU e hilos** tomada **mientras se usa el sistema**, y la explicación de cada valor. La pestaña Monitoreo (Actuator) ya mostraba las tres métricas, pero solo el valor de un momento. Tarea M1 de `PLAN_CODIGO.md`; resumen de la clase en `docs/clases/s16integradorresumen.txt`.
+
+**Decisión del equipo (24/11):** usar también **JConsole**, sin ponerlo "de frente" en el sistema. JConsole viene con el JDK: no se agregó a la aplicación (ni código ni librería). Se abre en el servidor y se conecta al proceso del `.jar`.
+
+**Qué se hizo** (sin cambiar el código del sistema):
+- **[docs/MONITOREO.md](docs/MONITOREO.md)**, una guía nueva con:
+  - las dos herramientas y por qué se usan las dos;
+  - el paso a paso para conectar JConsole al `.jar` y qué hacer mientras mide (la prueba completa del guion);
+  - qué capturar;
+  - la tabla de métricas con la unidad, qué indica y cómo leer cada una;
+  - de dónde salen los 41 hilos, qué decir en 30 segundos y lo que va en el Anexo G.
+- **Medición de referencia, de verdad, el 24/11:**
+  - **Condiciones:** el `.jar` armado con el código de hoy, contra Neon, en la PC del equipo (12 núcleos lógicos, unos 23 GB de RAM, G1). Carga: 1.200 consultas seguidas al catálogo y después 4 usuarios a la vez; en total, 1.520 peticiones y 0 errores.
+  - **Memoria heap:** 238 MB al arrancar y entre 330 y 400 MB con uso, de un máximo de 5.984 MB (la cuarta parte de la RAM); 540 MB comprometidos.
+  - **CPU del proceso:** 11,6 % al arrancar, 0,3 % en reposo y hasta 2,2 % con 4 usuarios (es el % de toda la máquina).
+  - **Hilos:** 41, estables (10 de Tomcat para la app, 10 para el monitoreo y el resto de servicio; se vio con `jcmd Thread.print`).
+  - **Peticiones:** 198 ms de promedio y la más lenta en 0,88 s, todas en 2 s o menos (RNF03). El recolector de basura pausó 1 vez, 6 ms.
+- **Se comprobó que JConsole se puede conectar:** `jcmd`, que usa la misma conexión local que JConsole, respondió con el proceso del `.jar`.
+- **Además:** la sección 13 de `GUION_SUSTENTACION.md`, la nota de JConsole en `docs/LIBRERIAS.md` y el texto del Anexo G en I80.1 de `PLAN_INFORME.md`.
+
+**Encontrado al medir (D25, pendiente):** el `Dockerfile` arranca Java sin límite de memoria propio. En Render (512 MB), Java usaría por defecto unos 128 MB de heap, y al arrancar se midieron unos 240 MB usados. Antes de publicar conviene agregar `-XX:MaxRAMPercentage=75` (detalle en `docs/MONITOREO.md`, sección 6).
+
+**Falta (equipo):** las capturas con el sistema en uso (prioridad 15 de "Capturas para el anexo") y anotar sus valores en la Tabla 62 del Anexo G.
+
+---
+
+## Cierre del código: memoria en Render, reservas al día, avisos de VS Code y carga por partes (24/11) ✅
+
+Lo último de código que quedaba en `PLAN_CODIGO.md`. Cada arreglo tiene su prueba, escrita antes y vista en rojo.
+
+| # | Qué pasaba | Qué se hizo | Archivos | Prueba |
+|---|---|---|---|---|
+| **D25** | El `Dockerfile` arrancaba Java sin límite de memoria propio. En Render (512 MB), Java toma por defecto la cuarta parte para el heap (unos 128 MB), y al arrancar se midieron unos 240 MB usados (ver "Semana 16: monitoreo") | `ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]`: el heap puede llegar a 3/4 de la memoria del contenedor. Es una opción estándar de Java | `Dockerfile` | `DespliegueTest.elDockerfileLeDaAJavaLaMayorParteDeLaMemoriaDelContenedor` (lee el Dockerfile) |
+| **D26** | 🐞 El catálogo mostraba un libro "reservado" con stock 0 aunque su reserva ya había vencido (visto el 17/11 con *Cien Años de Soledad*), hasta que alguien prestaba o reservaba. Lo mismo podía pasar en el reporte de stock, en el dashboard y en "Libros por categoría" | Antes de mostrar stock o estado, se llama a `ReservaService.liberarVencidas()`: las reservas cuya hora de recojo pasó quedan `vencida` y devuelven su ejemplar. Va en los **controllers** (`LibroController`, `ReporteController`, `DashboardController` y `CatalogoController`) por dos razones: `ReservaService` ya usa `LibroService` (al revés sería una dependencia circular), y `ReporteService.generar` es de solo lectura | Los 4 controllers | `ReservasAlDiaTest` (4, con Mockito `InOrder`: primero vence, después lista) |
+| **D27** | Los 3 avisos de VS Code de la mañana: dos métodos `@Bean` `public` en `SeguridadConfig` y `@RequestParam("archivo")` con un nombre que ya coincide con el del parámetro | Los `@Bean` quedan sin `public` (Spring no lo necesita) y `@RequestParam MultipartFile archivo`, como los `@PathVariable` del resto del proyecto | `SeguridadConfig`, `ReporteController` | `SeguridadEndpointsTest.laImportacionDeCsvRecibeElCampoArchivo` (el campo `archivo` sigue llegando) |
+| **D19** | El aviso de tamaño del paquete del frontend se había subido de 800 a 850 kB (por los datos del idioma `es-PE`) | **Lazy loading de Angular** (`loadComponent`, viene en Angular): el catálogo, el panel del admin y el del encargado se descargan recién al entrar. El guard se revisa antes, así que nadie descarga la pantalla de otro perfil. El paquete inicial bajó de **827,8 a 668,4 kB** (por la red, de 148 a 122 kB) y el aviso volvió a **800 kB** | `app.routes.ts`, `angular.json` | `app.routes.spec.ts` (4) |
+
+**Comprobado con el `.jar` real:**
+- trae las 5 partes de Angular (`chunk-*.js`) y las entrega como archivos;
+- `/admin` y `/catalogo` siguen entregando `index.html`;
+- el catálogo público responde con los 23 libros.
+
+**Resultado:**
+- backend **333 pruebas**, todas pasan contra Neon (0 fallas, 0 saltadas);
+- frontend **89**, todas pasan;
+- `ng build` sin avisos, con el límite original de 800 kB.
+
+**Ojo con la consola:** en PowerShell 5.1, `./mvnw test` puede terminar con código 255 aunque todo pase. Pasa porque Lombok imprime avisos de `sun.misc.Unsafe` por stderr al compilar con el JDK 26. Lo que vale es el `BUILD SUCCESS` y "Failures: 0".
+
+**No se cambió (decisión del equipo):**
+- **Spring Boot 4.1.2 → 4.1.3:** VS Code lo sugiere, pero CLAUDE.md pide preguntar antes de cambiar el stack.
+- **D21:** la auditoría es por título; funciona y coincide con el informe.
 
 ---
 
@@ -1367,7 +1475,7 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cómo funciona la cola de espera? | `cola de espera` |
 | ¿Dónde se busca por título, autor, categoría o ISBN? | `consulta disponibilidad` |
 | ¿Dónde está el historial con filtros? | `historial`, `filtro de fechas` |
-| ¿Dónde están los reportes del RF08? | `reportes rf08`, `reporte devoluciones`, `reporte reservas`, `reporte incidencias`, `reporte bajas logicas`, `reporte stock`, `reporte indicadores`, `reporte tiempos` |
+| ¿Dónde están los reportes del RF08? | `reportes rf08`, `reporte devoluciones`, `reporte reservas`, `reporte incidencias`, `reporte bajas logicas`, `reporte stock`, `reporte indicadores`, `reporte tiempos`, `reporte por dia` |
 | ¿Dónde se crea el encargado desde el panel? | `crear perfil 2` |
 | ¿Cómo se evita que un usuario tenga dos perfiles? | `perfil unico` |
 | ¿Por qué la contraseña se mide en bytes? | `criterio 1 en bytes` |
@@ -1388,10 +1496,17 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Dónde reserva el encargado en la ventanilla? ¿Quién cancela? | `reserva ventanilla`, `reserva cancelar` |
 | ¿Cómo se restablece una contraseña olvidada? | `restablecer contra` |
 | ¿Cómo se comprueba el RNF03 (95 % en 2 s)? | `monitoreo RNF03` |
+| ¿Con qué monitorean memoria, CPU e hilos? ¿Qué significa cada valor? | `docs/MONITOREO.md` (JConsole y la pestaña Monitoreo); en el código, `MonitoreoService.obtenerResumen` |
 | ¿Qué pasa si dos encargados prestan el último ejemplar a la vez? | `ConcurrenciaStockTest`, `buscarParaActualizar` |
 | ¿Cómo se despliega? ¿Por qué un solo .jar? | `despliegue` (`FrontendController`, `environment`, `docs/DESPLIEGUE.md`) |
 | ¿Por qué `buscarPorAutor` recibe un solo texto? ¿Qué SQL hace cada consulta de libros? | `D14` (`LibroDao`) |
 | ¿Y si las 3 horas cruzan la medianoche? | `D20` (`HorarioAtencion.limitarAlCierre`) |
+| ¿Por qué las pruebas de la búsqueda no usan un título fijo? | `D24` (`LibroDaoTest`) |
+| ¿Cuándo vencen las reservas que nadie recogió? ¿El catálogo muestra el stock real? | `D26` (los 4 controllers), `liberarVencidas` |
+| ¿Cuánta memoria usa Java en Render? | `D25` (`Dockerfile`) |
+| ¿Por qué el prestatario no descarga el panel del admin? | `D19` (`app.routes.ts`, `loadComponent`) |
+| ¿Dónde está el reporte de una operación (el comprobante)? ¿Quién lo descarga? | `comprobante prestamo`, `constancia reserva` (backend y frontend), `comprobante (s15)` |
+| ¿Cómo se descarga un archivo en el navegador? | `descarga (front)` (`utils/descarga.ts`) |
 
 ---
 
@@ -1510,3 +1625,14 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 13 | Semana 13: una prueba de integración con la BD en verde (`UsuarioBdTest` o `ConcurrenciaStockTest`) | ⬜ |
 | 13 | Casos de prueba funcionales (I73, Tabla 35 de la vBeta): una captura por mensaje (CP01 a CP19) | ⬜ |
 | 13 | GitHub: la lista de commits con el **tercer commit** (para el Anexo E) | ⬜ |
+| 14 | Semana 15: encargado → registrar un préstamo → el mensaje con "Descargar comprobante (PDF)" → el PDF abierto (pantalla completa, con la fecha y la hora de Windows) | ⬜ `encargado-comprobante.png`, `comprobante-pdf.png` |
+| 14 | Semana 15: prestatario → reservar → modal "Reserva Realizada" con "Descargar constancia (PDF)" → el PDF abierto | ⬜ `prestatario-constancia.png`, `constancia-pdf.png` |
+| 14 | Semana 15: prestatario → Mis Préstamos con la columna "Comprobante" y Mis Reservas con "Constancia" | ⬜ `prestatario-mis-prestamos-comprobante.png`, `prestatario-mis-reservas-constancia.png` |
+| 14 | Semana 15: admin → Reservas e Historial con los botones "Constancia" y "PDF" | ⬜ `admin-reservas-constancia.png`, `admin-historial-comprobante.png` |
+| 14 | Código: `ComprobanteService.comprobantePrestamo` y el `if` del 403 en `PrestamoController.comprobante` | ⬜ |
+| 14 | Terminal con `ComprobanteServiceTest` (8) y `ComprobanteEndpointsTest` (9) en verde | ⬜ |
+| 14 | Terminal con `./mvnw test` → **333**, BUILD SUCCESS, y `npx ng test --watch=false` → **89** (reemplaza a la de 306 y 76 de la prioridad 11) | ⬜ |
+| 14 | D19: `npx ng build` con "Initial total 668 kB" y los 3 *Lazy chunk files* (paneles del admin, del encargado y catálogo) | ⬜ |
+| 15 | Semana 16: **JConsole → Overview** con las curvas de memoria, hilos, clases y CPU **mientras se usa el sistema** (5 a 10 min de la prueba completa), pantalla completa con la fecha y la hora de Windows. Es la captura principal del Anexo G | ⬜ `jconsole-overview.png` |
+| 15 | Semana 16: JConsole → **Memory** (*Used*, *Committed*, *Max*) y **Threads** (*Live*, *Peak*, *Daemon*) | ⬜ `jconsole-memoria.png`, `jconsole-hilos.png` |
+| 15 | Semana 16: la pestaña **Monitoreo** del admin en el mismo momento (memoria, CPU, hilos y "Peticiones en 2 s o menos") | ⬜ `admin-monitoreo-en-uso.png` |
