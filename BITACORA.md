@@ -1565,6 +1565,41 @@ Antes de cada captura, el script comprueba por el título que la terminal correc
 
 ---
 
+## Informe vDelta: cambios aceptados, índices al día y guía de las semanas 15 y 16 (25/11, mañana) ✅
+
+**Por qué:** el equipo pidió aceptar todo y una guía en PDF para saber qué se agregó, en qué página está y qué decir.
+
+**Qué se hizo:** se creó [docs/ProyectoFinal_Integrador_vDelta.docx](docs/ProyectoFinal_Integrador_vDelta.docx), de 235 páginas, que es **la versión para entregar**. La vGamma no se tocó y sigue con las marcas, para ver qué cambió.
+
+1. Con Word (invisible) se aceptaron los **840 cambios** de la vBeta y de la vGamma y se quitaron los **8 comentarios**, que eran notas internas. Quedó una marca en el último párrafo del documento, que Word no acepta; se quitó en el XML.
+2. Se arreglaron cuatro cosas, sin control de cambios porque la copia ya es la limpia:
+   - **Conclusión general:** decía "306 pruebas del backend y 76 del frontend" y ahora dice **341 y 90**. También nombra el comprobante y la constancia en PDF.
+   - **Bibliografía (I25), en el orden de APA 7:**
+     - ILERNA pasó antes de ISO/IEC/IEEE;
+     - *The Apache Software Foundation* pasó a la A, porque APA ordena a los autores institucionales por la primera palabra con significado.
+   - **Tabla 61 (Anexo E):** se agregó la fila del commit `8379b8d`.
+   - **Gantt:** 1.7.1 pasó al 100 % (en verde), porque el informe quedó cerrado, y 1.7 al 91 %. El total sigue en 93 %.
+3. Con Word se actualizaron todos los campos, la tabla de contenido y los índices de figuras y de tablas (lo mismo que **Ctrl+E y F9**). Para comprobarlo se compararon los títulos de las 224 tablas y figuras antes y después: no cambió ninguno.
+4. **I47, revisado:** todo lo que nombran la encuesta y las conclusiones existe en el sistema (las alertas de 15 minutos están en `alerta-prestamo.ts`). No hubo que quitar nada.
+5. El validador del skill `docx`, contra la vGamma, dio "All validations PASSED".
+
+**Guía para el equipo:** está en `docs/guia_informe_semanas_15_16.pdf`, de 7 páginas, y es local: se agregó al `.gitignore`. Tiene:
+- lo que se terminó hoy;
+- un mapa de cada pedido de las semanas 15 y 16 y dónde está, en el informe y en el sistema;
+- cada cosa nueva, página por página, con qué decir;
+- las preguntas probables (despliegue, reportes, monitoreo con los valores de la Tabla 64, commits y Gantt);
+- el resumen de la prueba completa.
+
+Las páginas salieron del PDF de la vDelta, con PyMuPDF. Al revisarlas apareció un error de la vGamma: las figuras de código que se rehicieron son las **37, 38 y 39**, no las "35, 36 y 37" que decía la tabla de arriba, porque se corrieron al agregar las Figuras 32 y 33. La guía ya trae los números correctos.
+
+**Lo que queda (equipo):**
+- subir al aula virtual, como archivos, el informe vDelta, los programas y el script de la BD (I73.7);
+- revisar los porcentajes del Gantt y los números de la Tabla 64;
+- I31 (no hay resultados de la encuesta porque no se aplicó);
+- I10 e I37, que son opcionales.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
