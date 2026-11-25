@@ -1,0 +1,530 @@
+[
+  {
+    "pantalla": "inicio",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "inicio",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "inicio",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "login",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "login",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "login",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "registro",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "registro",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "registro",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "catalogo",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "catalogo",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "catalogo",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "mis-reservas",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "mis-reservas",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "mis-reservas",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "mis-prestamos",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "mis-prestamos",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "mis-prestamos",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-dashboard",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-dashboard",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-dashboard",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-libros-categoria",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-libros-categoria",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-libros-categoria",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-libros",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-libros",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-libros",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-prestamos",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-prestamos",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-prestamos",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-historial",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-historial",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-historial",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-reservas",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-reservas",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-reservas",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-usuarios",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-usuarios",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-usuarios",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-auditoria",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-auditoria",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-auditoria",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-reportes",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-reportes",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-reportes",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-monitoreo",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-monitoreo",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "admin-monitoreo",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-activos",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-activos",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-activos",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-registrar-prestamo",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-registrar-prestamo",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-registrar-prestamo",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-reservas",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-reservas",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-reservas",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-incidencias",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-incidencias",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-incidencias",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-historial",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-historial",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-historial",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-reportes",
+    "tamano": "escritorio",
+    "ancho": 1366,
+    "scrollWidth": 1366,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-reportes",
+    "tamano": "tablet",
+    "ancho": 768,
+    "scrollWidth": 768,
+    "errores": 0,
+    "ok": true
+  },
+  {
+    "pantalla": "encargado-reportes",
+    "tamano": "celular",
+    "ancho": 390,
+    "scrollWidth": 390,
+    "errores": 0,
+    "ok": true
+  }
+]
