@@ -7,7 +7,6 @@ import com.alejandria.biblioteca.service.ReporteService;
 import com.alejandria.biblioteca.service.ReservaService;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,10 +41,12 @@ public class ReporteController {
         reservaService.liberarVencidas();
         byte[] contenido = reporteService.generar(tipo, formato, desde, hasta);
         String nombre = "reporte_" + tipo + "_" + LocalDate.now();
+        // D30: la misma respuesta de descarga que el comprobante y la constancia (Descarga.archivo)
         return switch (formato) {
-            case "excel" -> archivo(contenido, nombre + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            case "pdf" -> archivo(contenido, nombre + ".pdf", MediaType.APPLICATION_PDF_VALUE);
-            default -> archivo(contenido, nombre + ".csv", "text/csv; charset=UTF-8");
+            case "excel" -> Descarga.archivo(contenido, nombre + ".xlsx",
+                    MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            case "pdf" -> Descarga.archivo(contenido, nombre + ".pdf", MediaType.APPLICATION_PDF);
+            default -> Descarga.archivo(contenido, nombre + ".csv", MediaType.parseMediaType("text/csv; charset=UTF-8"));
         };
     }
 
@@ -62,12 +63,5 @@ public class ReporteController {
         } catch (IOException e) {
             throw new NegocioException(HttpStatus.BAD_REQUEST, "No se pudo leer el archivo");
         }
-    }
-
-    private ResponseEntity<byte[]> archivo(byte[] contenido, String nombre, String tipo) {
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombre + "\"")
-                .contentType(MediaType.parseMediaType(tipo))
-                .body(contenido);
     }
 }

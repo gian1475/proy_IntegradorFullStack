@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -37,7 +38,8 @@ class UsuarioServiceTest {
 
     @BeforeEach
     void preparar() {
-        servicio = new UsuarioService(usuarioDao, prestamoDao, reservaDao, reservaService, sancionDao, sesionService, limitador);
+        servicio = new UsuarioService(usuarioDao, prestamoDao, reservaDao, reservaService, sancionDao, sesionService, limitador,
+                new BCryptPasswordEncoder()); // D28
     }
 
     @Test

@@ -13,7 +13,7 @@ import com.alejandria.biblioteca.seguridad.Sesion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +26,15 @@ public class AuthService {
     private final UsuarioService usuarioService;
     private final SesionService sesionService;
     private final LimitadorIntentosLogin limitador;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder; // bcrypt (D28): el @Bean de SeguridadConfig
 
     public AuthService(UsuarioDao usuarioDao, UsuarioService usuarioService, SesionService sesionService,
-                       LimitadorIntentosLogin limitador) {
+                       LimitadorIntentosLogin limitador, PasswordEncoder passwordEncoder) {
         this.usuarioDao = usuarioDao;
         this.usuarioService = usuarioService;
         this.sesionService = sesionService;
         this.limitador = limitador;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // proceso login: 1) ve si el correo esta bloqueado (guava) 2) busca al usuario por correo

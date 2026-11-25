@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { guardarArchivo } from '../utils/descarga';
+import { fechaInput } from '../utils/fechas';
 
 export interface ResultadoImportacion {
   creados: number;
@@ -105,7 +106,7 @@ export class ReporteService {
     let params = new HttpParams();
     if (desde) params = params.set('desde', desde);
     if (hasta) params = params.set('hasta', hasta);
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = fechaInput(new Date()); // D32: fecha LOCAL (formatDate de Angular). toISOString() daba la de UTC
     return this.http.get(`${this.apiUrl}/${tipo}/${formato}`, { params, responseType: 'blob' }).pipe(
       tap(archivo => guardarArchivo(archivo, `reporte_${tipo}_${hoy}.${EXTENSIONES[formato]}`))
     );

@@ -126,7 +126,7 @@ public class IncidenciaService {
         if ("anulado".equals(estado)) {
             throw new NegocioException(HttpStatus.CONFLICT, "No se registran incidencias de un préstamo anulado");
         }
-        boolean enCurso = "activo".equals(estado) || "vencido".equals(estado);
+        boolean enCurso = PrestamoService.estaEnCurso(prestamo);
 
         if (RETRASO.equals(tipo)) {
             LocalDateTime finDelPrestamo = prestamo.getFechaDevolucionReal() != null

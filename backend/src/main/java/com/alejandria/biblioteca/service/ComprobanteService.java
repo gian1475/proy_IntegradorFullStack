@@ -60,7 +60,7 @@ public class ComprobanteService {
         Prestamo p = prestamoDao.findById(idPrestamo)
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Préstamo no encontrado"));
         String estado = p.getEstadoPrestamo();
-        boolean enCurso = "activo".equals(estado) || "vencido".equals(estado);
+        boolean enCurso = PrestamoService.estaEnCurso(p);
 
         List<String[]> datos = List.of(
                 dato("Prestatario", p.getPrestatario().nombreCompleto()),

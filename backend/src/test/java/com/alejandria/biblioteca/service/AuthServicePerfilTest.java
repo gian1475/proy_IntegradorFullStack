@@ -32,7 +32,8 @@ class AuthServicePerfilTest {
 
     @BeforeEach
     void preparar() {
-        servicio = new AuthService(usuarioDao, usuarioService, new SesionService(15), new LimitadorIntentosLogin());
+        servicio = new AuthService(usuarioDao, usuarioService, new SesionService(15), new LimitadorIntentosLogin(),
+                new BCryptPasswordEncoder()); // D28: el mismo codificador que da SeguridadConfig
         carlos = new Usuario();
         carlos.setIdUsuario(5);
         carlos.setCorreo("carlos@alejandria.edu.pe");

@@ -11,8 +11,6 @@ import com.alejandria.biblioteca.service.ComprobanteService;
 import com.alejandria.biblioteca.service.ReservaService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -90,12 +88,8 @@ public class ReservaController {
     @RolesAllowed({Rol.ADMINISTRADOR, Rol.ENCARGADO, Rol.PRESTATARIO})
     public ResponseEntity<byte[]> constancia(@PathVariable Integer id, @AuthenticationPrincipal Sesion sesion) {
         verificarPropietario(sesion, reservaService.obtenerIdPrestatario(id));
-        // ContentDisposition de Spring arma la cabecera q le dice al navegador "descarga este archivo con este nombre"
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename("constancia_reserva_" + id + ".pdf").build().toString())
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(comprobanteService.constanciaReserva(id));
+        return Descarga.archivo(comprobanteService.constanciaReserva(id), "constancia_reserva_" + id + ".pdf",
+                MediaType.APPLICATION_PDF);
     }
 
     // eliminacion fisica: DELETE /api/reservas/{id}, solo el admin (RF17).

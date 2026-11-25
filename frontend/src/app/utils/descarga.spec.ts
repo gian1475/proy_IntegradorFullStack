@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { guardarArchivo } from './descarga';
 import { PrestamoService } from '../services/prestamo.service';
 import { ReservaService } from '../services/reserva.service';
+import { ReporteService } from '../services/reporte.service';
 
 // semana 15: el comprobante del préstamo y la constancia de la reserva se descargan como PDF.
 // jsdom (el navegador de las pruebas) no crea enlaces de archivos: se reemplazan createObjectURL y el click
@@ -42,6 +43,18 @@ describe('descarga de archivos (comprobante y constancia en PDF)', () => {
     req.flush(new Blob(['%PDF']));
 
     expect(nombres).toEqual(['comprobante_prestamo_12.pdf']);
+  });
+
+  // D32: el nombre del reporte lleva la fecha LOCAL. antes usaba toISOString() (hora UTC): a las 23:30 de Lima
+  // ya es el dia siguiente en UTC y el archivo salia con la fecha de mañana
+  it('el reporte descargado de noche lleva la fecha de hoy, no la de mañana', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 24, 23, 30)); // 24/11/2026 23:30, hora de la PC
+    TestBed.inject(ReporteService).descargar('stock', 'excel', '', '').subscribe();
+    http.expectOne(r => r.url === `${API}/reportes/stock/excel`).flush(new Blob(['x']));
+    vi.useRealTimers();
+
+    expect(nombres).toEqual(['reporte_stock_2026-11-24.xlsx']);
   });
 
   it('la constancia de la reserva se pide como archivo (blob) y se guarda con el N° de la reserva', () => {

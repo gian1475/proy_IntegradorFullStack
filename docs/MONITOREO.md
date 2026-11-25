@@ -37,7 +37,7 @@ También dijo que el monitoreo es una **prueba no funcional de rendimiento**: no
    & "C:\Program Files\Java\jdk-26\bin\jconsole.exe"
    ```
    Si no la encuentran: `Get-ChildItem "C:\Program Files\Java" -Recurse -Filter jconsole.exe`. Cualquier JDK 21 o superior la trae.
-3. **Conectarse:** en *New Connection*, elegir **Local Process** → `target\biblioteca-alejandria.jar` → **Connect**. Si aparece *"Secure connection failed. Retry insecurely?"*, elegir **Insecure connection**: es una conexión dentro de la misma PC.
+3. **Conectarse:** en *New Connection*, elegir **Local Process** → `target\biblioteca-alejandria.jar` → **Connect**. Va a aparecer *"Secure connection failed. Retry insecurely?"*: hacer **clic** en **Insecure connection** (con Enter no responde). Es una conexión dentro de la misma PC.
 4. Ir a la pestaña **Overview** (resumen). Muestra 4 gráficos: *Heap Memory Usage* (memoria), *Threads* (hilos), *Classes* (clases) y *CPU Usage* (CPU). En *Time Range* se puede elegir "5 min" o "All".
 5. **Usar el sistema de 5 a 10 minutos**, con JConsole abierto. Lo más simple es seguir la prueba completa de la sección 12 de `GUION_SUSTENTACION.md`:
    - entrar con los 3 perfiles;
@@ -87,6 +87,25 @@ También dijo que el monitoreo es una **prueba no funcional de rendimiento**: no
 - Tiempo de respuesta promedio: 198 ms. Casi todo es el viaje a Neon, que está en la nube.
 - La petición más lenta tardó 0,88 s: **todas** respondieron en 2 s o menos, así que cumple el RNF03.
 - El recolector de basura pausó 1 vez en 6 minutos, durante 6 ms.
+
+### Medición con JConsole durante la prueba completa (25/11, de 00:00 a 00:02)
+
+Capturas en `docs/capturas/2026-11-24/monitoreo/` y `sistema/16-admin-monitoreo-en-uso.png`. Estos son los valores que van en la columna "Valor obtenido" del Anexo G:
+
+| Métrica | Valor obtenido | Cómo explicarlo |
+|---|---|---|
+| Memoria heap usada | De 115 a 187 MB (de un máximo de 6,1 GB) | Subió mientras se registraban préstamos, reservas y reportes |
+| Memoria comprometida | 553 MB | Lo que Windows ya le dio a Java |
+| Recolector de basura | 22 recolecciones "young" en 0,1 s en total | Limpia la memoria sin detener el sistema |
+| CPU del proceso | Picos de hasta 1 % | Los picos coinciden con los reportes en PDF |
+| Hilos vivos | De 47 a 50 (pico 50) | Los 41 de siempre más los de la conexión de JConsole (RMI) |
+| Clases cargadas | De 20.300 a 21.910 | Suben un poco la primera vez que se usa cada parte |
+| Peticiones (pestaña Monitoreo) | 61, 0 con error, 623,7 ms de promedio | El promedio incluye las primeras consultas a Neon, más lentas |
+| Peticiones en 2 s o menos | **95,1 % → Cumple RNF03** | Ver D34, abajo |
+
+**D34 (24/11): por qué el RNF03 cuenta desde el inicio.** Micrometer guarda por defecto el histograma ("cuántas peticiones tardaron hasta 2 s") solo de los **últimos 2 minutos**, mientras que el total de peticiones es desde que arrancó el sistema. Al dividir uno por el otro, el porcentaje bajaba solo con el tiempo: el 24/11 la pestaña marcó "28 % — No cumple" con un promedio de 570 ms.
+
+`service/MonitoreoConfig` es un `MeterFilter` de Micrometer que deja ese histograma sin ventana, así que el % se cuenta desde el inicio, igual que el total. Lo prueba `MonitoreoServiceTest` con un reloj falso.
 
 ---
 

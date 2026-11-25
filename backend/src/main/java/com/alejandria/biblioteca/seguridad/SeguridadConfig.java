@@ -8,6 +8,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -67,5 +69,12 @@ public class SeguridadConfig {
         UrlBasedCorsConfigurationSource rutas = new UrlBasedCorsConfigurationSource();
         rutas.registerCorsConfiguration("/api/**", cors);
         return rutas;
+    }
+
+    // bcrypt (D28): UN solo codificador de contraseñas para todo el sistema. AuthService (login) y UsuarioService
+    // (registro, encargados y restablecer) lo reciben por el constructor; antes cada uno creaba el suyo
+    @Bean
+    PasswordEncoder codificadorDeContrasenas() {
+        return new BCryptPasswordEncoder();
     }
 }

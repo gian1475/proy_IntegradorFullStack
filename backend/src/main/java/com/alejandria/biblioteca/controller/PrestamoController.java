@@ -13,8 +13,6 @@ import com.alejandria.biblioteca.service.PrestamoService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -96,12 +94,8 @@ public class PrestamoController {
         if (Rol.PRESTATARIO.equals(sesion.rol()) && !sesion.idUsuario().equals(prestamoService.obtenerIdPrestatario(id))) {
             throw new NegocioException(HttpStatus.FORBIDDEN, "Solo puede descargar el comprobante de sus propios préstamos");
         }
-        // ContentDisposition de Spring arma la cabecera q le dice al navegador "descarga este archivo con este nombre"
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename("comprobante_prestamo_" + id + ".pdf").build().toString())
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(comprobanteService.comprobantePrestamo(id));
+        return Descarga.archivo(comprobanteService.comprobantePrestamo(id), "comprobante_prestamo_" + id + ".pdf",
+                MediaType.APPLICATION_PDF);
     }
 
     /** ACTUALIZAR: ampliar la hora límite (una sola vez). */

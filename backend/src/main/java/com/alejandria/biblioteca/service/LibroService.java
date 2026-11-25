@@ -5,6 +5,7 @@ import com.alejandria.biblioteca.dao.CategoriaDao;
 import com.alejandria.biblioteca.dao.LibroDao;
 import com.alejandria.biblioteca.dao.PrestamoDao;
 import com.alejandria.biblioteca.dao.ReservaDao;
+import com.alejandria.biblioteca.dto.libro.LibroCategoriaDTO;
 import com.alejandria.biblioteca.dto.libro.LibroDTO;
 import com.alejandria.biblioteca.dto.libro.LibroFormDTO;
 import com.alejandria.biblioteca.entity.Autor;
@@ -74,9 +75,9 @@ public class LibroService {
 
     /** Consulta de dos tablas (libro + categoria) para la pestaña "Libros por categoría" del admin. */
     @Transactional(readOnly = true)
-    public List<com.alejandria.biblioteca.dto.libro.LibroCategoriaDTO> consultarConCategoria(String categoria) {
+    public List<LibroCategoriaDTO> consultarConCategoria(String categoria) {
         return libroDao.consultarConCategoria(categoria == null ? "" : categoria.trim()).stream()
-                .map(f -> new com.alejandria.biblioteca.dto.libro.LibroCategoriaDTO(
+                .map(f -> new LibroCategoriaDTO(
                         ((Number) f[0]).intValue(), (String) f[1], (String) f[2],
                         ((Number) f[3]).intValue(), (String) f[4], (String) f[5]))
                 .toList();
@@ -174,7 +175,7 @@ public class LibroService {
             throw new NegocioException(HttpStatus.CONFLICT, "El libro ya está dado de baja");
         }
         // no se puede dar de baja si alguien lo tiene prestado
-        if (prestamoDao.existsByLibroIdLibroAndEstadoPrestamoIn(idLibro, List.of("activo", "vencido"))) {
+        if (prestamoDao.existsByLibroIdLibroAndEstadoPrestamoIn(idLibro, PrestamoService.EN_CURSO)) {
             throw new NegocioException(HttpStatus.CONFLICT, "El libro tiene préstamos sin devolver");
         }
         // ni si alguien lo tiene reservado (RF14: "con un préstamo o reserva activa")
@@ -197,8 +198,7 @@ public class LibroService {
      */
     @Transactional
     public Libro bloquearParaSalida(Integer idLibro) {
-        Libro libro = libroDao.buscarParaActualizar(idLibro)
-                .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Libro no encontrado"));
+        Libro libro = bloquear(idLibro);
         if (BAJA.equals(libro.getEstadoLibro()) || "mantenimiento".equals(libro.getEstadoLibro())) {
             throw new NegocioException(HttpStatus.CONFLICT, "El libro no está disponible");
         }
@@ -225,8 +225,7 @@ public class LibroService {
     // y el libro vuelve a 'disponible'
     @Transactional
     public void reponerStock(Integer idLibro) {
-        Libro libro = libroDao.buscarParaActualizar(idLibro)
-                .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Libro no encontrado"));
+        Libro libro = bloquear(idLibro);
 
         // cola de espera: si alguien espera este libro, el ejemplar es para el. el stock no sube
         // y el libro queda 'reservado' (no hay ejemplares libres para otros)
@@ -251,8 +250,7 @@ public class LibroService {
     // 'mantenimiento'. cuando lo reparen, el admin le sube el stock y vuelve a 'disponible'
     @Transactional
     public void registrarEjemplarDanado(Integer idLibro) {
-        Libro libro = libroDao.buscarParaActualizar(idLibro)
-                .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Libro no encontrado"));
+        Libro libro = bloquear(idLibro);
         if (libro.getStock() == 0) {
             libro.setEstadoLibro("mantenimiento");
         }
@@ -269,6 +267,12 @@ public class LibroService {
 
     private Libro buscar(Integer idLibro) {
         return libroDao.findById(idLibro)
+                .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Libro no encontrado"));
+    }
+
+    /** Lee el libro con bloqueo (SELECT ... FOR UPDATE) para cambiar su stock. D31: antes estaba copiado 3 veces. */
+    private Libro bloquear(Integer idLibro) {
+        return libroDao.buscarParaActualizar(idLibro)
                 .orElseThrow(() -> new NegocioException(HttpStatus.NOT_FOUND, "Libro no encontrado"));
     }
 

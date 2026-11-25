@@ -31,6 +31,8 @@ public class PrestamoService {
 
     public static final int HORAS_PRESTAMO = 3;   // 3 horas: tiempo maximo del prestamo en sala
     public static final int HORAS_AMPLIACION = 1; // ampliacion: RF05 dice "hasta por 1 hora adicional" (solo 1 vez)
+    /** Estados de un préstamo con el libro todavía en sala (sin devolver). */
+    public static final List<String> EN_CURSO = List.of("activo", "vencido");
 
     private final PrestamoDao prestamoDao;
     private final LibroDao libroDao;
@@ -262,7 +264,8 @@ public class PrestamoService {
     }
 
     /** Un préstamo está en curso si el libro aún no se devuelve (activo o vencido). */
-    private boolean estaEnCurso(Prestamo prestamo) {
-        return "activo".equals(prestamo.getEstadoPrestamo()) || "vencido".equals(prestamo.getEstadoPrestamo());
+    // D29: la regla esta UNA vez aqui; la usan libros (baja), usuarios (baja), incidencias y el comprobante
+    public static boolean estaEnCurso(Prestamo prestamo) {
+        return EN_CURSO.contains(prestamo.getEstadoPrestamo());
     }
 }

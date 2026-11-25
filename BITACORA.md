@@ -1433,6 +1433,82 @@ Lo último de código que quedaba en `PLAN_CODIGO.md`. Cada arreglo tiene su pru
 
 ---
 
+## Análisis del código y recortes con librerías (24/11, noche) ✅
+
+El equipo pidió revisar todo el código buscando qué recortar, qué estaba repetido y qué se podía resolver con librerías ya presentes, sin perder la coherencia con el informe.
+
+**Cómo se buscó:**
+- con un script, los métodos que nadie llama (backend) y las funciones, campos y clases CSS que no se usan (frontend);
+- leyendo los servicios, controllers y pantallas más grandes.
+
+**Resultado del análisis:** no hay código muerto en el backend (lo que aparece "sin uso" son entradas que llama Spring: endpoints, manejadores y filtros). En el frontend solo sobraba la clase `.footer-sub`. Se recortó esto:
+
+| # | Qué había | Qué se hizo | Prueba |
+|---|---|---|---|
+| **D28** | `AuthService` y `UsuarioService` creaban cada uno su `new BCryptPasswordEncoder()` | Un solo `@Bean PasswordEncoder` en `SeguridadConfig` (la forma estándar de Spring Security), que reciben por el constructor | `SeguridadEndpointsTest.elCodificadorDeContrasenasEsUnoSoloYEsBCrypt` |
+| **D29** | "Préstamo en curso = activo o vencido" escrito en 5 lugares | `PrestamoService.EN_CURSO` y `estaEnCurso(prestamo)`; los usan libros, usuarios, incidencias y el comprobante | 2 en `PrestamoServiceTest` |
+| **D30** | La respuesta de descarga copiada en 3 controllers (y `ReporteController` armaba la cabecera a mano con texto) | `controller/Descarga.archivo(...)` con `ContentDisposition` de Spring | `SeguridadEndpointsTest.unReporteSeDescargaConSuNombreDeArchivo` |
+| **D31** | `LibroService`: "buscar con bloqueo o 404" copiado 3 veces y nombres completos de clase | Un método `bloquear(idLibro)` y `import` normal | Las de `LibroServiceTest` |
+| **D32** | 🐞 El nombre del reporte descargado usaba `toISOString()` (hora UTC): de noche salía con la fecha de mañana | `fechaInput(new Date())` (formatDate de Angular, hora local) | `descarga.spec.ts` (con el reloj a las 23:30) |
+| **D33** | `user-catalog.html` con `style="..."` copiados (el error de los modales estaba 2 veces igual) y `.footer-sub` sin usar | Las clases que ya existían (`.aviso-vacio`, `.aviso-error`) más una regla `.compacto`; se borró `.footer-sub` | Las de `user-catalog` |
+| **D34** | 🐞 **RNF03:** la pestaña Monitoreo marcaba "28 % — No cumple" con un promedio de 570 ms. Micrometer guarda el histograma (cuántas tardaron hasta 2 s) solo de los **últimos 2 minutos**, pero el total es desde el inicio: el % bajaba solo con el tiempo | `service/MonitoreoConfig`: un `MeterFilter` de Micrometer que deja ese histograma sin ventana (cuenta desde que arrancó, igual que el total). Después, la pestaña marcó 95,1 % "Cumple" | 2 en `MonitoreoServiceTest` (con un reloj falso de Micrometer: sin el filtro, a los 10 minutos da 0 %; con el filtro, 90,9 %) |
+
+**Se analizó y no se cambió (con su razón):**
+- **MapStruct** para pasar entidades a DTO: sería una librería nueva para poco ahorro (ya descartado el 04/11).
+- **Proyecciones de Spring Data** en lugar de los `Object[]` de las consultas nativas: cambiaría 8 consultas y sus DTO, con riesgo, y las figuras del informe muestran esas consultas.
+- **Anotaciones propias de Bean Validation** (`@Dni`, `@Correo`) para los 3 DTO de usuario: ahorran poco y agregan 3 clases.
+- **Un ayudante de mensajes** para los 7 componentes con `limpiarMensajes()`: obliga a cambiar todas las plantillas y sus pruebas justo antes de la evaluación.
+- **Passay** para la contraseña: sería una librería nueva, y la regla ya es una sola expresión con los 5 criterios marcados para la sustentación.
+
+**Resultado:** backend **341 pruebas** y frontend **90**, todas pasan contra Neon; `ng build` sin avisos.
+
+---
+
+## Capturas para el informe y prueba en Firefox (24 y 25/11) ✅
+
+**Cómo se tomaron:**
+- en la PC del equipo, con el `.jar` contra Neon;
+- Chrome manejado con *puppeteer-core*, instalado en una carpeta temporal fuera del proyecto y con un perfil temporal;
+- capturas de **pantalla completa**, con la barra de tareas y el reloj, como pide el profe.
+
+Todo quedó en [docs/capturas/2026-11-24/](docs/capturas/2026-11-24/):
+
+| Carpeta | Qué tiene |
+|---|---|
+| `sistema/` (16) | La prueba completa del guion (sección 12): préstamo y comprobante; préstamos activos; anular; reserva y constancia; Mis Reservas y Mis Préstamos; reservas e historial del admin; los 5 reportes en PDF (préstamos de hoy, indicadores, préstamos por día, bajas lógicas y stock) y la pestaña Monitoreo |
+| `pdf/` | Los PDF descargados en esa prueba (comprobante, constancia y reportes), como evidencia |
+| `monitoreo/` (3) | JConsole → Overview, Memory y Threads, **mientras se usaba el sistema** |
+| `pruebas/` (4) | Terminales: las 17 pruebas del comprobante, **341** del backend, **90** del frontend y el build con la carga por partes |
+| `commits/` (3) | GitHub: la lista de commits y los dos commits del 24/11 abiertos (Anexo E) |
+| `figuras/` (11) | Figuras de código con las líneas reales (las 35, 36 y 37 rehechas porque se corrieron sus líneas; el comprobante, D19, D25, D26, D28 y D34) y el diagrama **dia-f69b**, que completa la Figura 69 con las clases nuevas |
+| `rnf06-firefox/` | La prueba en Firefox (abajo) |
+
+**Horario de prueba:** fue de noche, así que el sistema se levantó con `APP_HORARIO_APERTURA=00:00` y `APP_HORARIO_CIERRE=23:59`, solo con variables de entorno (igual que el 17/11). No se cambió ningún archivo, y al terminar se apagó ese proceso. Por eso el comprobante dice "sin pasar de las 23:59".
+
+**Datos de prueba en Neon:**
+- préstamos #440 (devuelto a las 23:58, a tiempo), #441 y #443 (anulados, para el reporte de bajas lógicas) y #442 (devuelto);
+- reservas #145 y #146: canceladas y **eliminadas** (RF17);
+- el stock quedó como estaba.
+
+**JConsole (25/11, de 00:00 a 00:02, durante la prueba completa):**
+- heap de 115 a 187 MB, 553 MB comprometidos y 6,1 GB de máximo;
+- 22 recolecciones de basura en 0,1 s;
+- hilos estables entre 47 y 50 (los 41 de siempre más los RMI de la conexión de JConsole);
+- CPU con picos de hasta 1 %.
+- La pestaña Monitoreo, a la misma hora: 61 peticiones, 0 errores, 623,7 ms de promedio y **95,1 %** en 2 s o menos ("Cumple RNF03", ya con D34).
+
+**RNF06 en Firefox (B6b):** Firefox 160.0.1, con las **22 pantallas** de los 3 perfiles (hoy son 22: el 11/11 se sumó "Libros por categoría") en 1366, 768 y 390 px.
+- **66 de 66 sin scroll horizontal ni errores de JavaScript.**
+- Hay capturas de escritorio y celular de las mismas 8 pantallas de Chromium, el resultado de cada revisión (`resultado-rnf06-firefox.json`) y una captura de pantalla completa del Firefox del sistema.
+- La barra de direcciones con rayas es como Firefox marca que lo maneja un programa.
+
+**Incidentes (corregidos):**
+- Dos capturas salieron con **VS Code al frente**, con el chat a la vista (en una se veía la contraseña de prueba): se borraron en el momento, sin usarlas.
+- Una vez se tomó por error la ventana del **Firefox personal** del usuario (quedó maximizada): la captura se borró sin abrirla.
+- Desde entonces, el script solo captura si comprueba que la ventana correcta quedó al frente (por su título).
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1505,6 +1581,10 @@ En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift
 | ¿Cuándo vencen las reservas que nadie recogió? ¿El catálogo muestra el stock real? | `D26` (los 4 controllers), `liberarVencidas` |
 | ¿Cuánta memoria usa Java en Render? | `D25` (`Dockerfile`) |
 | ¿Por qué el prestatario no descarga el panel del admin? | `D19` (`app.routes.ts`, `loadComponent`) |
+| ¿Dónde se crea el BCrypt? ¿Hay uno solo? | `D28`, `bcrypt` (`SeguridadConfig.codificadorDeContrasenas`) |
+| ¿Qué es un préstamo "en curso"? | `D29` (`PrestamoService.EN_CURSO`) |
+| ¿Cómo se descarga un archivo desde el backend? | `D30` (`controller/Descarga`) |
+| ¿Por qué el % del RNF03 cuenta desde el inicio? | `D34`, `monitoreo RNF03` (`MonitoreoConfig`) |
 | ¿Dónde está el reporte de una operación (el comprobante)? ¿Quién lo descarga? | `comprobante prestamo`, `constancia reserva` (backend y frontend), `comprobante (s15)` |
 | ¿Cómo se descarga un archivo en el navegador? | `descarga (front)` (`utils/descarga.ts`) |
 
@@ -1613,7 +1693,7 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 11 | B7: Usuarios → "Contraseña" con los requisitos y el mensaje "Contraseña de … restablecida" | ⬜ |
 | 11 | B3: Monitoreo con "Peticiones en 2 s o menos — Cumple RNF03" | ⬜ |
 | 11 | B4: terminal con `ConcurrenciaStockTest` en verde (y opcional: el rojo sin el `@Lock`) | ⬜ |
-| 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Falta Firefox** (tómenla en su PC) | 🟡 |
+| 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Firefox: hecho el 25/11** (`docs/capturas/2026-11-24/rnf06-firefox/`, 66 de 66) | ✅ |
 | 11 | B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen | ⬜ |
 | 11 | Terminal con `./mvnw test` → **306** y `npx ng test --watch=false` → **76** (reemplaza a todas las anteriores: 160, 205, 265 y 285) | ⬜ |
 | 11 | Anexo F (I75.4): el sistema abierto en `http://localhost:8080` desde el `.jar` único, sin `npm start` (reemplaza a la Figura 104) | ⬜ |
@@ -1625,14 +1705,17 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 13 | Semana 13: una prueba de integración con la BD en verde (`UsuarioBdTest` o `ConcurrenciaStockTest`) | ⬜ |
 | 13 | Casos de prueba funcionales (I73, Tabla 35 de la vBeta): una captura por mensaje (CP01 a CP19) | ⬜ |
 | 13 | GitHub: la lista de commits con el **tercer commit** (para el Anexo E) | ⬜ |
-| 14 | Semana 15: encargado → registrar un préstamo → el mensaje con "Descargar comprobante (PDF)" → el PDF abierto (pantalla completa, con la fecha y la hora de Windows) | ⬜ `encargado-comprobante.png`, `comprobante-pdf.png` |
-| 14 | Semana 15: prestatario → reservar → modal "Reserva Realizada" con "Descargar constancia (PDF)" → el PDF abierto | ⬜ `prestatario-constancia.png`, `constancia-pdf.png` |
-| 14 | Semana 15: prestatario → Mis Préstamos con la columna "Comprobante" y Mis Reservas con "Constancia" | ⬜ `prestatario-mis-prestamos-comprobante.png`, `prestatario-mis-reservas-constancia.png` |
-| 14 | Semana 15: admin → Reservas e Historial con los botones "Constancia" y "PDF" | ⬜ `admin-reservas-constancia.png`, `admin-historial-comprobante.png` |
-| 14 | Código: `ComprobanteService.comprobantePrestamo` y el `if` del 403 en `PrestamoController.comprobante` | ⬜ |
-| 14 | Terminal con `ComprobanteServiceTest` (8) y `ComprobanteEndpointsTest` (9) en verde | ⬜ |
-| 14 | Terminal con `./mvnw test` → **333**, BUILD SUCCESS, y `npx ng test --watch=false` → **89** (reemplaza a la de 306 y 76 de la prioridad 11) | ⬜ |
-| 14 | D19: `npx ng build` con "Initial total 668 kB" y los 3 *Lazy chunk files* (paneles del admin, del encargado y catálogo) | ⬜ |
-| 15 | Semana 16: **JConsole → Overview** con las curvas de memoria, hilos, clases y CPU **mientras se usa el sistema** (5 a 10 min de la prueba completa), pantalla completa con la fecha y la hora de Windows. Es la captura principal del Anexo G | ⬜ `jconsole-overview.png` |
-| 15 | Semana 16: JConsole → **Memory** (*Used*, *Committed*, *Max*) y **Threads** (*Live*, *Peak*, *Daemon*) | ⬜ `jconsole-memoria.png`, `jconsole-hilos.png` |
-| 15 | Semana 16: la pestaña **Monitoreo** del admin en el mismo momento (memoria, CPU, hilos y "Peticiones en 2 s o menos") | ⬜ `admin-monitoreo-en-uso.png` |
+| 14 | Semana 15: encargado → registrar un préstamo → el mensaje con "Descargar comprobante (PDF)" → el PDF abierto (pantalla completa, con la fecha y la hora de Windows) | ✅ `2026-11-24/sistema/01-…` y `02-…` |
+| 14 | Semana 15: prestatario → reservar → modal "Reserva Realizada" con "Descargar constancia (PDF)" → el PDF abierto | ✅ `sistema/05-…` y `06-…` |
+| 14 | Semana 15: prestatario → Mis Préstamos con la columna "Comprobante" y Mis Reservas con "Constancia" | ✅ `sistema/07-…` y `08-…` |
+| 14 | Semana 15: admin → Reservas e Historial con los botones "Constancia" y "PDF" | ✅ `sistema/09-…` y `10-…` |
+| 14 | Código: `ComprobanteService.comprobantePrestamo` y el `if` del 403 en `PrestamoController.comprobante` | ✅ `figuras/code-comprobante-service.png`, `code-comprobante-controller.png` |
+| 14 | Terminal con `ComprobanteServiceTest` (8) y `ComprobanteEndpointsTest` (9) en verde | ✅ `pruebas/pruebas-comprobante-constancia.png` |
+| 14 | Terminal con `./mvnw test` → **341**, BUILD SUCCESS, y `npx ng test --watch=false` → **90** (reemplaza a la de 306 y 76 de la prioridad 11) | ✅ `pruebas/backend-341-pruebas.png`, `frontend-90-pruebas.png` |
+| 14 | D19: `npx ng build` con "Initial total 668 kB" y los 3 *Lazy chunk files* (paneles del admin, del encargado y catálogo) | ✅ `pruebas/frontend-build-lazy-loading.png` |
+| 14 | Los 6 reportes de las semanas 15 y 16 en PDF con datos nuevos (préstamos de hoy, indicadores, por día, bajas lógicas y stock) | ✅ `sistema/11-…` a `15-…` |
+| 15 | Semana 16: **JConsole → Overview** con las curvas de memoria, hilos, clases y CPU **mientras se usa el sistema**, pantalla completa con la fecha y la hora de Windows. Es la captura principal del Anexo G | ✅ `monitoreo/jconsole-overview-en-uso.png` |
+| 15 | Semana 16: JConsole → **Memory** (*Used*, *Committed*, *Max*) y **Threads** (*Live*, *Peak*, *Daemon*) | ✅ `monitoreo/jconsole-memoria.png`, `jconsole-hilos.png` |
+| 15 | Semana 16: la pestaña **Monitoreo** del admin en el mismo momento (memoria, CPU, hilos y "Peticiones en 2 s o menos") | ✅ `sistema/16-admin-monitoreo-en-uso.png` (95,1 % "Cumple RNF03") |
+| 15 | RNF06 en **Firefox** (B6b): 22 pantallas × 3 tamaños | ✅ `rnf06-firefox/` (66 de 66) |
+| 15 | Anexo E: GitHub con los commits `e7d3f58` y `1aa01ba` | ✅ `commits/` |

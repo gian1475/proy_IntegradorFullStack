@@ -8,7 +8,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -24,6 +29,25 @@ class SeguridadEndpointsTest {
 
     @Autowired private MockMvc mvc;
     @Autowired private SesionService sesionService;
+    @Autowired private PasswordEncoder codificador;
+
+    // D28: hay UN solo codificador de contraseñas en todo el sistema (un @Bean de Spring Security) y es BCrypt
+    @Test
+    void elCodificadorDeContrasenasEsUnoSoloYEsBCrypt() {
+        assertInstanceOf(BCryptPasswordEncoder.class, codificador);
+        String hash = codificador.encode("Biblioteca#2026");
+        assertTrue(hash.startsWith("$2a$"));                       // formato de los hash que ya están en Neon
+        assertTrue(codificador.matches("Biblioteca#2026", hash));
+    }
+
+    // D30: la descarga de reportes arma su cabecera con ContentDisposition de Spring, igual que el comprobante
+    @Test
+    void unReporteSeDescargaConSuNombreDeArchivo() throws Exception {
+        mvc.perform(get("/api/reportes/stock/csv").header("Authorization", token(Rol.ADMINISTRADOR)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.startsWith("attachment; filename=\"reporte_stock_")))
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.endsWith(".csv\"")));
+    }
 
     private String token(String rol) {
         return "Bearer " + sesionService.crear(1, rol).token();

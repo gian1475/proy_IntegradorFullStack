@@ -18,7 +18,7 @@ import com.alejandria.biblioteca.seguridad.ValidadorContrasena;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,8 +37,6 @@ public class UsuarioService {
     /** Turnos de trabajo del encargado (diccionario de datos: "mañana" o "tarde"). */
     public static final List<String> TURNOS = List.of("mañana", "tarde");
 
-    /** RF13: préstamos con el libro todavía en sala; con uno de estos no se da de baja al prestatario. */
-    private static final List<String> PRESTAMOS_EN_CURSO = List.of("activo", "vencido");
     /** RF13: reservas que se cancelan al dar de baja (liberan el ejemplar o el puesto en la cola). */
     private static final List<String> RESERVAS_VIGENTES = List.of("pendiente", ColaEsperaService.EN_ESPERA);
     private static final String INACTIVO = "inactivo";
@@ -50,11 +48,11 @@ public class UsuarioService {
     private final SancionDao sancionDao;
     private final SesionService sesionService;
     private final LimitadorIntentosLogin limitador;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder; // bcrypt (D28): el @Bean de SeguridadConfig
 
     public UsuarioService(UsuarioDao usuarioDao, PrestamoDao prestamoDao, ReservaDao reservaDao,
                           ReservaService reservaService, SancionDao sancionDao, SesionService sesionService,
-                          LimitadorIntentosLogin limitador) {
+                          LimitadorIntentosLogin limitador, PasswordEncoder passwordEncoder) {
         this.usuarioDao = usuarioDao;
         this.prestamoDao = prestamoDao;
         this.reservaDao = reservaDao;
@@ -62,6 +60,7 @@ public class UsuarioService {
         this.sancionDao = sancionDao;
         this.sesionService = sesionService;
         this.limitador = limitador;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -173,7 +172,8 @@ public class UsuarioService {
         }
 
         if (Rol.PRESTATARIO.equals(perfil)) {
-            if (prestamoDao.existsByPrestatarioIdUsuarioAndEstadoPrestamoIn(idUsuario, PRESTAMOS_EN_CURSO)) {
+            // RF13: con un prestamo en curso (el libro sigue en sala) no se da de baja al prestatario
+            if (prestamoDao.existsByPrestatarioIdUsuarioAndEstadoPrestamoIn(idUsuario, PrestamoService.EN_CURSO)) {
                 throw new NegocioException(HttpStatus.CONFLICT,
                         "El prestatario tiene un libro prestado. Registre la devolución antes de darlo de baja");
             }

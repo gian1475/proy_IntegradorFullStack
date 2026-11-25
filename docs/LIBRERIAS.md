@@ -82,7 +82,7 @@ Lo que **no** se cambió, porque ya usaba una librería o es lógica del negocio
    `@AuthenticationPrincipal` entrega la sesión que guardó el filtro (así sabemos qué encargado registró el préstamo).
 3. Si el perfil no está permitido, Spring Security lanza `AccessDeniedException` y el [`ManejadorErrores`](../backend/src/main/java/com/alejandria/biblioteca/exception/ManejadorErrores.java) responde **401** si no hay sesión o **403** si hay sesión pero el perfil no tiene permiso.
 4. [`SeguridadConfig`](../backend/src/main/java/com/alejandria/biblioteca/seguridad/SeguridadConfig.java) arma todo: activa `@RolesAllowed`, pone el filtro, configura CORS (solo `http://localhost:4200`) y apaga lo que no usamos (la pantalla de login de Spring, CSRF y las sesiones con cookie).
-5. **BCrypt** (`BCryptPasswordEncoder`) también es parte de Spring Security: guarda las contraseñas como hash y nunca en texto plano.
+5. **BCrypt** (`BCryptPasswordEncoder`) también es parte de Spring Security: guarda las contraseñas como hash y nunca en texto plano. Desde el 24/11 (D28) se declara **una sola vez** como `@Bean PasswordEncoder` en `SeguridadConfig`, y `AuthService` y `UsuarioService` lo reciben por el constructor. Antes, cada uno creaba el suyo.
 
 **Lo que sigue siendo nuestro:** el token y la sesión de 15 minutos (`SesionService`), el login (`AuthService`) y el bloqueo por intentos (Guava). Spring Security no decide quién entra: solo aplica los permisos.
 
@@ -177,6 +177,8 @@ El comprobante y la constancia están en [`ComprobanteService`](../backend/src/m
 **Dónde:** corre en el puerto **8081** y solo responde desde la misma PC: `http://localhost:8081/actuator/health`, `/info` y `/metrics`. El admin ve un resumen en la pestaña Monitoreo (`MonitoreoService`).
 
 **RNF03 (desde el 03/11):** Micrometer, que viene con Actuator, también cuenta cuántas peticiones respondieron en **2 segundos o menos** (`management.metrics.distribution.slo.http.server.requests=2s` en `application.properties`). `MonitoreoService.porcentajeHasta` calcula el porcentaje y la pestaña Monitoreo dice si cumple la meta del 95 %. No se agregó ninguna librería.
+
+**El % del RNF03 desde el inicio (D34, 24/11):** por defecto Micrometer guarda el histograma solo de los últimos 2 minutos, y el porcentaje bajaba solo con el tiempo. [`MonitoreoConfig`](../backend/src/main/java/com/alejandria/biblioteca/service/MonitoreoConfig.java) registra un `MeterFilter` (una pieza de Micrometer) que deja ese histograma sin ventana. No se agregó ninguna librería.
 
 **JConsole (desde el 24/11, semana 16):** no es una librería ni parte del sistema: es una herramienta que **viene con el JDK** (`jconsole.exe`, en la carpeta `bin` del JDK). Se abre en el servidor, se conecta al proceso del `.jar` y grafica en el tiempo la memoria, el CPU y los hilos mientras se usa el sistema, que es lo que pidió el profe. Paso a paso y explicación de cada métrica: [MONITOREO.md](MONITOREO.md).
 

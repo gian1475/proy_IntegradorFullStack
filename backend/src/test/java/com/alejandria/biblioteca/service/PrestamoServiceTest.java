@@ -64,6 +64,25 @@ class PrestamoServiceTest {
         assertEquals(LocalDateTime.of(2026, 10, 28, 12, 30), PrestamoService.calcularHoraLimite(inicio));
     }
 
+    // D29: "en curso" (el libro sigue en sala) se define en un solo lugar y lo usan libros, usuarios,
+    // incidencias y el comprobante
+    @ParameterizedTest
+    @ValueSource(strings = {"activo", "vencido"})
+    void unPrestamoActivoOVencidoEstaEnCurso(String estado) {
+        Prestamo p = new Prestamo();
+        p.setEstadoPrestamo(estado);
+        assertTrue(PrestamoService.estaEnCurso(p));
+        assertTrue(PrestamoService.EN_CURSO.contains(estado));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"devuelto", "anulado"})
+    void unPrestamoDevueltoOAnuladoNoEstaEnCurso(String estado) {
+        Prestamo p = new Prestamo();
+        p.setEstadoPrestamo(estado);
+        assertFalse(PrestamoService.estaEnCurso(p));
+    }
+
     @Test
     void laHoraLimitePuedePasarAlDiaSiguiente() {
         LocalDateTime inicio = LocalDateTime.of(2026, 10, 28, 22, 0);
