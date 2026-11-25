@@ -1509,6 +1509,62 @@ Todo quedó en [docs/capturas/2026-11-24/](docs/capturas/2026-11-24/):
 
 ---
 
+## Informe vGamma: semanas 15 y 16, capturas y Gantt (25/11, madrugada) ✅
+
+**Qué se hizo:** se creó [docs/ProyectoFinal_Integrador_vGamma.docx](docs/ProyectoFinal_Integrador_vGamma.docx).
+- Es una copia de la vBeta con control de cambios: todos los cambios tienen autor "Claude" y fecha 25/11.
+- La vBeta no se tocó, igual que el 17/11 con la vAlpha.
+- Los cambios del 17/11 que el equipo aún no aceptó siguen ahí. Donde hoy hubo que cambiar texto que ya era una inserción del 17/11, el borrado va **dentro** de esa inserción, como pide Word.
+- El validador del skill `docx` dio "All validations PASSED": todo lo que cambió está marcado.
+
+**Lo que entró (I79, I80, I81, I76.7 a I76.9 de `PLAN_INFORME.md`):**
+
+| Dónde | Qué |
+|---|---|
+| RF01, RF04, RF08 y Tabla de permisos | El comprobante y la constancia en PDF (los tres perfiles; el prestatario, solo los suyos) |
+| RNF06 | Resultado de Firefox 160: 22 pantallas, 66 de 66 |
+| 2.1.4.5 y Tabla 34 | **341 y 90 pruebas**, con filas nuevas (comprobante 17, reservas al día 4, descarga 4, rutas 4) y "9 reportes"; capturas de las dos ejecuciones |
+| SOLID, Autorización, Spring Security, OpenPDF, Actuator, Vitest y Tabla de librerías | `ComprobanteService`, el `PasswordEncoder` único, `MonitoreoConfig`, 341 y 90; figuras de código nuevas |
+| Figuras 35, 36 y 37 | Rehechas con las líneas de hoy |
+| 3.3 | Figura nueva con las clases agregadas (después de la 69) |
+| 3.5 | Capturas del comprobante y de la constancia. Préstamos activos, reservas del admin, Monitoreo, Mis Reservas y Mis Préstamos, con los botones nuevos. **Tabla "reporte pedido → reporte del sistema"** (semanas 15 y 16) y los 5 reportes en PDF |
+| Anexo C (Gantt) | Corte en **S16** (rojo), terminadas en verde. 1.6.1 al 100 % (despliegue con el `.jar`), 1.7.1 al 90 %, total **93 %**, con un comentario para que el equipo lo revise |
+| Anexo E | 6 filas (0660e3e, 31ee160, e7d3f58, 1aa01ba, db4adaa, b301105). Subsección del **commit de los reportes (e7d3f58)**, con 4 capturas de GitHub |
+| Anexo F | Sin Render (el despliegue se presenta con el `.jar`). Figuras 113 a 115 rehechas en **pantalla completa con el reloj de Windows** (25/11, 00:37) |
+| Anexo G | Las dos herramientas (Actuator y **JConsole**), fila "Memoria comprometida", 3 capturas de JConsole, la tabla **"Valores obtenidos"** con su interpretación (con un comentario: si el equipo toma su propia captura, cambia los números) y la figura de `MonitoreoConfig` |
+| Anexo H | Firefox en pantalla completa |
+| Bibliografía | Oracle (s.f.-c), *Using JConsole* |
+
+En total:
+- 24 figuras nuevas, 11 imágenes reemplazadas, 2 tablas nuevas y 11 filas;
+- tablas y figuras renumeradas (47 menciones del texto corregidas con control de cambios);
+- 2 comentarios de Word.
+
+**Capturas nuevas:**
+- `docs/capturas/2026-11-24/despliegue/`, de pantalla completa:
+  - el empaquetado con `ng build` y `mvnw clean package`;
+  - el `.jar` desempaquetado con `tar -xf` (103 librerías);
+  - el `index.html` de adentro.
+- `commits/github-commits-25-11.png` y `commits/github-commit-recortes-db4adaa.png`.
+
+Antes de cada captura, el script comprueba por el título que la terminal correcta está al frente.
+
+**Cómo se revisó:** la vGamma se pasó a PDF con Word (invisible) y se miraron las páginas que cambiaron. Por ejemplo:
+- Tabla 34 en la página 80;
+- Gantt en la 197;
+- reportes en la 161;
+- Anexo E en la 211;
+- Anexo F en la 215;
+- Anexo G en la 218 y la 219.
+
+**Lo que queda para el equipo:** está en I76 de `PLAN_INFORME.md`:
+- aceptar los cambios de la vBeta y de la vGamma;
+- actualizar los índices con F9;
+- revisar los porcentajes del Gantt;
+- I10, I25, I31, I37, I47, I73.7 e I73.8.
+
+---
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
@@ -1664,8 +1720,8 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 6 | Admin: dashboard, historial, reservas y encargados **con los datos de la demo** (reemplazan a las capturas vacías) | ⬜ |
 | 6 | Encargado: préstamo registrado después de las 17:00 con el aviso "ajustada a la hora de cierre" (RF01) | ⬜ (solo se puede tomar después de las 17:00; `encargado-historial.png` ya muestra un préstamo de las 18:21 con límite 20:00) |
 | 4 | Código: `LimitadorIntentosLogin` (Guava), `ReporteService` (POI y CSV), `logback-spring.xml` | ⬜ |
-| 5 | Terminal con `./mvnw clean package` → BUILD SUCCESS | ⬜ |
-| 5 | Explorador mostrando `backend/target/biblioteca-alejandria.jar` | ⬜ |
+| 5 | Terminal con `./mvnw clean package` → BUILD SUCCESS | ✅ (25/11) `2026-11-24/despliegue/01-empaquetado-pantalla-completa.png` |
+| 5 | Explorador mostrando `backend/target/biblioteca-alejandria.jar` | ✅ (25/11) la misma captura lista el `.jar` con su tamaño y su hora |
 | 5 | Terminal con `java -jar target/biblioteca-alejandria.jar` arrancando ("Started BibliotecaApplication") | ⬜ |
 | 5 | README del repositorio en GitHub | ⬜ |
 | 7 | **Rehacer** las capturas de los paneles con Bootstrap y los datos de la demo | ✅ (02/11) `admin-dashboard`, `admin-libros`, `admin-prestamos-activos`, `admin-historial`, `admin-reservas`, `admin-reservas-cola`, `admin-encargados`, `admin-reportes`, `admin-monitoreo`, `encargado-prestamos-activos`, `encargado-devolucion-danado`, `encargado-buscar-libro`, `encargado-reservas-pendientes`, `encargado-cola-espera`, `encargado-historial`, `encargado-reportes`, `prestatario-catalogo` (con portadas) |
@@ -1691,11 +1747,11 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 10 | Código: `IndicadoresGestion.calcular`, `AuditoriaInventarioDao.contarCoincidentesEntre` (DISTINCT ON) y `marcarInicio` del frontend | ⬜ |
 | 11 | B1/B2: admin → Reservas con "Cancelar"; encargado → "Reservar en ventanilla" y "Cancelar" en la cola | ⬜ |
 | 11 | B7: Usuarios → "Contraseña" con los requisitos y el mensaje "Contraseña de … restablecida" | ⬜ |
-| 11 | B3: Monitoreo con "Peticiones en 2 s o menos — Cumple RNF03" | ⬜ |
+| 11 | B3: Monitoreo con "Peticiones en 2 s o menos — Cumple RNF03" | ✅ (25/11) `2026-11-24/sistema/16-admin-monitoreo-en-uso.png` (95,1 %) |
 | 11 | B4: terminal con `ConcurrenciaStockTest` en verde (y opcional: el rojo sin el `@Lock`) | ⬜ |
 | 11 | B6 (RNF06): ya están en `docs/capturas/rnf06/` (escritorio y celular, Chromium). **Firefox: hecho el 25/11** (`docs/capturas/2026-11-24/rnf06-firefox/`, 66 de 66) | ✅ |
-| 11 | B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen | ⬜ |
-| 11 | Terminal con `./mvnw test` → **306** y `npx ng test --watch=false` → **76** (reemplaza a todas las anteriores: 160, 205, 265 y 285) | ⬜ |
+| 11 | ~~B5: el sistema en Render (`https://<su-app>.onrender.com`) con el login y el dashboard, cuando lo desplieguen~~ | ➖ Render descartado el 24/11 (el despliegue se presenta con el `.jar`) |
+| 11 | ~~Terminal con `./mvnw test` → **306** y `npx ng test --watch=false` → **76** (reemplaza a todas las anteriores: 160, 205, 265 y 285)~~ | ➖ la reemplaza la de 341 y 90 (prioridad 14) |
 | 11 | Anexo F (I75.4): el sistema abierto en `http://localhost:8080` desde el `.jar` único, sin `npm start` (reemplaza a la Figura 104) | ⬜ |
 | 12 | D20: terminal con `HorarioAtencionTest` en verde (8 pruebas, incluidas las 2 de la medianoche) y el código de `limitarAlCierre(inicio, limite)` | ⬜ |
 | 12 | D14: `LibroDao` con el comentario del SQL equivalente encima de `buscarPorAutor` | ⬜ |
@@ -1703,8 +1759,8 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 13 | Semana 13: `AuthServiceLoginTest` en verde (5) y el código de una prueba (`conLaContrasenaIncorrectaNoEntra`) | ⬜ |
 | 13 | Semana 13: `ValidacionDtoTest` en verde (31), con los métodos de rangos (`laSuspensionRechazaMenosDe1OMasDe30Dias`) | ⬜ |
 | 13 | Semana 13: una prueba de integración con la BD en verde (`UsuarioBdTest` o `ConcurrenciaStockTest`) | ⬜ |
-| 13 | Casos de prueba funcionales (I73, Tabla 35 de la vBeta): una captura por mensaje (CP01 a CP19) | ⬜ |
-| 13 | GitHub: la lista de commits con el **tercer commit** (para el Anexo E) | ⬜ |
+| 13 | Casos de prueba funcionales (I73, Tabla 35 de la vBeta): una captura por mensaje (CP01 a CP19) | ✅ (17/11) Anexo H de la vBeta |
+| 13 | GitHub: la lista de commits con el **tercer commit** (para el Anexo E) | ✅ (17/11) Figuras del tercer commit en el Anexo E |
 | 14 | Semana 15: encargado → registrar un préstamo → el mensaje con "Descargar comprobante (PDF)" → el PDF abierto (pantalla completa, con la fecha y la hora de Windows) | ✅ `2026-11-24/sistema/01-…` y `02-…` |
 | 14 | Semana 15: prestatario → reservar → modal "Reserva Realizada" con "Descargar constancia (PDF)" → el PDF abierto | ✅ `sistema/05-…` y `06-…` |
 | 14 | Semana 15: prestatario → Mis Préstamos con la columna "Comprobante" y Mis Reservas con "Constancia" | ✅ `sistema/07-…` y `08-…` |
@@ -1719,3 +1775,6 @@ Cada tarea del código dice si cambia algo en el informe. Esos cambios se anotan
 | 15 | Semana 16: la pestaña **Monitoreo** del admin en el mismo momento (memoria, CPU, hilos y "Peticiones en 2 s o menos") | ✅ `sistema/16-admin-monitoreo-en-uso.png` (95,1 % "Cumple RNF03") |
 | 15 | RNF06 en **Firefox** (B6b): 22 pantallas × 3 tamaños | ✅ `rnf06-firefox/` (66 de 66) |
 | 15 | Anexo E: GitHub con los commits `e7d3f58` y `1aa01ba` | ✅ `commits/` |
+| 16 | Anexo F (semana 15): empaquetado, `.jar` desempaquetado e `index.html`, en **pantalla completa con la fecha y la hora de Windows** (reemplazan a las Figuras 113 a 115 de la vBeta) | ✅ (25/11, 00:37) `2026-11-24/despliegue/01-…`, `02-…` y `03-…` |
+| 16 | Anexo E: GitHub con los commits del 25/11 (`db4adaa` y `b301105`) | ✅ `commits/github-commits-25-11.png`, `github-commit-recortes-db4adaa.png` |
+| 16 | Todas las de las prioridades 14 a 16 ya están puestas en el informe | ✅ `docs/ProyectoFinal_Integrador_vGamma.docx` (25/11) |
