@@ -50,3 +50,8 @@ docs/Guía Integral de Estudio y Sustentación de Código.pdf
 docs/resumendelresumen.pdf
 docs/guia_contrasenas_autorizacion.pdf
 docs/guia_informe_semanas_15_16.pdf
+docs/Notas de la semana 16 y 15.docx
+
+# Llaves privadas (SSH del servidor): nunca en el repo
+*.key
+*.pem

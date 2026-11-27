@@ -1600,6 +1600,62 @@ Las páginas salieron del PDF de la vDelta, con PyMuPDF. Al revisarlas apareció
 
 ---
 
+## Revisión final del profe (25/11) y despliegue en Oracle Cloud (anotado el 27/11) ⏳
+
+**Origen:** `docs/Notas de la semana 16 y 15.docx`. Son las notas del equipo en la revisión del 25/11, de 09:00 a 09:58, con 15 capturas de la clase. El usuario dice que es la última ronda de cambios antes de la exposición final.
+
+**Lo que salió bien en la revisión:**
+- Bajas lógicas: el profe pidió eliminar otro registro en vivo. Se dio de baja a Diego Huamán y el reporte pasó de 2 a 3.
+- Préstamos: el Total pasó de 10 a 11 al registrar otro préstamo.
+- Reservas por fechas: el Total pasó de 2 a 3 al reservar en vivo ("TERCER REPORTE ESTA BIEN").
+- JConsole con memoria, hilos, clases y CPU.
+
+**Lo que hay que mejorar** (tareas en la sección 11 de `PLAN_CODIGO.md` e I84 de `PLAN_INFORME.md`):
+1. **Monitoreo:** explicar cada número tal como se ve en la captura ("Según el panel, se usó 174,4 MB…"). Revisando la Tabla 64 del informe contra la Figura 135 se encontró una diferencia: la tabla dice 553 MB y 6,1 GB, y la captura, 566,2 MB y 6,3 GB. Es el mismo valor, porque la tabla lo tomó de la pestaña Memory, que está en kbytes, pero el número del texto tiene que ser el que se ve en la figura. → I84.1.
+2. **Despliegue:** decir qué se distribuye (solo el `.jar`), dónde está la BD (Neon, AWS São Paulo, `sa-east-1`), los recursos mínimos con cifras y cómo entra el cliente. El profe dijo "mejorar". → I84.2 e I84.3.
+3. **Cliente:** el profe quiere que el cliente entre con un **acceso directo** que abre la página, sin instalar nada, con el sistema en la nube. El usuario eligió **Oracle Cloud** en lugar de Render. → O1, O2 y O3.
+
+**Hecho el 27/11:**
+- El guion tiene las preguntas del 25/11 y sus respuestas: §11 (servidor, distribución, BD y recursos), §12 ("anulado, anulado, inactivo", Total, eliminar otro en vivo y por fechas con Reservas) y §13 (los 9 valores de la Figura 135, uno por uno).
+- Sin cambios en el código ni en la BD.
+
+**Informe vEpsilon (27/11).** Es una copia de la vDelta con control de cambios (autor "Claude"); la vDelta no se tocó. Tiene 20 marcas.
+- **Anexo G, Tabla 64:** cada valor, tal como se ve en la Figura 135:
+  - Used 186,9 MB y Max 6,3 GB;
+  - Committed 566,2 MB;
+  - Live 47, Peak 50 y Total 54;
+  - Loaded 21.910, Unloaded 0 y Total 21.910;
+  - CPU 0,1 %.
+  - Se explica qué es Max (la cuarta parte de los 24 GB de RAM), Peak, Total y Unloaded.
+  - El párrafo de antes de la tabla dice "según el panel…" y nombra las tres métricas pedidas.
+- **Anexo F:**
+  - Neon está en AWS São Paulo (`sa-east-1`);
+  - se distribuye un solo archivo, el `.jar`, más las variables de entorno, y al cliente no se le instala nada;
+  - Tabla 62: los mínimos del servidor (1 núcleo, 1 GB de RAM y 200 MB de disco) y del cliente.
+
+**Oracle Cloud (27/11):**
+- **Región Santiago.** Oracle había borrado las VM viejas por inactividad.
+- **Sin capacidad gratis:** "Out of capacity" en la Micro y en la A1. La cuenta se pasó a **Pay As You Go**; lo Always Free sigue gratis y hay un presupuesto con alerta de US$ 1.
+- **VM:** **A1.Flex** (1 OCPU Arm y 6 GB) con **Ubuntu 24.04**, hora de Lima y **Java 21** (OpenJDK 21.0.13).
+- **El sistema como servicio** (`/etc/systemd/system/biblioteca.service`):
+  - corre con su propio usuario `biblioteca`, desde `/opt/biblioteca`, con `-Xmx1g`;
+  - `Restart=always`: arranca solo con la VM y se reinicia solo si se cae;
+  - las credenciales de Neon van en `/opt/biblioteca/.env`, con permisos 600 (nunca en git).
+- **Medido en la VM (27/11):**
+  - arranca en 26 s;
+  - la conexión con Neon está UP;
+  - el proceso usa **423 MB de RAM** recién arrancado (con eso se sostiene el mínimo de 1 GB del Anexo F).
+- **HTTPS:** Caddy 2.6.2 (de los repositorios de Ubuntu; es un programa del servidor, no una librería del código), con el certificado gratis de Let's Encrypt en `<IP>.sslip.io`. Recibe en los puertos 80 y 443 y pasa todo al `.jar` en 127.0.0.1:8080.
+  - El firewall de Ubuntu ya tiene abiertos el 80 y el 443.
+  - **Falta (usuario):** la regla de entrada de 80 y 443 en la *Security List* de Oracle. Sin ella, Let's Encrypt no puede verificar el dominio ("Timeout during connect").
+- **La llave SSH:** se había dejado en `backend/` y se movió fuera del proyecto. `*.key` y `*.pem` se agregaron al `.gitignore`.
+
+**Otro:** `docs/Notas de la semana 16 y 15.docx` se agregó al `.gitignore`, porque tiene chats y capturas de la clase y el repo es público.
+
+**Lo que dijo Gianfranco a las 09:50** (confirmado el 27/11): el sistema se pasa a un servidor en la nube para que el cliente entre sin instalar nada, y del lado del servidor todo queda listo en Oracle Cloud, siempre encendido.
+
+**Por confirmar (equipo):** qué quiso decir "el tercero (indicadores) capítulo 4".
+
 ## Marcadores para la sustentación
 
 En el código hay comentarios con estas palabras clave. En VS Code, **Ctrl+Shift+F** busca en todo el proyecto (Ctrl+F solo en el archivo abierto). Van sin tildes para que la búsqueda no falle.
