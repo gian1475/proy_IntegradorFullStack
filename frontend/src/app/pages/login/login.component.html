@@ -19,6 +19,7 @@
             type="email"
             class="form-input"
             placeholder="correo@alejandria.edu.pe"
+            autocomplete="username"
             [(ngModel)]="email"
             name="email"
             required
@@ -27,15 +28,24 @@
 
         <div class="form-group">
           <label for="password">Ingresa tu contraseña</label>
-          <input
-            id="password"
-            type="password"
-            class="form-input"
-            placeholder="••••••••"
-            [(ngModel)]="password"
-            name="password"
-            required
-          />
+          <!-- ver contraseña: el boton cambia el campo de password a text (no envia el formulario: type="button") -->
+          <div class="campo-contrasena">
+            <input
+              id="password"
+              [type]="verContrasena() ? 'text' : 'password'"
+              class="form-input"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              [(ngModel)]="password"
+              name="password"
+              required
+            />
+            <button type="button" class="btn-ver-contrasena" aria-controls="password"
+                    [attr.aria-label]="verContrasena() ? 'Ocultar la contraseña' : 'Ver la contraseña'"
+                    (click)="verContrasena.set(!verContrasena())">
+              {{ verContrasena() ? 'Ocultar' : 'Ver' }}
+            </button>
+          </div>
         </div>
 
         <div class="forgot-link-wrapper">

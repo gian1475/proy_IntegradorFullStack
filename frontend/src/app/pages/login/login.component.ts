@@ -21,6 +21,8 @@ export class LoginComponent {
   password: string = '';
   errorMessage = signal<string>('');
   cargando = signal<boolean>(false);
+  // ver contraseña: true = el campo se muestra como texto
+  verContrasena = signal<boolean>(false);
 
   // login: revisa q no esten vacios, llama al backend y si sale bien lo manda a la pantalla de su rol
   onLogin(): void {

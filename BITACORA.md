@@ -1647,7 +1647,8 @@ Las páginas salieron del PDF de la vDelta, con PyMuPDF. Al revisarlas apareció
   - el proceso usa **423 MB de RAM** recién arrancado (con eso se sostiene el mínimo de 1 GB del Anexo F).
 - **HTTPS:** Caddy 2.6.2 (de los repositorios de Ubuntu; es un programa del servidor, no una librería del código), con el certificado gratis de Let's Encrypt en `<IP>.sslip.io`. Recibe en los puertos 80 y 443 y pasa todo al `.jar` en 127.0.0.1:8080.
   - El firewall de Ubuntu ya tiene abiertos el 80 y el 443.
-  - **Falta (usuario):** la regla de entrada de 80 y 443 en la *Security List* de Oracle. Sin ella, Let's Encrypt no puede verificar el dominio ("Timeout during connect").
+  - **28/11:** el usuario abrió 80 y 443 en la *Security List* de Oracle. Caddy obtuvo el certificado de Let's Encrypt en 15 s. **El sistema está publicado en `https://129-151-108-104.sslip.io`** (HTTP 200 desde afuera; `http://` redirige a `https://`).
+  - **28/11:** se subió el `.jar` con el commit de Rosa (`74a5a84`, migración 06). Antes pasaron las **342 pruebas** contra Neon (341 + 1 de Rosa), con BUILD SUCCESS. El servicio volvió a estar arriba en 35 s y usa 418 MB de RAM.
 - **La llave SSH:** se había dejado en `backend/` y se movió fuera del proyecto. `*.key` y `*.pem` se agregaron al `.gitignore`.
 
 **Otro:** `docs/Notas de la semana 16 y 15.docx` se agregó al `.gitignore`, porque tiene chats y capturas de la clase y el repo es público.
@@ -1655,6 +1656,73 @@ Las páginas salieron del PDF de la vDelta, con PyMuPDF. Al revisarlas apareció
 **Lo que dijo Gianfranco a las 09:50** (confirmado el 27/11): el sistema se pasa a un servidor en la nube para que el cliente entre sin instalar nada, y del lado del servidor todo queda listo en Oracle Cloud, siempre encendido.
 
 **Por confirmar (equipo):** qué quiso decir "el tercero (indicadores) capítulo 4".
+
+### 🐞 Error en el servidor publicado: "Invalid CORS request" (28/11) ✅
+
+**Qué pasaba:** desde el navegador fallaba **todo envío**: registrarse, iniciar sesión, prestar o reservar. El registro solo decía "Error al registrar usuario". Las pantallas y las consultas (GET) sí cargaban.
+- Lo encontró una persona de prueba que se registró desde el celular.
+- En la PC nunca pasó, porque ahí todo es `http://localhost`.
+
+**Por qué:**
+- Caddy recibe por `https://` y le pasa la petición al `.jar` por `http://`, dentro del servidor.
+- El navegador manda `Origin: https://…`, y Spring creía estar en `http://…`. Lo tomaba como otro sitio, que no estaba en `app.cors.origenes`, y respondía 403 sin `{"mensaje"}`.
+- Por eso la pantalla mostraba el texto genérico.
+
+**Arreglo (sin cambiar el código):** dos variables de entorno del servicio, en `/etc/systemd/system/biblioteca.service.d/seguridad.conf`:
+- `SERVER_FORWARD_HEADERS_STRATEGY=native`: Java confía en `X-Forwarded-Proto` de Caddy;
+- `APP_CORS_ORIGENES=https://129-151-108-104.sslip.io`.
+
+**Comprobado:**
+- un POST con el `Origin` de la página llega al sistema y responde 401 "Credenciales incorrectas" (con un correo falso);
+- un POST con `Origin` de otro sitio sigue en 403.
+
+### Seguridad del servidor (28/11) ✅
+
+**Auditoría.** Antes de cambiar nada se midió esto:
+- en un día hubo **813 intentos de entrar por SSH** desde bots ("Invalid user admin", etc.). No pasan, porque SSH solo acepta la llave;
+- había 15 actualizaciones pendientes, y el servidor pedía reinicio;
+- Java escuchaba en `*:8080` y `rpcbind` en el 111. Los frenaban los firewalls, pero no hacía falta que escucharan;
+- las pantallas no tenían cabeceras de seguridad (la API sí, porque las pone Spring);
+- `npm audit`: 2 avisos "high". Los de `@angular/router` solo afectan el renderizado en el servidor (SSR), que no se usa; el de `zod` no corre en el servidor. Se dejan para después de la evaluación.
+
+**Hecho:**
+- **El servicio** (en el mismo `seguridad.conf`):
+  - `SERVER_ADDRESS=127.0.0.1`: Java solo escucha dentro del servidor;
+  - `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem=strict`, `ProtectHome` y `ReadWritePaths=/opt/biblioteca/logs`: aunque hubiera una falla en Java, no puede tocar el resto del sistema.
+- **Caddy:**
+  - HSTS de un año, `nosniff`, `X-Frame-Options: DENY` y `Referrer-Policy`;
+  - se quitó la cabecera `Server`;
+  - compresión gzip.
+- **`rpcbind` apagado** y **SSH sin `X11Forwarding`**, comprobado con `sshd -t` antes de recargar.
+- **fail2ban** para SSH: 5 intentos fallidos en 10 minutos → la IP queda baneada 1 hora.
+- **`apt upgrade`** (0 pendientes) y **reinicio**. El sistema volvió solo en 72 segundos, sin intervención.
+
+**Desde internet, después del reinicio:**
+- abiertos solo el 22, el 80 y el 443; cerrados el 111, el 8080, el 8081 y el 5432;
+- `biblioteca`, `caddy` y `fail2ban` activos.
+
+**Queda para el equipo:**
+- no mostrar la contraseña de prueba en la exposición ni en las capturas;
+- activar la verificación en dos pasos en Oracle, Neon y GitHub;
+- después de la evaluación, cambiar la contraseña del admin (`backend/herramientas/CambiarContrasenaPrueba.java`) y apagar la VM cuando termine el curso.
+
+**Si en la demo alguien bloquea al admin** (3 contraseñas malas): `sudo systemctl restart biblioteca`. Los bloqueos se guardan en memoria (Guava), así que se borran al reiniciar.
+
+### Usabilidad: ver la contraseña, teclado numérico y autocompletar (28/11, U1) ✅
+
+Lo pidieron personas que probaron el sistema publicado: no había cómo ver la contraseña mientras se escribía. Se revisaron las pantallas buscando otros detalles parecidos. Primero se escribieron las pruebas (12 nuevas, que fallaban) y después el código. Solo cambia el frontend: ni el backend ni la BD.
+
+| Qué | Dónde | Cómo |
+|---|---|---|
+| Botón **"Ver / Ocultar"** en los 5 campos de contraseña | Login; registro (un solo botón para la contraseña y su confirmación, para compararlas); admin → Usuarios (registrar encargado y restablecer contraseña) | Una señal (`verContrasena`, `verContrasenas`, `verContrasenaEncargado`, `verContrasenaNueva`) cambia `[type]` entre `password` y `text`. El botón es `type="button"`, así que no envía el formulario. Tiene `aria-controls` y `aria-label` para los lectores de pantalla. Al abrir "restablecer" para otra persona, la contraseña vuelve a empezar oculta |
+| **Teclado numérico** en los DNI | Registrar préstamo, reservar en ventanilla, incidencias, historial, registrar encargado y editar usuario (el registro ya lo tenía) | `inputmode="numeric"`: en el celular o la tablet se abre el teclado de números |
+| **Autocompletar** | Login: `username` y `current-password`. Registro: `given-name`, `family-name`, `email` y `new-password` | El navegador ofrece guardar la contraseña y llenar los datos |
+| En el celular, los campos del registro ocupan **todo el ancho** | `register.component.less` | Antes quedaban angostos (se veía en la captura del celular) |
+
+- **Estilo:** el del botón va una sola vez en `styles.less` (`.btn-ver-contrasena`); en el panel del admin se usa `input-group` de Bootstrap. No se agregó ninguna librería: el botón dice "Ver" con texto, sin íconos.
+- **Pruebas:** `login.component.spec.ts` y `register.component.spec.ts` son nuevas; también hay casos nuevos en `usuarios-tab` y `registrar-tab`. **103 pruebas del frontend, todas pasan** (eran 91: las 90 del 24/11 y 1 de Rosa). `ng build`: 670,85 kB.
+- **Comprobado en el servidor publicado,** con Chrome imitando un celular (390 × 844) y una PC. Capturas en `docs/capturas/2026-11-28/usabilidad/`.
+- **Marcador de búsqueda:** `ver contraseña`.
 
 ## Marcadores para la sustentación
 

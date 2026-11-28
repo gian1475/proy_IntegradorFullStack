@@ -63,6 +63,29 @@ input, select {
   outline: none;
 }
 
+// ver contraseña (login y registro): boton "Ver / Ocultar" adentro del campo, a la derecha.
+// El contenedor .campo-contrasena (position: relative) esta en el estilo de cada pantalla.
+.btn-ver-contrasena {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  background: transparent;
+  color: @primary-color;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  &:hover {
+    background-color: @primary-soft;
+  }
+
+  &:focus-visible {
+    outline: 2px solid @primary-color;
+  }
+}
+
 // Paneles del administrador y del encargado
 @import "styles/panel.less";
 

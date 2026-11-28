@@ -20,7 +20,7 @@
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="e-dni">DNI</label>
-        <input class="form-control" id="e-dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="form.dni" />
+        <input class="form-control" id="e-dni" name="dni" maxlength="8" inputmode="numeric" placeholder="8 dígitos" [(ngModel)]="form.dni" />
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="e-correo">Correo</label>
@@ -28,7 +28,13 @@
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="e-contrasena">Contraseña</label>
-        <input class="form-control" id="e-contrasena" name="contrasena" type="password" maxlength="64" autocomplete="new-password" [(ngModel)]="form.contrasena" />
+        <!-- ver contraseña: el boton cambia el campo de password a text -->
+        <div class="input-group">
+          <input class="form-control" id="e-contrasena" name="contrasena" [type]="verContrasenaEncargado() ? 'text' : 'password'" maxlength="64" autocomplete="new-password" [(ngModel)]="form.contrasena" />
+          <button type="button" class="btn btn-outline-secondary" aria-controls="e-contrasena"
+                  [attr.aria-label]="verContrasenaEncargado() ? 'Ocultar la contraseña' : 'Ver la contraseña'"
+                  (click)="verContrasenaEncargado.set(!verContrasenaEncargado())">{{ verContrasenaEncargado() ? 'Ocultar' : 'Ver' }}</button>
+        </div>
       </div>
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="e-turno">Turno</label>
@@ -65,7 +71,7 @@
         </div>
         <div class="col-sm-6 col-lg-2">
           <label class="form-label" for="u-dni">DNI</label>
-          <input class="form-control" id="u-dni" name="editDni" maxlength="8" [(ngModel)]="edicion.dni" />
+          <input class="form-control" id="u-dni" name="editDni" maxlength="8" inputmode="numeric" [(ngModel)]="edicion.dni" />
         </div>
         <div class="col-sm-6 col-lg-4">
           <label class="form-label" for="u-correo">Correo</label>
@@ -98,8 +104,13 @@
       <div class="row g-3 mb-2">
         <div class="col-sm-6 col-lg-4">
           <label class="form-label" for="u-contrasena">Contraseña nueva</label>
-          <input class="form-control" id="u-contrasena" name="contrasenaNueva" type="password" maxlength="64"
-                 autocomplete="new-password" [(ngModel)]="contrasenaNueva" />
+          <div class="input-group">
+            <input class="form-control" id="u-contrasena" name="contrasenaNueva" [type]="verContrasenaNueva() ? 'text' : 'password'" maxlength="64"
+                   autocomplete="new-password" [(ngModel)]="contrasenaNueva" />
+            <button type="button" class="btn btn-outline-secondary" aria-controls="u-contrasena"
+                    [attr.aria-label]="verContrasenaNueva() ? 'Ocultar la contraseña' : 'Ver la contraseña'"
+                    (click)="verContrasenaNueva.set(!verContrasenaNueva())">{{ verContrasenaNueva() ? 'Ocultar' : 'Ver' }}</button>
+          </div>
         </div>
       </div>
       <ul class="list-unstyled d-flex flex-wrap gap-3 small mb-3">

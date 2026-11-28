@@ -28,6 +28,9 @@ export class UsuariosTabComponent implements OnInit {
   readonly mensajeOk = signal('');
   readonly mensajeError = signal('');
   readonly guardando = signal(false);
+  // ver contraseña: una señal por campo (registrar encargado y restablecer)
+  readonly verContrasenaEncargado = signal(false);
+  readonly verContrasenaNueva = signal(false);
 
   // filtros de la tabla
   readonly filtroPerfil = signal<FiltroPerfil>('TODOS');
@@ -154,6 +157,7 @@ export class UsuariosTabComponent implements OnInit {
     this.edicion = null;
     this.cambioContrasena = u;
     this.contrasenaNueva = '';
+    this.verContrasenaNueva.set(false); // cada vez que se abre, la contraseña empieza oculta
   }
 
   requisitosNueva(): { texto: string; cumple: boolean }[] {

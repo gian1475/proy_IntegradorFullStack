@@ -66,6 +66,17 @@
             box-shadow: 0 0 0 3px rgba(133, 77, 14, 0.12);
           }
         }
+
+        // ver contraseña: el boton va adentro del campo, a la derecha (su estilo esta en styles.less)
+        .campo-contrasena {
+          position: relative;
+          flex: 1;
+          display: flex;
+
+          .form-input {
+            padding-right: 5.5rem;
+          }
+        }
       }
 
       .password-rules {
@@ -132,6 +143,12 @@
 
       label {
         width: auto;
+      }
+
+      // en el celular, cada campo ocupa todo el ancho (mas facil de tocar y cabe el boton "Ver")
+      .form-input,
+      .campo-contrasena {
+        align-self: stretch;
       }
     }
   }

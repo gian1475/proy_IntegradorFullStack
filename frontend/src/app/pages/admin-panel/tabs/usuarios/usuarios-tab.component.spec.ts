@@ -164,4 +164,45 @@ describe('pestaña Usuarios del admin (RF12 y RF13)', () => {
     expect(document.activeElement?.id).toBe('u-nombre');
     fixture.nativeElement.remove();
   });
+
+  // ver contraseña (28/11): el admin puede revisar lo que escribió antes de guardarlo
+  it('la contraseña del encargado nuevo se puede ver y ocultar', () => {
+    const fixture = abrir();
+    const el: HTMLElement = fixture.nativeElement;
+    const campo = () => el.querySelector('#e-contrasena') as HTMLInputElement;
+    const ver = el.querySelector('button[aria-controls="e-contrasena"]') as HTMLButtonElement;
+
+    expect(campo().type).toBe('password');
+    expect(ver.type).toBe('button');
+    ver.click();
+    fixture.detectChanges();
+    expect(campo().type).toBe('text');
+    expect(ver.textContent?.trim()).toBe('Ocultar');
+    ver.click();
+    fixture.detectChanges();
+    expect(campo().type).toBe('password');
+  });
+
+  it('la contraseña nueva al restablecer se puede ver y ocultar', () => {
+    const fixture = abrir();
+    boton(fixture, 0, 'Contraseña').click(); // como lo hace el admin: el botón de la fila de Valeria
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const campo = () => el.querySelector('#u-contrasena') as HTMLInputElement;
+    const ver = el.querySelector('button[aria-controls="u-contrasena"]') as HTMLButtonElement;
+
+    expect(campo().type).toBe('password');
+    ver.click();
+    fixture.detectChanges();
+    expect(campo().type).toBe('text');
+  });
+
+  it('los DNI abren el teclado numérico en el celular', () => {
+    const fixture = abrir();
+    boton(fixture, 0, 'Editar').click();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('#e-dni')?.getAttribute('inputmode')).toBe('numeric');
+    expect(el.querySelector('#u-dni')?.getAttribute('inputmode')).toBe('numeric');
+  });
 });

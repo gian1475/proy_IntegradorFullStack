@@ -20,6 +20,7 @@
             class="form-input"
             placeholder="Ingrese su nombre"
             maxlength="50"
+            autocomplete="given-name"
             [(ngModel)]="nombre"
             name="nombre"
             required
@@ -34,6 +35,7 @@
             class="form-input"
             placeholder="Ingrese su apellido"
             maxlength="50"
+            autocomplete="family-name"
             [(ngModel)]="apellido"
             name="apellido"
             required
@@ -63,6 +65,7 @@
             class="form-input"
             placeholder="correo@alejandria.edu.pe"
             maxlength="100"
+            autocomplete="email"
             [(ngModel)]="correo"
             name="correo"
             required
@@ -71,15 +74,24 @@
 
         <div class="form-row">
           <label for="contrasena">Contraseña</label>
-          <input
-            id="contrasena"
-            type="password"
-            class="form-input"
-            placeholder="••••••••"
-            [(ngModel)]="contrasena"
-            name="contrasena"
-            required
-          />
+          <!-- ver contraseña: un solo boton muestra la contraseña y la confirmacion, para compararlas -->
+          <div class="campo-contrasena">
+            <input
+              id="contrasena"
+              [type]="verContrasenas() ? 'text' : 'password'"
+              class="form-input"
+              placeholder="••••••••"
+              autocomplete="new-password"
+              [(ngModel)]="contrasena"
+              name="contrasena"
+              required
+            />
+            <button type="button" class="btn-ver-contrasena" aria-controls="contrasena confirmar"
+                    [attr.aria-label]="verContrasenas() ? 'Ocultar las contraseñas' : 'Ver las contraseñas'"
+                    (click)="verContrasenas.set(!verContrasenas())">
+              {{ verContrasenas() ? 'Ocultar' : 'Ver' }}
+            </button>
+          </div>
         </div>
 
         @if (contrasena) {
@@ -94,9 +106,10 @@
           <label for="confirmar">Confirmar</label>
           <input
             id="confirmar"
-            type="password"
+            [type]="verContrasenas() ? 'text' : 'password'"
             class="form-input"
             placeholder="Repita la contraseña"
+            autocomplete="new-password"
             [(ngModel)]="confirmarContrasena"
             name="confirmar"
             required

@@ -17,7 +17,7 @@
       <div class="col-sm-6 col-lg-4">
         <label class="form-label" for="i-dni">DNI del prestatario</label>
         <div class="input-group">
-          <input class="form-control" id="i-dni" name="dni" maxlength="8" placeholder="8 dígitos" [(ngModel)]="dni" />
+          <input class="form-control" id="i-dni" name="dni" maxlength="8" inputmode="numeric" placeholder="8 dígitos" [(ngModel)]="dni" />
           <button type="button" class="btn btn-outline-secondary btn-sm" (click)="buscarPrestamos()">Buscar</button>
         </div>
       </div>

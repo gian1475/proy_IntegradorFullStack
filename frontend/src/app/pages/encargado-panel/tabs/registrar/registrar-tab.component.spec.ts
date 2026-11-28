@@ -102,4 +102,9 @@ describe('Registrar préstamo: tiempo de atención (TAP)', () => {
 
     expect(http.expectOne(`${API}/prestamos`).request.body.segundosAtencion).toBe(40);
   });
+
+  // teclado numérico (28/11): en el celular o la tablet de la ventanilla, el DNI abre solo números
+  it('el DNI del prestatario abre el teclado numérico', () => {
+    expect(abrir().nativeElement.querySelector('#dni')?.getAttribute('inputmode')).toBe('numeric');
+  });
 });

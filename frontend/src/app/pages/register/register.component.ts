@@ -27,6 +27,8 @@ export class RegisterComponent {
 
   errorMessage = signal<string>('');
   cargando = signal<boolean>(false);
+  // ver contraseña: true = la contraseña y la confirmacion se muestran como texto
+  verContrasenas = signal<boolean>(false);
 
   /** Misma regla que ValidadorContrasena del backend (los criterios están en utils/regla-contrasena.ts). */
   // regla contra (front): los mismos 5 criterios del backend, se van marcando mientras escribe
